@@ -1,0 +1,15 @@
+{
+  "name": "effata-social-automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automazione contenuti social (Facebook/Instagram) a partire da foto e messaggi raccolti via bot Telegram, generati con Claude API",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+.env
+intake/*.jpg
+intake/*.txt
+output/*.jpg
+output/*.txt
+!intake/.gitkeep
+!output/.gitkeep
