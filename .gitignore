@@ -1,6 +1,7 @@
 node_modules/
 .env
 state.json
+coverage/
 logs/*.log
 logs/*.log.*
 intake/*.jpg

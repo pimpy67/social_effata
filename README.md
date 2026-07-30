@@ -379,6 +379,57 @@ Secondo /genera (dopo 10s): ⏱️ Aspetta 20s prima di generare di nuovo.
 - Sì, se il bot crasha prima di `/genera`, il materiale va perso
 - Soluzione futura: salvare il materiale in un database
 
+## Test automatici
+
+Il progetto usa **Jest** per test automatici. Coverage attuale: **50%+** (validation, logger, generateContent).
+
+### Eseguire i test
+
+```bash
+# Esegui tutti i test una volta
+npm test
+
+# Modalità watch (esegui di nuovo al salvataggio file)
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
+```
+
+### Struttura test
+
+```
+__tests__/
+├── validation.test.js       # 24 test per validazione input
+├── logger.test.js           # 8 test per logging
+└── generateContent.test.js  # 2 test per API Claude
+```
+
+### Cosa è testato
+
+- **validation.js**: formato foto, dimensioni, lunghezze testo, rate limiting, cooldown
+- **logger.js**: output file, timestamp ISO, livelli log, multi-line
+- **generateContent.js**: import funzione, signature parametri
+
+### Cosa NON è testato (per ora)
+
+- **telegramBot.js**: complesso, richiede mock Telegram API (future improvement)
+- Integrazione end-to-end: richiede bot vero + Telegram + Claude API
+
+### Aggiungere nuovi test
+
+Crea file in `__tests__/nomedel-modulo.test.js`:
+
+```javascript
+describe("modulo", () => {
+  test("comportamento specifico", () => {
+    expect(funzione()).toBe(valore_atteso);
+  });
+});
+```
+
+Esegui `npm test` per verificare.
+
 ## Sviluppo
 
 ### Modificare i limiti di validazione
