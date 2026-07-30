@@ -563,24 +563,158 @@ Oggi il materiale accumulato è per chat (non per storia). Se tre volontari crea
 
 Soluzione futura: usare "thread" o un prefisso (`[storia1]`, `[storia2]`) per separare il materiale per story, oppure creare gruppi separati per story.
 
-## Roadmap
+## Roadmap e Stato Progetto
 
-### Phase 1 (fatto)
+### Phase 1: MVP Core (✅ FATTO)
+**Generazione contenuti multicanale con controllo umano**
+
 - ✅ Bot Telegram riceve foto + testi
-- ✅ Comando `/genera` chiama Claude
-- ✅ Output in file di testo
+- ✅ Comando `/genera` chiama Claude API
+- ✅ Output in file di testo (5 formati)
+- ✅ Persistenza stato (niente perdita dati)
+- ✅ Logging avanzato (file + console)
+- ✅ Validazione input robusti
+- ✅ Test automatici (30 test, 50%+ coverage)
+- ✅ Dashboard web moderna
 
-### Phase 2 (proposto)
-- [ ] Pubblicazione automatica su Facebook/Instagram via Meta Graph API (come bozza, non live)
-- [ ] Storico/dashboard delle bozze generate
-- [ ] Gestione di più storie in parallelo nello stesso gruppo
-- [ ] Persistenza materiale (DB leggero, es. SQLite)
+**Piattaforme supportate (generazione)**:
+- 📘 Facebook (post)
+- 📷 Instagram (story overlay)
+- 💼 LinkedIn (post aziendale)
+- 📝 Blog (titolo + 4-6 paragrafi)
+- 🎬 Reel/TikTok (script 30-45 secondi)
 
-### Phase 3 (long-term)
-- [ ] Migrare da polling a webhooks (più efficiente)
-- [ ] Deployment su server cloud (Railway, Render)
-- [ ] UI web per visualizzare e approvare prima della pubblicazione
-- [ ] Integrazione con LinkedIn API
+**Pubblicazione**: Manuale per tutti (volontario copia dalla dashboard)
+
+---
+
+### Phase 2: Automazione Pubblicazione (⏳ PROPOSTO)
+
+#### Opzione A: Meta API (Facebook + Instagram)
+- [ ] Configurare app Meta for Developers
+- [ ] Implementare Graph API per pubblicare come bozza
+- [ ] Gestione token di lunga durata + refresh
+- [ ] Pubblicazione automatica → Business Suite (bozza)
+- [ ] Volontario clicca "Pubblica" per andare live
+
+**Effort**: Alto (~12 ore)
+**Piattaforme coperte**: Facebook ✅ Instagram ✅
+**Altre piattaforme**: Rimangono manuali
+
+#### Opzione B: YouTube Shorts (Testo)
+- [ ] Generare script ottimizzato per YouTube Shorts
+- [ ] Formato: testo con istruzioni di montaggio
+- [ ] Volontario crea video manualmente (foto + voce) e pubblica
+
+**Effort**: Basso (~30 min)
+**Output**: Script testuale (come TikTok)
+**Pubblicazione**: Manuale
+
+#### Opzione C: Database SQLite (Storico)
+- [ ] Salvare metadati bozze in database
+- [ ] Query: cerca per data, numero foto, canale
+- [ ] Dashboard: elenco storico con filtri
+- [ ] Audit trail: chi ha generato, quando, quanti token
+
+**Effort**: Medio (~6 ore)
+**Valore**: Tracciabilità, reporting
+
+#### Opzione D: Multiple Storie Parallele
+- [ ] Supportare prefissi `[storia1]`, `[storia2]` nel gruppo
+- [ ] Separare il materiale accumulato per storia
+- [ ] Comando `/lista-storie` per vedere quali sono in corso
+
+**Effort**: Basso (~3 ore)
+**Valore**: Gestione migliore se il team cresce
+
+---
+
+### Phase 3: Scaling e Produzione (🚀 LONG-TERM)
+
+#### Infrastruttura
+- [ ] Migrare da polling a webhooks Telegram (efficienza)
+- [ ] Deployment su server cloud (Railway, Render, AWS)
+- [ ] Uptime 99% (niente PC sempre acceso)
+- [ ] CI/CD automatico (test + deploy su push)
+
+#### Feature avanzate
+- [ ] LinkedIn API (richiede approvazione, burocrazia)
+- [ ] TikTok API (limitata, complicata)
+- [ ] Video auto-generato per Shorts
+  - Text-to-Speech (script → voce)
+  - FFmpeg (foto + audio → video)
+  - Upload automatico YouTube
+- [ ] WordPress integration (pubblicare blog post automaticamente)
+
+#### UX
+- [ ] Copy-to-clipboard buttons nella dashboard
+- [ ] Anteprima tempo reale nei tabs
+- [ ] Dark/light mode selector
+- [ ] Download ZIP di una bozza (testo + foto)
+
+---
+
+## Supporto Piattaforme (Matrice)
+
+| Piattaforma | Generazione | Pubblicazione | Note |
+|-------------|-------------|---------------|------|
+| **Facebook** | ✅ Post | ❌ Manuale | Meta API: possibile (Phase 2) |
+| **Instagram** | ✅ Story | ❌ Manuale | Meta API: possibile (Phase 2) |
+| **LinkedIn** | ✅ Post | ❌ Manuale | API complessa, richiede approvazione |
+| **Blog** | ✅ Articolo | ❌ Manuale | WordPress API: possibile |
+| **TikTok** | ✅ Script | ❌ Manuale | API limitata, video serve fare a mano |
+| **YouTube Shorts** | ⏳ Script (Phase 2) | ❌ Manuale | Video auto-gen: possibile ma complesso |
+| **Telegram** | ✅ Bot riceve | N/A | Canale di input |
+
+---
+
+## Feature Attuali e Prossimi Step
+
+### Completed ✅
+- Bot Telegram con ricevimento foto/testi
+- Generazione contenuti con Claude (5 formati)
+- Persistenza stato (evita perdita dati)
+- Validazione input robusta (25+ regole)
+- Rate limiting (`/genera` 30s cooldown)
+- Logging completo (timestamp + file)
+- Test automatici (30 test)
+- Dashboard web responsive
+
+### In Progress (scegliete uno)
+- **Meta API**: Pubblicazione automatica Facebook/Instagram
+- **YouTube Shorts**: Aggiungere script per Shorts
+- **SQLite**: Storico bozze + query
+- **Multiple storie**: Supportare storie parallele
+
+### Not Started 📋
+- Webhooks Telegram (efficienza)
+- Cloud deployment (uptime)
+- LinkedIn API (burocrazia)
+- Video auto-generato (complesso)
+
+---
+
+## Come Scegliere il Prossimo Step
+
+**Criterio: Impatto vs Effort**
+
+| Feature | Impatto | Effort | Priorità |
+|---------|---------|--------|----------|
+| Meta API | 🔴 Alto | 🔴 Alto | 1️⃣ (automazione completa) |
+| YouTube Shorts | 🟡 Medio | 🟢 Basso | 2️⃣ (quick win) |
+| SQLite | 🟡 Medio | 🟡 Medio | 3️⃣ (tracciabilità) |
+| Multiple storie | 🟡 Medio | 🟢 Basso | 4️⃣ (se team cresce) |
+| Cloud deploy | 🟢 Basso | 🟢 Basso | 5️⃣ (affidabilità) |
+
+---
+
+## Prossimo Meeting
+
+**Discutere con il team**:
+- Priorità: Meta API o YouTube Shorts o Database?
+- Timeline: Quando serve avere x feature?
+- Team size: Quanti volontari usano il bot?
+- Budget: API costs (Claude vs YouTube vs TikTok)?
 
 ## Privacy e minori
 
