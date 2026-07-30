@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Effatá Dashboard - Bozze Contenuti Social</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .drafts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .draft-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .draft-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .draft-card-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .draft-id {
+      font-size: 14px;
+      opacity: 0.9;
+      font-family: monospace;
+    }
+
+    .draft-date {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .draft-card-body {
+      padding: 20px;
+    }
+
+    .draft-formats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .format-badge {
+      background: #f0f0f0;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .format-badge.facebook {
+      background: #e7f3ff;
+    }
+
+    .format-badge.instagram {
+      background: #fff0e7;
+    }
+
+    .format-badge.linkedin {
+      background: #e7f0ff;
+    }
+
+    .format-badge.blog {
+      background: #f0e7ff;
+    }
+
+    .format-badge.reel {
+      background: #e7fff0;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn-view {
+      background: #667eea;
+      color: white;
+      flex: 1;
+    }
+
+    .btn-view:hover {
+      background: #5568d3;
+    }
+
+    .btn-download {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-download:hover {
+      background: #e0e0e0;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body {
+      padding: 30px;
+    }
+
+    .content-type-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .tab {
+      padding: 12px 20px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #666;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .draft-text {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 4px;
+      font-family: "Monaco", "Menlo", monospace;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .draft-photos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .photo {
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .photo img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #666;
+    }
+
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .drafts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-content {
+        width: 95%;
+        max-height: 95vh;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      .content-type-tabs {
+        flex-wrap: wrap;
+      }
+
+      .tab {
+        padding: 10px 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📱 Effatá Social Dashboard</h1>
+      <p class="subtitle">Visualizza, approva e scarica le bozze di contenuti generati</p>
+    </header>
+
+    <div id="error-container"></div>
+    <div id="drafts-container" class="drafts-grid">
+      <div class="loading">⏳ Caricamento bozze...</div>
+    </div>
+  </div>
+
+  <!-- Modal per visualizzare i dettagli -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div id="modal-title" style="font-size: 18px;"></div>
+          <div id="modal-date" style="font-size: 12px; opacity: 0.9;"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="content-type-tabs">
+          <button class="tab active" onclick="switchTab('facebook')">📘 Facebook</button>
+          <button class="tab" onclick="switchTab('instagram')">📷 Instagram</button>
+          <button class="tab" onclick="switchTab('linkedin')">💼 LinkedIn</button>
+          <button class="tab" onclick="switchTab('blog')">📝 Blog</button>
+          <button class="tab" onclick="switchTab('reel')">🎬 Reel/TikTok</button>
+          <button class="tab" onclick="switchTab('photos')">🖼️ Foto</button>
+        </div>
+
+        <div id="facebook" class="tab-content active">
+          <div id="facebook-content" class="draft-text">Caricamento...</div>
+        </div>
+        <div id="instagram" class="tab-content">
+          <div id="instagram-content" class="draft-text">Caricamento...</div>
+        </div>
+        <div id="linkedin" class="tab-content">
+          <div id="linkedin-content" class="draft-text">Caricamento...</div>
+        </div>
+        <div id="blog" class="tab-content">
+          <div id="blog-content" class="draft-text">Caricamento...</div>
+        </div>
+        <div id="reel" class="tab-content">
+          <div id="reel-content" class="draft-text">Caricamento...</div>
+        </div>
+        <div id="photos" class="tab-content">
+          <div id="photos-content" class="draft-photos">Caricamento...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentDraftId = null;
+
+    // Carica l'elenco delle bozze al caricamento della pagina
+    document.addEventListener("DOMContentLoaded", loadDrafts);
+
+    async function loadDrafts() {
+      try {
+        const response = await fetch("/api/drafts");
+        const drafts = await response.json();
+
+        const container = document.getElementById("drafts-container");
+
+        if (drafts.length === 0) {
+          container.innerHTML = `
+            <div style="grid-column: 1 / -1;">
+              <div class="empty-state">
+                <h2>📭 Nessuna bozza ancora</h2>
+                <p>Le bozze generate dal bot appariranno qui</p>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = drafts
+          .map(
+            (draft) => `
+          <div class="draft-card" onclick="openDraft('${draft.id}')">
+            <div class="draft-card-header">
+              <div>
+                <div class="draft-date">${new Date(draft.createdAt).toLocaleString('it-IT')}</div>
+                <div class="draft-id">#${draft.id}</div>
+              </div>
+            </div>
+            <div class="draft-card-body">
+              <div class="draft-formats">
+                ${draft.files.facebook ? '<span class="format-badge facebook">Facebook</span>' : ''}
+                ${draft.files.instagram ? '<span class="format-badge instagram">Instagram</span>' : ''}
+                ${draft.files.linkedin ? '<span class="format-badge linkedin">LinkedIn</span>' : ''}
+                ${draft.files.blog ? '<span class="format-badge blog">Blog</span>' : ''}
+                ${draft.files.reel ? '<span class="format-badge reel">Reel/TikTok</span>' : ''}
+              </div>
+              <div class="action-buttons">
+                <button class="btn-view" onclick="openDraft('${draft.id}'); event.stopPropagation();">👁️ Visualizza</button>
+              </div>
+            </div>
+          </div>
+        `
+          )
+          .join("");
+      } catch (err) {
+        document.getElementById("drafts-container").innerHTML = `
+          <div style="grid-column: 1 / -1;">
+            <div class="error">Errore nel caricamento delle bozze: ${err.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    async function openDraft(draftId) {
+      currentDraftId = draftId;
+      document.getElementById("modal").classList.add("active");
+      document.getElementById("modal-title").textContent = `Bozza #${draftId}`;
+      document.getElementById("modal-date").textContent = new Date(
+        parseInt(draftId)
+      ).toLocaleString('it-IT');
+
+      // Carica tutti i contenuti
+      loadDraftContent("facebook");
+      loadDraftContent("instagram");
+      loadDraftContent("linkedin");
+      loadDraftContent("blog");
+      loadDraftContent("reel");
+      loadPhotos();
+    }
+
+    async function loadDraftContent(type) {
+      try {
+        const response = await fetch(`/api/drafts/${currentDraftId}/${type}`);
+        if (!response.ok) {
+          document.getElementById(`${type}-content`).textContent =
+            "Contenuto non disponibile";
+          return;
+        }
+        const data = await response.json();
+        document.getElementById(`${type}-content`).textContent = data.content;
+      } catch (err) {
+        document.getElementById(`${type}-content`).textContent =
+          `Errore: ${err.message}`;
+      }
+    }
+
+    async function loadPhotos() {
+      try {
+        const response = await fetch(
+          `/api/drafts/${currentDraftId}/photos`
+        );
+        const data = await response.json();
+
+        if (data.photos.length === 0) {
+          document.getElementById("photos-content").innerHTML =
+            "<p>Nessuna foto</p>";
+          return;
+        }
+
+        document.getElementById("photos-content").innerHTML = data.photos
+          .map(
+            (photo) => `
+          <div class="photo">
+            <img src="/output/${photo}" alt="Foto della bozza">
+          </div>
+        `
+          )
+          .join("");
+      } catch (err) {
+        document.getElementById("photos-content").textContent =
+          `Errore: ${err.message}`;
+      }
+    }
+
+    function switchTab(tab) {
+      // Nascondi tutti i tab
+      document.querySelectorAll(".tab-content").forEach((el) => {
+        el.classList.remove("active");
+      });
+      document.querySelectorAll(".tab").forEach((el) => {
+        el.classList.remove("active");
+      });
+
+      // Mostra il tab selezionato
+      document.getElementById(tab).classList.add("active");
+      event.target.classList.add("active");
+    }
+
+    function closeModal() {
+      document.getElementById("modal").classList.remove("active");
+      currentDraftId = null;
+    }
+
+    // Chiudi modal quando clicchi fuori dal contenuto
+    document.getElementById("modal").addEventListener("click", (e) => {
+      if (e.target.id === "modal") {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -239,6 +239,85 @@ social_effata/
 - `output/` accumula i risultati finali — ordina per timestamp
 - `.env` non va mai in git (contiene chiavi segrete)
 
+## Dashboard Web
+
+Il bot include una **dashboard web** moderna per visualizzare le bozze generate, approvarle e scaricarle.
+
+### Accedere alla dashboard
+
+Quando il bot è in esecuzione:
+
+```bash
+npm start
+```
+
+Apri il browser a **`http://localhost:3000`**
+
+### Funzionalità
+
+- 📋 **Elenco bozze**: visualizza tutte le bozze generate con data e formati disponibili
+- 👁️ **Visualizzazione**: leggi il testo di Facebook, Instagram, LinkedIn, blog, Reel/TikTok
+- 🖼️ **Foto**: guarda le foto associate a ogni bozza
+- 📱 **Responsive**: funziona su desktop, tablet, mobile
+- 🎨 **Interfaccia moderna**: dark gradient, animazioni smooth
+
+### Screenshot (concetti)
+
+```
+┌─────────────────────────────────────────┐
+│ 📱 Effatá Social Dashboard              │
+│ Visualizza, approva e scarica...        │
+└─────────────────────────────────────────┘
+
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Bozza #1234  │  │ Bozza #5678  │  │ Bozza #9999  │
+│ 31 lug 2026  │  │ 30 lug 2026  │  │ 29 lug 2026  │
+│ 📘 📷 💼 📝  │  │ 📘 📷 💼    │  │ 🎬 📘 📷    │
+│ [Visualizza] │  │ [Visualizza] │  │ [Visualizza] │
+└──────────────┘  └──────────────┘  └──────────────┘
+
+[Click per aprire]
+┌─────────────────────────────────────────┐
+│ Bozza #1234 (31 lug 2026)               │
+├─────────────────────────────────────────┤
+│ [Facebook] [Instagram] [LinkedIn] ...   │
+├─────────────────────────────────────────┤
+│ Post Facebook:                          │
+│ ═════════════════════════════════════   │
+│ "Ciao mondo! Oggi vi raccontiamo..."    │
+│                                         │
+│ [Copy to clipboard]                     │
+└─────────────────────────────────────────┘
+```
+
+### API disponibili
+
+```bash
+# Listare tutte le bozze
+GET /api/drafts
+
+# Ottenere il contenuto di una bozza
+GET /api/drafts/:id/facebook
+GET /api/drafts/:id/instagram
+GET /api/drafts/:id/linkedin
+GET /api/drafts/:id/blog
+GET /api/drafts/:id/reel
+
+# Listare le foto di una bozza
+GET /api/drafts/:id/photos
+
+# Servire le foto
+GET /output/:filename
+```
+
+### Configurazione porta
+
+Per cambiare la porta (default 3000):
+
+```bash
+PORT=8080 npm start
+```
+
 ## Logging
 
 Il bot registra tutte le operazioni in **console** (con colori) e in un **file di log** (`logs/app.log`). Questo è utile per:
