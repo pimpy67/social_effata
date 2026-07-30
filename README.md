@@ -716,6 +716,280 @@ Soluzione futura: usare "thread" o un prefisso (`[storia1]`, `[storia2]`) per se
 - Team size: Quanti volontari usano il bot?
 - Budget: API costs (Claude vs YouTube vs TikTok)?
 
+## Deployment
+
+### Overview: Dove hostare il bot?
+
+| Piattaforma | Costo | Setup | Uptime | Consigliato per |
+|------------|-------|-------|--------|----------------|
+| **Localhost** | Gratis | Facile | ❌ Basso (PC) | Sviluppo, test |
+| **Hostinger** | $4-10/mese | Medio | ✅ 99.9% | **Produzione (raccomandato)** |
+| **Railway** | $5-20/mese | Facile | ✅ 99.9% | Prototipo veloce |
+| **Render** | $7/mese | Facile | ✅ 99.9% | Backup Hostinger |
+| **AWS/GCP** | $10-50/mese | Complesso | ✅ 99.99% | Enterprise |
+
+---
+
+### Deployment su Hostinger (Consigliato)
+
+**Vantaggi**:
+- ✅ Unico server per sito + bot (effataitalia.it)
+- ✅ Uptime garantito
+- ✅ Niente PC sempre acceso
+- ✅ Backup e SSL automatici
+- ✅ Supporto Hostinger disponibile
+
+**Prerequisiti**:
+- Accesso SSH/cPanel a Hostinger
+- Node.js abilitato (la maggior parte dei piani moderni lo supporta)
+- PM2 per mantenere il bot online
+
+#### Step 1: Accedi a Hostinger via SSH
+
+```bash
+ssh user@effataitalia.it
+# Oppure usa il file manager del cPanel
+
+# Vai nella directory pubblica (o una cartella privata per il bot)
+cd /home/username/public_html
+# oppure
+cd /home/username/bot  # directory privata
+```
+
+#### Step 2: Clone il repository
+
+```bash
+git clone https://github.com/pimpy67/social_effata.git
+cd social_effata
+```
+
+#### Step 3: Installa le dipendenze
+
+```bash
+npm install
+```
+
+#### Step 4: Configura .env
+
+```bash
+# Crea il file .env
+nano .env
+```
+
+Compila con i tuoi valori:
+
+```bash
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234...
+ANTHROPIC_API_KEY=sk-ant-...
+ALLOWED_CHAT_ID=-1001234567890
+PORT=3000
+```
+
+Salva con `Ctrl+O`, `Enter`, `Ctrl+X`.
+
+#### Step 5: Installa PM2 (mantiene il bot sempre online)
+
+```bash
+# Installa globalmente
+npm install -g pm2
+
+# Avvia il bot con PM2
+pm2 start src/index.js --name "effata-bot"
+
+# Configura PM2 per auto-start al riavvio del server
+pm2 startup
+pm2 save
+```
+
+#### Step 6: Verifica che il bot stia girando
+
+```bash
+pm2 list
+
+# Dovresti vedere:
+# id | name       | mode | ↺ | status | ↻ | cpu | mem
+# 0  | effata-bot | fork | 0 | online | 0 | 0%  | 20M
+```
+
+#### Step 7: Accedi alla dashboard
+
+Nel browser:
+
+```
+http://effataitalia.it:3000
+```
+
+Oppure configura Nginx per un percorso (contatta Hostinger support):
+
+```
+http://effataitalia.it/dashboard
+```
+
+---
+
+### Deployment Alternativo: Railway o Render (Backup)
+
+Se Hostinger non supporta Node.js, questi sono backup:
+
+#### Railway
+
+```bash
+# 1. Registrati su railway.app
+# 2. Installa Railway CLI
+npm i -g @railway/cli
+
+# 3. Connetti il repo
+railway login
+railway init
+
+# 4. Deploy
+railway up
+```
+
+#### Render
+
+```bash
+# 1. Registrati su render.com
+# 2. Connetti GitHub repository
+# 3. Create → Web Service
+# 4. Runtime: Node, Buildcommand: npm install, Start: npm start
+```
+
+---
+
+### Monitoraggio e Manutenzione
+
+#### Visualizza i log
+
+```bash
+# Log in tempo reale
+pm2 logs effata-bot
+
+# Log ultimi 100 righe
+pm2 logs effata-bot --lines 100
+
+# Salva log in file
+pm2 logs effata-bot > bot.log
+```
+
+#### Riavvia il bot (se serve update)
+
+```bash
+# Aggiorna il codice
+cd /home/username/social_effata
+git pull origin main
+
+# Reinstalla dipendenze (se necessario)
+npm install
+
+# Riavvia il bot
+pm2 restart effata-bot
+```
+
+#### Arresta il bot
+
+```bash
+pm2 stop effata-bot
+```
+
+#### Rimuovi PM2 auto-start
+
+```bash
+pm2 delete effata-bot
+pm2 save
+```
+
+---
+
+### Troubleshooting Deployment
+
+#### "Porta 3000 già in uso"
+```bash
+# Cambia porta in .env
+PORT=3001
+
+# Oppure trova il processo e killalo
+lsof -i :3000
+kill -9 <PID>
+```
+
+#### "TELEGRAM_BOT_TOKEN manca"
+```bash
+# Verifica il .env esista
+cat .env
+
+# Se non esiste, ricrealo:
+nano .env
+# Compila di nuovo
+```
+
+#### "PM2 non parte all'avvio"
+```bash
+# Verifica la configurazione
+pm2 startup
+pm2 save
+
+# Oppure ricrea manualmente
+pm2 delete effata-bot
+pm2 start src/index.js --name "effata-bot"
+pm2 startup
+pm2 save
+```
+
+#### "Dashboard non si vede"
+```bash
+# Verifica che il server stia girando
+pm2 list
+
+# Verifica che la porta sia corretta nel browser
+http://effataitalia.it:3000
+
+# Se Hostinger ha filtri, contatta support per abilitare porta 3000
+```
+
+---
+
+### Monitoraggio Risorse (Hostinger)
+
+Nel cPanel di Hostinger:
+
+1. **Resource Usage** → vedi CPU/RAM del bot
+2. **Error Log** → vedi errori Node.js
+3. **Access Log** → vedi richieste HTTP alla dashboard
+
+Se il bot usa troppa RAM/CPU, contatta Hostinger per upgrade del piano.
+
+---
+
+### Workflow di Deploy (Riassunto)
+
+**Primo deploy**:
+```bash
+ssh user@effataitalia.it
+cd /home/user/social_effata
+npm install
+# Compila .env
+npm install -g pm2
+pm2 start src/index.js --name "effata-bot"
+pm2 startup
+pm2 save
+```
+
+**Aggiornare il codice**:
+```bash
+cd /home/user/social_effata
+git pull origin main
+npm install
+pm2 restart effata-bot
+```
+
+**Fermare il bot**:
+```bash
+pm2 stop effata-bot
+```
+
+---
+
 ## Privacy e minori
 
 **Importante**: questo progetto tratta foto e storie di minori a scopo di raccolta fondi.
