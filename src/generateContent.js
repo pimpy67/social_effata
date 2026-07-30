@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from "./logger.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -21,6 +22,8 @@ Rispondi SOLO in formato JSON con questa struttura, senza markdown né testo agg
 {"facebookPost": "...", "instagramStory": "...", "linkedinPost": "...", "blogTitle": "...", "blogBody": "...", "reelScript": "..."}`;
 
 export async function generateSocialContent(rawText, images = []) {
+  logger.info(`Generazione contenuti: ${images.length} foto, ${rawText.length} char di testo`);
+
   const content = [
     ...images.map(({ buffer, mediaType }) => ({
       type: "image",
@@ -29,27 +32,34 @@ export async function generateSocialContent(rawText, images = []) {
     { type: "text", text: rawText || "(nessuna descrizione fornita, usa un tono generico)" },
   ];
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2500,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content }],
-  });
-
-  const textBlock = message.content.find((c) => c.type === "text");
-  const cleaned = (textBlock?.text || "{}").replace(/```json|```/g, "").trim();
-
   try {
-    return JSON.parse(cleaned);
-  } catch {
-    // fallback: se il modello non ha rispettato il formato, restituisci il testo grezzo per tutti i campi
-    return {
-      facebookPost: cleaned,
-      instagramStory: cleaned,
-      linkedinPost: cleaned,
-      blogTitle: "",
-      blogBody: cleaned,
-      reelScript: cleaned,
-    };
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2500,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content }],
+    });
+
+    logger.debug(`API response: ${message.usage.input_tokens} input, ${message.usage.output_tokens} output tokens`);
+
+    const textBlock = message.content.find((c) => c.type === "text");
+    const cleaned = (textBlock?.text || "{}").replace(/```json|```/g, "").trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      logger.warn("Claude non ha rispettato il formato JSON, usando fallback");
+      return {
+        facebookPost: cleaned,
+        instagramStory: cleaned,
+        linkedinPost: cleaned,
+        blogTitle: "",
+        blogBody: cleaned,
+        reelScript: cleaned,
+      };
+    }
+  } catch (err) {
+    logger.error(`Errore nella chiamata API Claude: ${err.message}`);
+    throw err;
   }
 }
