@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
+import { getAllDrafts, queryDrafts, getStatistics, getMonthlyReport, getYearlyReport } from "./database.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
@@ -53,11 +54,34 @@ app.get("/api/drafts", (req, res) => {
   }
 });
 
-// API: Ottenere il contenuto di un file
+// API: Listare le foto di una bozza (DEVE VENIRE PRIMA di /:id/:type)
+app.get("/api/drafts/:id/photos", (req, res) => {
+  try {
+    const { id } = req.params;
+    const files = fs.readdirSync(OUTPUT_DIR);
+
+    // Trova tutte le foto associate a questo ID
+    const photos = files
+      .filter((f) => f.startsWith(id + "_") && /\.(jpg|png|webp|gif)$/i.test(f))
+      .sort((a, b) => {
+        const numA = parseInt(a.split("_")[1]);
+        const numB = parseInt(b.split("_")[1]);
+        return numA - numB;
+      });
+
+    logger.debug(`API /drafts/${id}/photos: ${photos.length} foto trovate`);
+    res.json({ photos });
+  } catch (err) {
+    logger.error(`Errore nel listare foto: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Ottenere il contenuto di un file (DOPO /photos per evitare conflitti)
 app.get("/api/drafts/:id/:type", (req, res) => {
   try {
     const { id, type } = req.params;
-    const validTypes = ["facebook", "instagram", "linkedin", "blog", "reel"];
+    const validTypes = ["facebook", "instagram", "linkedin", "blog", "reel", "youtube"];
 
     if (!validTypes.includes(type)) {
       return res.status(400).json({ error: "Tipo non valido" });
@@ -78,25 +102,69 @@ app.get("/api/drafts/:id/:type", (req, res) => {
   }
 });
 
-// API: Listare le foto di una bozza
-app.get("/api/drafts/:id/photos", (req, res) => {
+// API: Query database con filtri
+app.get("/api/query", (req, res) => {
   try {
-    const { id } = req.params;
-    const files = fs.readdirSync(OUTPUT_DIR);
+    const filters = {};
 
-    // Trova tutte le foto associate a questo ID
-    const photos = files
-      .filter((f) => f.startsWith(id + "_") && /\.(jpg|png|webp|gif)$/i.test(f))
-      .sort((a, b) => {
-        const numA = parseInt(a.split("_")[1]);
-        const numB = parseInt(b.split("_")[1]);
-        return numA - numB;
-      });
+    if (req.query.daysAgo) {
+      filters.daysAgo = parseInt(req.query.daysAgo);
+    }
 
-    logger.debug(`API /drafts/${id}/photos: ${photos.length} foto trovate`);
-    res.json({ photos });
+    if (req.query.photoCountMin) {
+      filters.photoCountMin = parseInt(req.query.photoCountMin);
+    }
+
+    if (req.query.photoCountMax) {
+      filters.photoCountMax = parseInt(req.query.photoCountMax);
+    }
+
+    if (req.query.channel) {
+      filters.channel = req.query.channel;
+    }
+
+    const drafts = queryDrafts(filters);
+    logger.info(`API /query: ${drafts.length} bozze trovate con filtri`);
+    res.json(drafts);
   } catch (err) {
-    logger.error(`Errore nel listare foto: ${err.message}`);
+    logger.error(`Errore nella query: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Statistiche database
+app.get("/api/statistics", (req, res) => {
+  try {
+    const stats = getStatistics();
+    logger.debug("API /statistics: statistiche recuperate");
+    res.json(stats);
+  } catch (err) {
+    logger.error(`Errore nel recuperare statistiche: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Report mensile
+app.get("/api/report/month/:year/:month", (req, res) => {
+  try {
+    const year = parseInt(req.params.year);
+    const month = parseInt(req.params.month);
+    const report = getMonthlyReport(year, month);
+    res.json(report);
+  } catch (err) {
+    logger.error(`Errore nel report mensile: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Report annuale
+app.get("/api/report/year/:year", (req, res) => {
+  try {
+    const year = parseInt(req.params.year);
+    const report = getYearlyReport(year);
+    res.json(report);
+  } catch (err) {
+    logger.error(`Errore nel report annuale: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

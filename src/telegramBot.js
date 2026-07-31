@@ -5,6 +5,24 @@ import { fileURLToPath } from "url";
 import { generateSocialContent } from "./generateContent.js";
 import { logger } from "./logger.js";
 import { validation } from "./validation.js";
+import { initMetaAPI } from "./metaAPI.js";
+import { optimizePhotosForSocial } from "./photoOptimizer.js";
+import { saveDraft, getMonthlyReport, getYearlyReport } from "./database.js";
+
+// Categorie disponibili
+const CATEGORIES = {
+  "1": "Adozioni scolastiche",
+  "2": "Aiuti sanitari (Operazioni)",
+  "3": "Aiuti sanitari (Carozzine)",
+  "4": "Costruzione casette",
+  "5": "Affitto terreni agricoli",
+  "6": "Animali domestici",
+  "7": "Materassi e scarpe",
+  "8": "Casafamiglia (Vari)",
+};
+
+// Categoria selezionata per ogni chat
+const selectedCategory = new Map();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const INTAKE_DIR = path.join(__dirname, "..", "intake");
@@ -21,6 +39,9 @@ const EXT_BY_MIME = {
 // Materiale (foto + testi) accumulato per ogni chat, in attesa del comando /genera.
 // Persistente: caricato da state.json all'avvio, salvato dopo ogni operazione.
 const pendingByChat = new Map();
+
+// Client Meta API (per pubblicare su Facebook/Instagram)
+let metaAPI = null;
 
 function loadState() {
   try {
@@ -53,13 +74,17 @@ function getPending(chatId) {
   return pendingByChat.get(chatId);
 }
 
-export function startBot() {
+export async function startBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
     throw new Error("Manca TELEGRAM_BOT_TOKEN nel file .env");
   }
 
   loadState();
+
+  // Inizializza Meta API (se configurato)
+  metaAPI = await initMetaAPI();
+
   const bot = new TelegramBot(token, { polling: true });
   logger.info("Bot Telegram avviato, in ascolto...");
 
@@ -237,6 +262,98 @@ export function startBot() {
     await bot.sendMessage(chatId, "✅ Materiale cancellato. Puoi iniziare una nuova storia.");
   });
 
+  // Comando /categoria - Seleziona categoria per la storia
+  bot.onText(/^\/categoria$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    const buttons = Object.entries(CATEGORIES).map(([id, name]) => [
+      { text: `${id}. ${name}`, callback_data: `category_${id}` },
+    ]);
+
+    await bot.sendMessage(chatId, "🏷️ Seleziona la categoria per questa storia:", {
+      reply_markup: { inline_keyboard: buttons },
+    });
+  });
+
+  // Callback per selezione categoria
+  bot.on("callback_query", async (query) => {
+    const chatId = query.message.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    if (query.data.startsWith("category_")) {
+      const categoryId = query.data.replace("category_", "");
+      const categoryName = CATEGORIES[categoryId];
+
+      if (categoryName) {
+        selectedCategory.set(chatId, { id: categoryId, name: categoryName });
+        await bot.answerCallbackQuery(query.id);
+        await bot.sendMessage(chatId, `✅ Categoria selezionata: **${categoryName}**\n\nOra manda foto e testo, poi scrivi /genera`);
+        logger.info(`Categoria selezionata: ${categoryName} (chat ${chatId})`);
+      }
+    }
+  });
+
+  // Comando /report-mese - Report mensile
+  bot.onText(/^\/report-mese(?:\s+(\d{4})\s+(\d{1,2}))?$/i, async (msg, match) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    let year = new Date().getFullYear();
+    let month = new Date().getMonth() + 1;
+
+    if (match[1] && match[2]) {
+      year = parseInt(match[1]);
+      month = parseInt(match[2]);
+    }
+
+    const report = getMonthlyReport(year, month);
+
+    if (!report.monthName) {
+      await bot.sendMessage(chatId, "⚠️ Nessun dato disponibile per questo mese.");
+      return;
+    }
+
+    let message = `📊 **Report ${report.monthName}**\n\n`;
+    message += `**Totale storie: ${report.total}**\n\n`;
+
+    Object.entries(report.report).forEach(([category, count]) => {
+      message += `• ${category}: ${count}\n`;
+    });
+
+    await bot.sendMessage(chatId, message);
+    logger.info(`Report mensile: ${year}-${month}`);
+  });
+
+  // Comando /report-anno - Report annuale
+  bot.onText(/^\/report-anno(?:\s+(\d{4}))?$/i, async (msg, match) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    let year = new Date().getFullYear();
+
+    if (match[1]) {
+      year = parseInt(match[1]);
+    }
+
+    const report = getYearlyReport(year);
+
+    if (!report.year || report.total === 0) {
+      await bot.sendMessage(chatId, "⚠️ Nessun dato disponibile per questo anno.");
+      return;
+    }
+
+    let message = `📈 **Report Annuale ${report.year}**\n\n`;
+    message += `**Totale storie: ${report.total}**\n\n`;
+
+    Object.entries(report.report).forEach(([category, count]) => {
+      message += `• ${category}: ${count}\n`;
+    });
+
+    await bot.sendMessage(chatId, message);
+    logger.info(`Report annuale: ${year}`);
+  });
+
   bot.onText(/^\/genera$/i, async (msg) => {
     const chatId = msg.chat.id;
     if (!isAllowed(chatId)) return;
@@ -281,10 +398,33 @@ export function startBot() {
       fs.writeFileSync(`${outBase}_linkedin.txt`, result.linkedinPost);
       fs.writeFileSync(`${outBase}_blog.txt`, `${result.blogTitle}\n\n${result.blogBody}`);
       fs.writeFileSync(`${outBase}_reel.txt`, result.reelScript);
+
+      // YouTube Shorts
+      if (result.youtubeShorts) {
+        const youtubeContent = `TITOLO:\n${result.youtubeShorts.titolo}\n\nSCRIPT:\n${result.youtubeShorts.script}\n\nISTRUZIONI:\n${result.youtubeShorts.istruzioni}\n\nCTA:\n${result.youtubeShorts.cta}`;
+        fs.writeFileSync(`${outBase}_youtube.txt`, youtubeContent);
+      }
+
+      // Salva le foto originali
       pending.photos.forEach((p, i) => {
         const ext = path.extname(p.imgPath);
         fs.copyFileSync(p.imgPath, `${outBase}_${i + 1}${ext}`);
       });
+
+      // Ottimizza le foto per ogni social
+      let optimizedPhotos = {};
+      try {
+        optimizedPhotos = await optimizePhotosForSocial(images);
+        // Salva le foto ottimizzate con suffissi social
+        for (const [social, buffer] of Object.entries(optimizedPhotos)) {
+          fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
+        }
+        logger.info(`Foto ottimizzate salvate per ${Object.keys(optimizedPhotos).length} social`);
+      } catch (err) {
+        logger.warn(`Errore nell'ottimizzazione foto: ${err.message}`);
+        // Se l'ottimizzazione fallisce, usa le foto originali
+        optimizedPhotos = { facebook: images[0].buffer, instagram: images[0].buffer, linkedin: images[0].buffer, blog: images[0].buffer, reel: images[0].buffer };
+      }
 
       // Cleanup: cancella i file temporanei da intake/
       pending.photos.forEach((p) => {
@@ -300,13 +440,72 @@ export function startBot() {
       pendingByChat.delete(chatId);
       saveState();
 
+      // Salva la bozza nel database SQLite con categoria
+      const formats = [];
+      if (result.facebookPost) formats.push("facebook");
+      if (result.instagramStory) formats.push("instagram");
+      if (result.linkedinPost) formats.push("linkedin");
+      if (result.blogTitle) formats.push("blog");
+      if (result.reelScript) formats.push("reel");
+      if (result.youtubeShorts) formats.push("youtube");
+
+      const totalTextLength = rawText.length;
+      const category = selectedCategory.get(chatId);
+      saveDraft(
+        timestamp,
+        pending.photos.length,
+        formats,
+        totalTextLength,
+        category?.name || null,
+        category?.id || null
+      );
+
+      // Pulisci la categoria dopo la generazione
+      selectedCategory.delete(chatId);
+
+      let metaMessage = "";
+
+      // Pubblica su Facebook e Instagram (come bozze) se Meta API è configurata
+      if (metaAPI) {
+        try {
+          const metaResults = await metaAPI.publishToMetaBusiness(
+            result.facebookPost,
+            result.instagramStory,
+            images,
+            optimizedPhotos
+          );
+
+          if (metaResults.facebook?.success) {
+            metaMessage += "📘 Facebook: pubblicato (bozza)\n";
+          }
+          if (metaResults.instagram?.success) {
+            metaMessage += "📷 Instagram: pubblicato (bozza)\n";
+          }
+          if (metaResults.errors.length > 0) {
+            metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;
+          }
+          if (!metaResults.facebook?.success && !metaResults.instagram?.success) {
+            metaMessage = "⚠️ Nessun canale Meta pubblicato\n";
+          }
+        } catch (err) {
+          logger.error(`Errore nella pubblicazione Meta: ${err.message}`);
+          metaMessage = `⚠️ Errore Meta API: ${err.message}\n`;
+        }
+      }
+
       await bot.sendMessage(
         chatId,
-        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)`
+        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n\n${metaMessage}`
       );
     } catch (err) {
       logger.error(`Errore nel generare i contenuti: ${err.message}`);
-      await bot.sendMessage(chatId, "⚠️ Si è verificato un errore nella generazione, riprova con /genera.");
+      logger.error(`Stack trace: ${err.stack}`);
+
+      const materialsLeft = `${pending.photos.length} foto, ${pending.notes.length} testi`;
+      await bot.sendMessage(
+        chatId,
+        `⚠️ Errore nella generazione. Il tuo materiale rimane intatto (${materialsLeft}).\n\nRiprova con /genera.\n\nDettagli errore: ${err.message}`
+      );
     }
   });
 

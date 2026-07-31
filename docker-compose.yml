@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  effata-bot:
+    build: .
+    container_name: effata-bot
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'      # Max 50% di 1 CPU
+          memory: 512M     # Max 512MB RAM
+        reservations:
+          cpus: '0.25'     # Riserva 25% CPU
+          memory: 256M     # Riserva 256MB RAM
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ALLOWED_CHAT_ID=${ALLOWED_CHAT_ID}
+      - META_PAGE_ID=${META_PAGE_ID}
+      - META_PAGE_ACCESS_TOKEN=${META_PAGE_ACCESS_TOKEN}
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"     # Max 10MB per file log
+        max-file: "3"       # Mantieni ultimi 3 file
+    volumes:
+      # Persisti i dati anche se il container riavvia
+      - ./output:/app/output
+      - ./logs:/app/logs
+      - ./effata.db:/app/effata.db
+    networks:
+      - effata-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.effata-bot.rule=Host(`bot.effataitalia.it`)"
+      - "traefik.http.routers.effata-bot.entrypoints=websecure"
+      - "traefik.http.routers.effata-bot.tls.certresolver=letsencrypt"
+      - "traefik.http.services.effata-bot.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (res) => {if (res.statusCode !== 200) throw new Error(res.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  effata-network:
+    driver: bridge

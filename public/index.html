@@ -361,6 +361,7 @@
           <button class="tab" onclick="switchTab('linkedin')">💼 LinkedIn</button>
           <button class="tab" onclick="switchTab('blog')">📝 Blog</button>
           <button class="tab" onclick="switchTab('reel')">🎬 Reel/TikTok</button>
+          <button class="tab" onclick="switchTab('youtube')">▶️ YouTube Shorts</button>
           <button class="tab" onclick="switchTab('photos')">🖼️ Foto</button>
         </div>
 
@@ -378,6 +379,9 @@
         </div>
         <div id="reel" class="tab-content">
           <div id="reel-content" class="draft-text">Caricamento...</div>
+        </div>
+        <div id="youtube" class="tab-content">
+          <div id="youtube-content" class="draft-text">Caricamento...</div>
         </div>
         <div id="photos" class="tab-content">
           <div id="photos-content" class="draft-photos">Caricamento...</div>
@@ -460,6 +464,7 @@
       loadDraftContent("linkedin");
       loadDraftContent("blog");
       loadDraftContent("reel");
+      loadDraftContent("youtube");
       loadPhotos();
     }
 

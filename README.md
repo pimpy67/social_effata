@@ -130,7 +130,31 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Se non impostato, qualsiasi chat può usare il bot
 # Scopri l'ID al primo avvio con npm start
 ALLOWED_CHAT_ID=-1001234567890
+
+# Meta API (opzionale - per pubblicazione automatica su Facebook/Instagram)
+# Page ID della pagina Facebook di Effatá
+META_PAGE_ID=1078382168688068
+
+# Page Access Token (di lunga durata) per la pagina Facebook
+META_PAGE_ACCESS_TOKEN=EAAUFq1nGuUs...
 ```
+
+### Configurare Meta API
+
+Se vuoi la **pubblicazione automatica su Facebook e Instagram** come bozze, aggiungi le credenziali Meta:
+
+1. Vai su https://developers.facebook.com/tools/explorer
+2. Seleziona la tua app "Effata Social Bot"
+3. Clicca "Generate Access Token"
+4. Accedi e autorizza l'accesso alle pagine
+5. Copia l'access token e il Page ID (vedi istruzioni complete in PHASE 1 sopra)
+6. Aggiungi in `.env`:
+   ```
+   META_PAGE_ID=<il tuo page id>
+   META_PAGE_ACCESS_TOKEN=<il tuo token>
+   ```
+
+**Senza Meta API**: il bot funziona normalmente, genera solo le bozze locali, niente pubblicazione automatica.
 
 ## Comandi del bot
 
@@ -147,12 +171,28 @@ Genera i contenuti da tutte le foto + testi accumulati.
 - Tutti in cartella `output/` con timestamp
 - Il materiale accumulato viene pulito (sia dalla memoria che dai file temporanei)
 
+**Pubblicazione automatica** (se Meta API è configurata):
+- ✅ Post Facebook pubblicato come **bozza** in Business Suite
+- ✅ Post Instagram pubblicato come **bozza** in Business Suite
+- ❌ LinkedIn, blog, Reel, YouTube Shorts rimangono manuali (copia dalla dashboard)
+
 **Esempio nella chat**:
 ```
 📥 Genero le bozze da 2 foto e 1 testi extra...
 [Claude processa...]
 ✅ Bozze pronte in output/1704067200000_*.txt
+
+📘 Facebook: pubblicato (bozza)
+📷 Instagram: pubblicato (bozza)
 ```
+
+**Formati generati**:
+- `{timestamp}_facebook.txt` — Post Facebook
+- `{timestamp}_instagram.txt` — Story Instagram
+- `{timestamp}_linkedin.txt` — Post LinkedIn
+- `{timestamp}_blog.txt` — Titolo + corpo blog
+- `{timestamp}_reel.txt` — Script Reel/TikTok
+- `{timestamp}_youtube.txt` — **Script YouTube Shorts** (titolo + script + istruzioni + CTA)
 
 ### `/status`
 Mostra quante foto e quanti testi sono accumulati in attesa di `/genera`.
@@ -583,6 +623,7 @@ Soluzione futura: usare "thread" o un prefisso (`[storia1]`, `[storia2]`) per se
 - 💼 LinkedIn (post aziendale)
 - 📝 Blog (titolo + 4-6 paragrafi)
 - 🎬 Reel/TikTok (script 30-45 secondi)
+- ▶️ YouTube Shorts (titolo + script + istruzioni montaggio)
 
 **Pubblicazione**: Manuale per tutti (volontario copia dalla dashboard)
 
@@ -716,78 +757,220 @@ Soluzione futura: usare "thread" o un prefisso (`[storia1]`, `[storia2]`) per se
 - Team size: Quanti volontari usano il bot?
 - Budget: API costs (Claude vs YouTube vs TikTok)?
 
-## Deployment
+## Deployment su Hostinger con Docker
 
-### Overview: Dove hostare il bot?
+### ✅ SCELTA: Docker su Hostinger (con Docker Manager)
 
-| Piattaforma | Costo | Setup | Uptime | Consigliato per |
-|------------|-------|-------|--------|----------------|
-| **Localhost** | Gratis | Facile | ❌ Basso (PC) | Sviluppo, test |
-| **Hostinger** | $4-10/mese | Medio | ✅ 99.9% | **Produzione (raccomandato)** |
-| **Railway** | $5-20/mese | Facile | ✅ 99.9% | Prototipo veloce |
-| **Render** | $7/mese | Facile | ✅ 99.9% | Backup Hostinger |
-| **AWS/GCP** | $10-50/mese | Complesso | ✅ 99.99% | Enterprise |
+**Vantaggi**:
+- ✅ Isolato e pulito (come WordPress)
+- ✅ Facile da gestire dal Docker Manager di Hostinger
+- ✅ Stessa infrastruttura del sito principale
+- ✅ Uptime 99.9% + SSL automatico (Traefik)
+- ✅ Dati persistenti (output, logs, database)
+
+**Costo**: Incluso nel piano hosting del sito (niente extra)
 
 ---
 
-### Deployment su Hostinger (Consigliato)
+## 🐳 Deploy con Docker (Consigliato)
 
-**Vantaggi**:
-- ✅ Unico server per sito + bot (effataitalia.it)
-- ✅ Uptime garantito
-- ✅ Niente PC sempre acceso
-- ✅ Backup e SSL automatici
-- ✅ Supporto Hostinger disponibile
+### Step 1: Clona il repository
 
-**Prerequisiti**:
-- Accesso SSH/cPanel a Hostinger
-- Node.js abilitato (la maggior parte dei piani moderni lo supporta)
-- PM2 per mantenere il bot online
+```bash
+cd ~/
+git clone https://github.com/pimpy67/social_effata.git
+cd social_effata
+```
 
-#### Step 1: Accedi a Hostinger via SSH
+### Step 2: Crea il file .env
+
+```bash
+nano .env
+```
+
+Incolla:
+```bash
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ALLOWED_CHAT_ID=-1001234567890
+META_PAGE_ID=1078382168688068
+META_PAGE_ACCESS_TOKEN=your_meta_page_access_token_here
+```
+
+Salva: `Ctrl+O`, `Enter`, `Ctrl+X`
+
+### Step 3: Build e avvia il container
+
+```bash
+docker-compose up -d
+```
+
+Questo:
+- ✅ Crea l'immagine Docker
+- ✅ Avvia il container `effata-bot`
+- ✅ Configura Traefik per HTTPS
+- ✅ Persiste dati in `output/`, `logs/`, `effata.db`
+
+### Step 4: Verifica che il bot sia online
+
+```bash
+docker-compose ps
+
+# Dovresti vedere:
+# NAME         STATUS
+# effata-bot   Up (healthy)
+```
+
+### Step 5: Vedi i log
+
+```bash
+docker-compose logs -f effata-bot
+```
+
+### Step 6: Accedi alla dashboard
+
+```
+http://bot.effataitalia.it
+```
+
+(Se hai configurato il sottodominio in Hostinger)
+
+---
+
+## 📋 Comandi Docker utili
+
+```bash
+# Riavvia il bot
+docker-compose restart effata-bot
+
+# Arresta il bot
+docker-compose stop effata-bot
+
+# Rimuovi il container
+docker-compose down
+
+# Aggiorna il codice e riavvia
+git pull origin main
+docker-compose up -d --build
+
+# Vedi i log
+docker-compose logs -f
+
+# Accedi al container (shell)
+docker-compose exec effata-bot sh
+```
+
+---
+
+## 🔄 Aggiornamenti futuri
+
+```bash
+cd ~/social_effata
+
+# Scarica gli ultimi cambiamenti
+git pull origin main
+
+# Rebuild e riavvia
+docker-compose up -d --build
+```
+
+---
+
+## ⚠️ Troubleshooting Docker
+
+**Il container non si avvia?**
+```bash
+docker-compose logs effata-bot
+```
+
+**Errore di permessi?**
+```bash
+sudo chown -R $USER:$USER ~/social_effata
+```
+
+**Porta già in uso?**
+```bash
+# Cambia porta in docker-compose.yml
+ports:
+  - "3001:3000"  # Usa 3001 invece di 3000
+```
+
+---
+
+### Deployment tradizionale (senza Docker)
+
+Se preferisci **Node.js + PM2** direttamente (senza Docker):
+
+---
+
+### Step 1: Accedi a Hostinger via SSH
 
 ```bash
 ssh user@effataitalia.it
-# Oppure usa il file manager del cPanel
-
-# Vai nella directory pubblica (o una cartella privata per il bot)
-cd /home/username/public_html
-# oppure
-cd /home/username/bot  # directory privata
+# oppure usa il File Manager di cPanel
 ```
 
-#### Step 2: Clone il repository
+Spostati in una directory privata (non public_html):
+```bash
+cd ~/bot
+# oppure
+mkdir ~/social_effata && cd ~/social_effata
+```
+
+---
+
+### Step 2: Clona il repository
 
 ```bash
 git clone https://github.com/pimpy67/social_effata.git
 cd social_effata
 ```
 
-#### Step 3: Installa le dipendenze
+---
+
+### Step 3: Installa Node.js (se non presente)
+
+Verifica se Node.js è disponibile:
+```bash
+node --version
+npm --version
+```
+
+Se non è installato, contatta Hostinger support per abilitarlo nel tuo piano.
+
+---
+
+### Step 4: Installa le dipendenze
 
 ```bash
 npm install
 ```
 
-#### Step 4: Configura .env
+---
+
+### Step 5: Configura il file .env
 
 ```bash
-# Crea il file .env
 nano .env
 ```
 
-Compila con i tuoi valori:
-
+Compila con i tuoi dati:
 ```bash
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234...
-ANTHROPIC_API_KEY=sk-ant-...
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ALLOWED_CHAT_ID=-1001234567890
+META_PAGE_ID=1078382168688068
+META_PAGE_ACCESS_TOKEN=your_meta_page_access_token_here
 PORT=3000
 ```
 
 Salva con `Ctrl+O`, `Enter`, `Ctrl+X`.
 
-#### Step 5: Installa PM2 (mantiene il bot sempre online)
+---
+
+### Step 6: Installa e configura PM2
+
+PM2 mantiene il bot sempre online anche se il server si riavvia.
 
 ```bash
 # Installa globalmente
@@ -796,70 +979,94 @@ npm install -g pm2
 # Avvia il bot con PM2
 pm2 start src/index.js --name "effata-bot"
 
-# Configura PM2 per auto-start al riavvio del server
+# Salva la configurazione (auto-start al riavvio)
 pm2 startup
 pm2 save
-```
 
-#### Step 6: Verifica che il bot stia girando
-
-```bash
+# Verifica che sia online
 pm2 list
-
-# Dovresti vedere:
-# id | name       | mode | ↺ | status | ↻ | cpu | mem
-# 0  | effata-bot | fork | 0 | online | 0 | 0%  | 20M
 ```
 
-#### Step 7: Accedi alla dashboard
-
-Nel browser:
-
+Dovresti vedere:
 ```
-http://effataitalia.it:3000
-```
-
-Oppure configura Nginx per un percorso (contatta Hostinger support):
-
-```
-http://effataitalia.it/dashboard
+id | name       | mode | ↺ | status | ↻ | cpu | mem
+0  | effata-bot | fork | 0 | online | 0 | 0%  | 45M
 ```
 
 ---
 
-### Deployment Alternativo: Railway o Render (Backup)
+### Step 7: Configura Nginx (reverse proxy)
 
-Se Hostinger non supporta Node.js, questi sono backup:
+Il bot gira su porta 3000, ma vogliamo accederlo da un URL pubblico (es. `bot.effataitalia.it` o `/bot`).
 
-#### Railway
+**Opzione A: Sottodominio `bot.effataitalia.it`**
 
+Contatta Hostinger per creare un record DNS/pointing per `bot.effataitalia.it` → IP del server.
+
+Poi crea file `/etc/nginx/sites-available/bot`:
 ```bash
-# 1. Registrati su railway.app
-# 2. Installa Railway CLI
-npm i -g @railway/cli
-
-# 3. Connetti il repo
-railway login
-railway init
-
-# 4. Deploy
-railway up
+sudo nano /etc/nginx/sites-available/bot
 ```
 
-#### Render
+Contenuto:
+```nginx
+server {
+    listen 80;
+    server_name bot.effataitalia.it;
 
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Abilita il sito:
 ```bash
-# 1. Registrati su render.com
-# 2. Connetti GitHub repository
-# 3. Create → Web Service
-# 4. Runtime: Node, Buildcommand: npm install, Start: npm start
+sudo ln -s /etc/nginx/sites-available/bot /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
 ```
 
 ---
 
-### Monitoraggio e Manutenzione
+**Opzione B: URL `effataitalia.it/bot`** (se preferisci)
 
-#### Visualizza i log
+Modifica il file di configurazione di effataitalia.it e aggiungi:
+```nginx
+location /bot {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+```
+
+---
+
+### Step 8: Verifica che il bot sia online
+
+Apri nel browser:
+```
+http://bot.effataitalia.it:3000
+```
+
+oppure (se hai usato il reverse proxy):
+```
+http://bot.effataitalia.it
+```
+
+Dovresti vedere la dashboard di Effatá! 🎉
+
+---
+
+### Step 9: Visualizza i log
 
 ```bash
 # Log in tempo reale
@@ -868,15 +1075,20 @@ pm2 logs effata-bot
 # Log ultimi 100 righe
 pm2 logs effata-bot --lines 100
 
-# Salva log in file
-pm2 logs effata-bot > bot.log
+# Log degli errori
+pm2 logs effata-bot --err
 ```
 
-#### Riavvia il bot (se serve update)
+---
+
+### Step 10: Aggiornamenti futuri
+
+Quando vuoi aggiornare il codice:
 
 ```bash
-# Aggiorna il codice
-cd /home/username/social_effata
+cd ~/social_effata
+
+# Scarica gli ultimi cambiamenti
 git pull origin main
 
 # Reinstalla dipendenze (se necessario)
@@ -884,134 +1096,82 @@ npm install
 
 # Riavvia il bot
 pm2 restart effata-bot
-```
 
-#### Arresta il bot
-
-```bash
-pm2 stop effata-bot
-```
-
-#### Rimuovi PM2 auto-start
-
-```bash
-pm2 delete effata-bot
-pm2 save
-```
-
----
-
-### Troubleshooting Deployment
-
-#### "Porta 3000 già in uso"
-```bash
-# Cambia porta in .env
-PORT=3001
-
-# Oppure trova il processo e killalo
-lsof -i :3000
-kill -9 <PID>
-```
-
-#### "TELEGRAM_BOT_TOKEN manca"
-```bash
-# Verifica il .env esista
-cat .env
-
-# Se non esiste, ricrealo:
-nano .env
-# Compila di nuovo
-```
-
-#### "PM2 non parte all'avvio"
-```bash
-# Verifica la configurazione
-pm2 startup
-pm2 save
-
-# Oppure ricrea manualmente
-pm2 delete effata-bot
-pm2 start src/index.js --name "effata-bot"
-pm2 startup
-pm2 save
-```
-
-#### "Dashboard non si vede"
-```bash
-# Verifica che il server stia girando
+# Verifica che sia online
 pm2 list
-
-# Verifica che la porta sia corretta nel browser
-http://effataitalia.it:3000
-
-# Se Hostinger ha filtri, contatta support per abilitare porta 3000
 ```
 
 ---
 
-### Monitoraggio Risorse (Hostinger)
+### Troubleshooting Hostinger
 
-Nel cPanel di Hostinger:
-
-1. **Resource Usage** → vedi CPU/RAM del bot
-2. **Error Log** → vedi errori Node.js
-3. **Access Log** → vedi richieste HTTP alla dashboard
-
-Se il bot usa troppa RAM/CPU, contatta Hostinger per upgrade del piano.
-
----
-
-### Workflow di Deploy (Riassunto)
-
-**Primo deploy**:
+**Porta 3000 bloccata da firewall?**
 ```bash
-ssh user@effataitalia.it
-cd /home/user/social_effata
-npm install
-# Compila .env
-npm install -g pm2
-pm2 start src/index.js --name "effata-bot"
+# Contatta Hostinger support per aprire la porta 3000
+# Oppure usa un reverse proxy Nginx (consigliato)
+```
+
+**PM2 non parte all'avvio?**
+```bash
 pm2 startup
 pm2 save
 ```
 
-**Aggiornare il codice**:
+**Errore di permessi?**
 ```bash
-cd /home/user/social_effata
-git pull origin main
-npm install
-pm2 restart effata-bot
+sudo chown -R $USER:$USER ~/social_effata
 ```
 
-**Fermare il bot**:
-```bash
-pm2 stop effata-bot
-```
 
 ---
 
-## Privacy e minori
 
-**Importante**: questo progetto tratta foto e storie di minori a scopo di raccolta fondi.
 
-Prima di pubblicare, assicurati sempre che:
-- ✅ Ci sia il consenso scritto della famiglia/tutore per la diffusione dell'immagine
-- ✅ Non vengano condivisi dettagli identificativi non necessari:
-  - Cognome completo
-  - Indirizzo esatto
-  - Nome della scuola specifica
-  - Nomi di altri familiari
-- ✅ Le foto non mostrino il volto intero o identificabile se non necessario
-
-Queste regole seguono le **buone prassi di child safeguarding** delle ONG internazionali (Save the Children, UNICEF, ecc.) — non sono optional.
 
 Se un volontario manda materiale che viola queste regole, **non generare**. Parla con il team di Effatá prima di procedere.
+
+## Come usare YouTube Shorts
+
+Il bot genera automaticamente uno **script completo per YouTube Shorts** che include:
+
+### Script YouTube Shorts (dalla dashboard)
+
+1. Vai a **http://localhost:3000**
+2. Clicca sulla bozza → tab **"▶️ YouTube Shorts"**
+3. Copia il contenuto (include: titolo, script voce, istruzioni montaggio, CTA)
+
+### Creare il video
+
+1. **Registra il video** (smartphone):
+   - Usa lo **script** come guida (cosa dire)
+   - Segui le **istruzioni** (quale foto mostrare, quando)
+   - Formato verticale (9:16)
+   - Durata: 30-45 secondi
+
+2. **Carica su YouTube Shorts**:
+   - Apri YouTube app (smartphone)
+   - Clicca **"Crea"** → **"Shorts"**
+   - Carica il video
+   - Aggiungi il **titolo** (dalla dashboard)
+   - Aggiungi la **CTA** (call-to-action dalla dashboard)
+   - Pubblica
+
+### Esempio YouTube Shorts
+
+**Titolo**: "Mable torna a scuola in Uganda"
+**Script**: "Mable voleva studiare ma la sua famiglia non poteva permettersi la retta. Con il vostro aiuto..."
+**Istruzioni**: "Mostra foto 1 per 5 sec → testo sovrapposto 'Nome scuola' → foto 2 per 8 sec"
+**CTA**: "Adotta uno studente su effataitalia.it"
+
+---
 
 ## Dipendenze
 
 - **@anthropic-ai/sdk**: Client Node.js per l'API Anthropic
 - **node-telegram-bot-api**: Wrapper Telegram Bot API
 - **dotenv**: Caricamento variabili d'ambiente da file `.env`
+- **sharp**: Ottimizzazione foto per ogni social
+- **axios**: HTTP client per Meta API
 
 Vedi `package.json` per le versioni esatte.
 
