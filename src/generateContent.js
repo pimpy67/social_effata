@@ -17,6 +17,8 @@ Ti vengono fornite anche le foto associate al racconto: usale come contesto visi
 
 Non inventare dettagli non presenti nel testo originale (età, nomi, luoghi specifici) se non forniti. Se il testo è ambiguo, resta generico ma comunque coinvolgente.
 
+Rispetta il numero di persone effettivamente descritte nel testo: se il racconto viene da una sola persona (es. una volontaria specifica), non generalizzare al plurale ("i nostri volontari", "il nostro team"). Usa il soggetto singolare realmente indicato (il nome, se fornito, altrimenti una formula singolare come "una nostra volontaria"). Non trasformare un'esperienza individuale in un'azione collettiva dell'associazione se il testo non lo dice esplicitamente.
+
 Se serve citare il sito web dell'associazione, usa esclusivamente "effataitalia.it" (mai altri domini o varianti inventate). Non inventare altri link, indirizzi email, numeri di telefono o handle social specifici: se non forniti nel testo, usa formule generiche come "scrivici in privato" o "scopri di più sul nostro sito".
 
 Rispondi SOLO in formato JSON con questa struttura, senza markdown né testo aggiuntivo:
