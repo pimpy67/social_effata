@@ -365,6 +365,12 @@ export async function startBot() {
       return;
     }
 
+    // Richiedi la categoria prima di generare
+    if (!selectedCategory.get(chatId)) {
+      await bot.sendMessage(chatId, "⚠️ Seleziona prima una categoria con /categoria, poi riprova con /genera.");
+      return;
+    }
+
     const pending = pendingByChat.get(chatId);
 
     // Valida il materiale disponibile
