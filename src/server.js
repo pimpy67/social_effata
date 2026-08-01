@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { ZipArchive } from "archiver";
 import { logger } from "./logger.js";
 import {
   getAllDrafts,
@@ -90,6 +91,44 @@ app.get("/api/drafts/:id/photos", (req, res) => {
     res.json({ photos });
   } catch (err) {
     logger.error(`Errore nel listare foto: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Scaricare testo e foto di una bozza in un unico zip (DEVE VENIRE PRIMA di /:id/:type)
+app.get("/api/drafts/:id/zip", (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!fs.existsSync(OUTPUT_DIR)) {
+      return res.status(404).json({ error: "Bozza non trovata" });
+    }
+
+    const files = fs.readdirSync(OUTPUT_DIR).filter((f) => f.startsWith(id + "_") || f.startsWith(id + "."));
+
+    if (files.length === 0) {
+      return res.status(404).json({ error: "Bozza non trovata" });
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="bozza-${id}.zip"`);
+
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    archive.on("error", (err) => {
+      logger.error(`Errore nella creazione dello zip per ${id}: ${err.message}`);
+      res.destroy();
+    });
+
+    archive.pipe(res);
+
+    for (const file of files) {
+      archive.file(path.join(OUTPUT_DIR, file), { name: file });
+    }
+
+    archive.finalize();
+    logger.info(`API /drafts/${id}/zip: ${files.length} file inclusi`);
+  } catch (err) {
+    logger.error(`Errore nel generare zip: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

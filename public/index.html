@@ -519,6 +519,10 @@
       }
     }
 
+    function downloadZip(id) {
+      window.location.href = `/api/drafts/${id}/zip`;
+    }
+
     function renderActionButtons(draft) {
       const id = draft.id;
       if (draft.status === "pubblicato") {
@@ -575,6 +579,7 @@
               </div>
               <div class="action-buttons">
                 <button class="btn-view" onclick="openDraft('${draft.id}'); event.stopPropagation();">👁️ Visualizza</button>
+                <button class="btn-download" onclick="downloadZip('${draft.id}'); event.stopPropagation();">📦 Zip</button>
                 ${renderActionButtons(draft)}
               </div>
             </div>
