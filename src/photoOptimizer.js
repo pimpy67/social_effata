@@ -17,9 +17,25 @@ export async function optimizePhotosForSocial(imageBuffers) {
     // Crea versioni ottimizzate per ogni social
     for (const [social, dimensions] of Object.entries(SOCIAL_DIMENSIONS)) {
       try {
-        // Usa la prima foto per tutti i social
+        if (social === "facebook") {
+          // Facebook supporta più foto per post: ottimizza tutte quelle caricate
+          optimized.facebook = await Promise.all(
+            imageBuffers.map((img) =>
+              sharp(img.buffer)
+                .resize(dimensions.width, dimensions.height, {
+                  fit: dimensions.fit,
+                  position: "center",
+                })
+                .jpeg({ quality: 90, progressive: true })
+                .toBuffer()
+            )
+          );
+          logger.debug(`${imageBuffers.length} foto ottimizzate per facebook (${dimensions.width}x${dimensions.height})`);
+          continue;
+        }
+
+        // Gli altri social usano un solo post/immagine: la prima foto
         const buffer = imageBuffers[0].buffer;
-        const mediaType = imageBuffers[0].mediaType || "image/jpeg";
 
         optimized[social] = await sharp(buffer)
           .resize(dimensions.width, dimensions.height, {
@@ -33,7 +49,7 @@ export async function optimizePhotosForSocial(imageBuffers) {
       } catch (err) {
         logger.warn(`Errore nell'ottimizzare foto per ${social}: ${err.message}`);
         // Fallback: usa la foto originale se l'ottimizzazione fallisce
-        optimized[social] = imageBuffers[0].buffer;
+        optimized[social] = social === "facebook" ? imageBuffers.map((img) => img.buffer) : imageBuffers[0].buffer;
       }
     }
 

@@ -87,22 +87,49 @@ export class MetaAPI {
     }
   }
 
-  async publishToFacebook(text, imageBuffer) {
+  // Carica una foto come "non pubblicata": serve per allegarla in un secondo
+  // momento a un post con più foto tramite attached_media.
+  async uploadUnpublishedPhoto(imageBuffer) {
+    const formData = new FormData();
+    const blob = new Blob([imageBuffer], { type: "image/jpeg" });
+    formData.append("source", blob, "image.jpg");
+    formData.append("published", "false");
+
+    const response = await axios.post(
+      `https://graph.facebook.com/v26.0/${this.pageId}/photos`,
+      formData,
+      {
+        params: {
+          access_token: this.pageAccessToken,
+        },
+      }
+    );
+
+    return response.data.id;
+  }
+
+  async publishToFacebook(text, imageBuffers) {
     if (!this.pageAccessToken || !this.pageId) {
       logger.warn("Meta API: pageAccessToken o pageId non configurati");
       return { success: false, error: "Credenziali Meta mancanti" };
     }
 
+    const photos = (Array.isArray(imageBuffers) ? imageBuffers : imageBuffers ? [imageBuffers] : []).filter(Boolean);
+
     try {
       const formData = new FormData();
       formData.append("message", text);
-
-      if (imageBuffer) {
-        const blob = new Blob([imageBuffer], { type: "image/jpeg" });
-        formData.append("source", blob, "image.jpg");
-      }
-
       formData.append("published", "false"); // Pubblica come bozza
+
+      if (photos.length === 1) {
+        const blob = new Blob([photos[0]], { type: "image/jpeg" });
+        formData.append("source", blob, "image.jpg");
+      } else if (photos.length > 1) {
+        // Facebook richiede di caricare ogni foto come "non pubblicata" e poi
+        // allegarle tutte a un unico post tramite attached_media.
+        const photoIds = await Promise.all(photos.map((buf) => this.uploadUnpublishedPhoto(buf)));
+        formData.append("attached_media", JSON.stringify(photoIds.map((id) => ({ media_fbid: id }))));
+      }
 
       const response = await axios.post(
         `https://graph.facebook.com/v26.0/${this.pageId}/feed`,
@@ -114,7 +141,7 @@ export class MetaAPI {
         }
       );
 
-      logger.info(`Post Facebook pubblicato (bozza): ${response.data.id}`);
+      logger.info(`Post Facebook pubblicato (bozza) con ${photos.length} foto: ${response.data.id}`);
       return { success: true, postId: response.data.id, platform: "facebook" };
     } catch (err) {
       logger.error(`Errore nella pubblicazione Facebook: ${err.message}`);
@@ -163,12 +190,14 @@ export class MetaAPI {
       errors: [],
     };
 
-    // Usa foto ottimizzate se disponibili, altrimenti usa la prima foto originale
-    const facebookPhoto = optimizedPhotos?.facebook || (photos.length > 0 ? photos[0].buffer : null);
+    // Usa foto ottimizzate se disponibili, altrimenti usa tutte le foto originali
+    const facebookPhotos = optimizedPhotos?.facebook
+      ? (Array.isArray(optimizedPhotos.facebook) ? optimizedPhotos.facebook : [optimizedPhotos.facebook])
+      : photos.map((p) => p.buffer);
     const instagramPhoto = optimizedPhotos?.instagram || (photos.length > 0 ? photos[0].buffer : null);
 
     try {
-      const fbResult = await this.publishToFacebook(facebookText, facebookPhoto);
+      const fbResult = await this.publishToFacebook(facebookText, facebookPhotos);
       results.facebook = fbResult;
       if (!fbResult.success) {
         results.errors.push(`Facebook: ${fbResult.error}`);

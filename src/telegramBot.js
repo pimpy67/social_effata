@@ -423,13 +423,23 @@ export async function startBot() {
         optimizedPhotos = await optimizePhotosForSocial(images);
         // Salva le foto ottimizzate con suffissi social
         for (const [social, buffer] of Object.entries(optimizedPhotos)) {
-          fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
+          if (Array.isArray(buffer)) {
+            buffer.forEach((b, idx) => fs.writeFileSync(`${outBase}_optimized_${social}_${idx + 1}.jpg`, b));
+          } else {
+            fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
+          }
         }
         logger.info(`Foto ottimizzate salvate per ${Object.keys(optimizedPhotos).length} social`);
       } catch (err) {
         logger.warn(`Errore nell'ottimizzazione foto: ${err.message}`);
         // Se l'ottimizzazione fallisce, usa le foto originali
-        optimizedPhotos = { facebook: images[0].buffer, instagram: images[0].buffer, linkedin: images[0].buffer, blog: images[0].buffer, reel: images[0].buffer };
+        optimizedPhotos = {
+          facebook: images.map((img) => img.buffer),
+          instagram: images[0].buffer,
+          linkedin: images[0].buffer,
+          blog: images[0].buffer,
+          reel: images[0].buffer,
+        };
       }
 
       // Cleanup: cancella i file temporanei da intake/
