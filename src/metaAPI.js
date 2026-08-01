@@ -4,6 +4,14 @@ import { logger } from "./logger.js";
 const GRAPH_API_VERSION = "v26.0";
 const GRAPH_API_URL = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
+// Estrae il messaggio d'errore reale restituito da Meta (es. token scaduto,
+// permesso mancante) invece del generico "Request failed with status code 4xx"
+// che axios mette in err.message.
+function metaErrorMessage(err) {
+  const metaError = err.response?.data?.error;
+  return metaError ? `${metaError.message} (code=${metaError.code}, subcode=${metaError.error_subcode ?? "-"})` : err.message;
+}
+
 export class MetaAPI {
   constructor(pageAccessToken, pageId) {
     this.pageAccessToken = pageAccessToken;
@@ -16,7 +24,7 @@ export class MetaAPI {
       await this.fetchInstagramAccountId();
       logger.info(`MetaAPI inizializzato. Instagram Account ID: ${this.instagramAccountId}`);
     } catch (err) {
-      logger.warn(`Errore nell'inizializzazione MetaAPI: ${err.message}`);
+      logger.warn(`Errore nell'inizializzazione MetaAPI: ${metaErrorMessage(err)}`);
     }
   }
 
@@ -39,7 +47,7 @@ export class MetaAPI {
           return;
         }
       } catch (err1) {
-        logger.debug(`Variante 1 (instagram_business_account) fallita: ${err1.message}`);
+        logger.debug(`Variante 1 (instagram_business_account) fallita: ${metaErrorMessage(err1)}`);
       }
 
       // Prova 2: instagram_business_accounts (plurale)
@@ -59,7 +67,7 @@ export class MetaAPI {
           return;
         }
       } catch (err2) {
-        logger.debug(`Variante 2 (instagram_business_accounts) fallita: ${err2.message}`);
+        logger.debug(`Variante 2 (instagram_business_accounts) fallita: ${metaErrorMessage(err2)}`);
       }
 
       // Prova 3: Endpoint diretto /instagram_accounts
@@ -78,12 +86,12 @@ export class MetaAPI {
           return;
         }
       } catch (err3) {
-        logger.debug(`Variante 3 (/instagram_accounts) fallita: ${err3.message}`);
+        logger.debug(`Variante 3 (/instagram_accounts) fallita: ${metaErrorMessage(err3)}`);
       }
 
       logger.warn("Instagram Business Account non trovato - tutte le varianti fallite");
     } catch (err) {
-      logger.error(`Errore nel recupero Instagram Account ID: ${err.message}`);
+      logger.error(`Errore nel recupero Instagram Account ID: ${metaErrorMessage(err)}`);
     }
   }
 
@@ -144,8 +152,9 @@ export class MetaAPI {
       logger.info(`Post Facebook pubblicato (bozza) con ${photos.length} foto: ${response.data.id}`);
       return { success: true, postId: response.data.id, platform: "facebook" };
     } catch (err) {
-      logger.error(`Errore nella pubblicazione Facebook: ${err.message}`);
-      return { success: false, error: err.message, platform: "facebook" };
+      const message = metaErrorMessage(err);
+      logger.error(`Errore nella pubblicazione Facebook: ${message}`);
+      return { success: false, error: message, platform: "facebook" };
     }
   }
 
@@ -176,8 +185,9 @@ export class MetaAPI {
 
       return { success: true, mediaId: response.data.id, platform: "instagram" };
     } catch (err) {
-      logger.error(`Errore nella pubblicazione Instagram: ${err.message}`);
-      return { success: false, error: err.message, platform: "instagram" };
+      const message = metaErrorMessage(err);
+      logger.error(`Errore nella pubblicazione Instagram: ${message}`);
+      return { success: false, error: message, platform: "instagram" };
     }
   }
 

@@ -839,6 +839,14 @@ http://bot.effataitalia.it
 
 ## 📋 Comandi Docker utili
 
+> ⚠️ Sul server di produzione è installato anche `docker-compose` (v1, in Python, deprecato):
+> ha un bug noto (`KeyError: 'ContainerConfig'`) che rompe qualsiasi comando che debba
+> *ricreare* un container esistente (`up -d`, `up -d --build`, ecc. — non i comandi che non
+> toccano container esistenti, come `logs` o `exec`). Usa sempre **`docker compose`** (con lo
+> spazio, plugin v2) per i comandi qui sotto — verifica quale hai con `docker compose version`.
+> Se un `docker compose up -d` fallisce comunque per lo stesso motivo, il container va rimosso
+> a mano prima di ricrearlo: `docker rm -f effata-bot && docker compose up -d`.
+
 ```bash
 # Riavvia il bot
 docker-compose restart effata-bot
@@ -893,6 +901,28 @@ sudo chown -R $USER:$USER ~/social_effata
 # Cambia porta in docker-compose.yml
 ports:
   - "3001:3000"  # Usa 3001 invece di 3000
+```
+
+**`ERROR: for effata-bot 'ContainerConfig'` durante `up -d`?**
+Bug di `docker-compose` v1 (vedi nota sopra). Usa `docker compose` (v2, con lo spazio) e, se il
+container esiste già in uno stato inconsistente, rimuovilo prima a mano:
+```bash
+docker rm -f effata-bot
+docker compose up -d
+```
+
+**Nei log compare "Error validating access token: Session has expired" (Facebook/Instagram)?**
+Il `META_PAGE_ACCESS_TOKEN` in `.env` è scaduto o è stato invalidato (es. logout dell'account
+Facebook usato per generarlo). Va rigenerato: Graph API Explorer (developers.facebook.com/tools/explorer)
+→ genera un token con i permessi `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`,
+`instagram_basic`, `instagram_content_publish` (selezionabili solo impostando "Utente o Pagina" sulla
+Pagina, non su "Token utente") → estendilo nell'Access Token Debugger ("Estendi token d'accesso") →
+usa il token esteso per chiamare `me/accounts?fields=name,access_token` nel Graph Explorer → copia
+l'`access_token` della Pagina in `.env`. **Non disconnetterti da Facebook nel browser** tra la
+generazione del token e il suo utilizzo, altrimenti si invalida di nuovo. Poi:
+```bash
+docker rm -f effata-bot
+docker compose up -d
 ```
 
 ---

@@ -2,9 +2,9 @@
 
 Piano di lavoro per accessi, tracciabilità delle pubblicazioni e riduzione dell'attrito nel passaggio foto → bozza → post pubblicato, dal PC e dal telefono.
 
-*01/08/2026 — Bozza per discussione. Aggiornato 01/08/2026: A2 e A3 implementate e verificate in produzione.*
+*01/08/2026 — Bozza per discussione. Aggiornato 01/08/2026: Fase A completata (A1, A2, A3) e verificata in produzione.*
 
-**In breve:** 8 categorie di storia già attive nel bot · 1 canale su 2 con bozza automatica via API (Facebook sì, Instagram da sbloccare) · dashboard ora protetta da password condivisa e con stato/nome volontario per ogni bozza.
+**In breve:** 8 categorie di storia già attive nel bot · 2 canali su 2 con bozza automatica via API (Facebook e Instagram) · dashboard protetta da password condivisa e con stato/nome volontario per ogni bozza.
 
 ---
 
@@ -16,9 +16,9 @@ Prima di proporre cose nuove, due funzioni che hai chiesto sono già scritte nel
 
 I comandi `/report-mese` e `/report-anno` nel bot restituiscono già il totale per ciascuna delle 8 categorie. Fino a oggi restavano vuoti perché `/categoria` non era obbligatoria prima di `/genera` — l'ho appena reso obbligatorio, quindi da adesso i report inizieranno a popolarsi da soli.
 
-### Pubblicazione automatica come bozza su Facebook — `scritto, da verificare`
+### Pubblicazione automatica come bozza su Facebook e Instagram — `verificato in produzione`
 
-`src/metaAPI.js` pubblica già il post Facebook come bozza *non pubblicata* direttamente sulla Pagina, via Graph API — se configurato, elimina del tutto il trascinamento immagini: il volontario apre Meta Business Suite e clicca "Pubblica", niente download/upload a mano. È scritto anche per Instagram, ma nei log l'associazione all'account Instagram Business della pagina fallisce sempre: è quasi certamente un problema di permessi/token, non di codice.
+`src/metaAPI.js` pubblica il post Facebook e la bozza Instagram direttamente sulla Pagina/account, via Graph API — elimina il trascinamento immagini: il volontario apre Meta Business Suite e clicca "Pubblica", niente download/upload a mano. Entrambi i canali verificati funzionanti il 01/08/2026 dopo aver rigenerato un Page Access Token valido con i permessi giusti (vedi A1).
 
 ---
 
@@ -38,7 +38,7 @@ In ordine di rapporto beneficio/sforzo. Nessuna fase presuppone la precedente co
 
 | # | Cosa | Perché |
 |---|------|--------|
-| A1 | **Sbloccare Meta API per Instagram** — `da fare` | Verificare `META_PAGE_ID` / `META_PAGE_ACCESS_TOKEN` nel `.env` del server e che l'account Instagram sia davvero collegato come account Business alla Pagina Facebook, con i permessi giusti sul token. Elimina il drag&drop per entrambi i canali principali. |
+| A1 | **Sbloccare Meta API per Instagram** — `fatto` | Il vero problema non erano i permessi Instagram: il `META_PAGE_ACCESS_TOKEN` era scaduto da giorni, il che aveva rotto silenziosamente anche Facebook. Rigenerato un Page Access Token a lunga durata con anche `instagram_basic`/`instagram_content_publish`; verificato in produzione — l'account Instagram Business risulta ora collegato e leggibile dall'API. |
 | A2 | **Stato bozza + nome di chi pubblica** — `fatto` | Tre stati per ogni bozza — *da pubblicare*, *in lavorazione*, *pubblicato* — più il nome del volontario, salvati nel database e visibili in dashboard con bottoni dedicati. Nome volontario ricordato dal browser tra una sessione e l'altra. |
 | A3 | **Accesso condiviso alla dashboard** — `fatto` | Password condivisa via Basic Auth su Nginx (utente `volontari`), verificata in produzione su bot.effataitalia.it: la dashboard ora richiede login prima di mostrare qualsiasi bozza. |
 
@@ -59,9 +59,9 @@ In ordine di rapporto beneficio/sforzo. Nessuna fase presuppone la precedente co
 
 ---
 
-## Confronto rapido: oggi vs. con Fase A completata
+## Confronto: prima vs. dopo Fase A (completata il 01/08/2026)
 
-| Passaggio | Oggi | Dopo Fase A |
+| Passaggio | Prima | Ora |
 |---|---|---|
 | Pubblicare su Facebook | Scarica foto, apri FB, trascina, incolla testo | Apri Meta Business Suite, clicca "Pubblica" |
 | Pubblicare su Instagram | Scarica foto, apri IG, carica, incolla testo | Apri Meta Business Suite, clicca "Pubblica" |
@@ -86,4 +86,6 @@ Da confermare — condiziona se C2 (bozza blog via API) è realisticamente fatti
 
 ## Prossimo passo
 
-A2 (stato bozza + nome) e A3 (password condivisa) sono fatte e verificate in produzione. Resta A1 (sblocco Meta API Instagram): richiede di verificare permessi/collegamento Business Account su Meta, non è risolvibile da codice.
+Fase A completata (A1, A2, A3) e verificata in produzione il 01/08/2026. Il prossimo passo naturale è scegliere da dove iniziare la Fase B — B1 (bottone "prendo in carico"), B2 (zip bozze) e B3 (condivisione mobile) sono indipendenti tra loro.
+
+**Nota operativa per manutenzione futura:** il `META_PAGE_ACCESS_TOKEN` è ora un token di sistema/pagina a lunga durata, ma non è impostato per non scadere mai in senso assoluto — se in futuro tornano errori "Session has expired" nei log, va rigenerato seguendo la stessa procedura (Graph API Explorer → estendi token → `me/accounts` per il Page Access Token). Sul server, usare sempre `docker compose` (con lo spazio, non `docker-compose` con il trattino) per evitare il bug di ricreazione container riscontrato il 01/08/2026.
