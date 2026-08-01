@@ -2,9 +2,9 @@
 
 Piano di lavoro per accessi, tracciabilità delle pubblicazioni e riduzione dell'attrito nel passaggio foto → bozza → post pubblicato, dal PC e dal telefono.
 
-*01/08/2026 — Bozza per discussione, nulla è ancora stato implementato.*
+*01/08/2026 — Bozza per discussione. Aggiornato 01/08/2026: A2 e A3 implementate e verificate in produzione.*
 
-**In breve:** 8 categorie di storia già attive nel bot · 1 canale su 2 con bozza automatica via API (Facebook sì, Instagram da sbloccare) · 0 volontari distinti riconosciuti oggi dalla dashboard.
+**In breve:** 8 categorie di storia già attive nel bot · 1 canale su 2 con bozza automatica via API (Facebook sì, Instagram da sbloccare) · dashboard ora protetta da password condivisa e con stato/nome volontario per ogni bozza.
 
 ---
 
@@ -38,9 +38,9 @@ In ordine di rapporto beneficio/sforzo. Nessuna fase presuppone la precedente co
 
 | # | Cosa | Perché |
 |---|------|--------|
-| A1 | **Sbloccare Meta API per Instagram** | Verificare `META_PAGE_ID` / `META_PAGE_ACCESS_TOKEN` nel `.env` del server e che l'account Instagram sia davvero collegato come account Business alla Pagina Facebook, con i permessi giusti sul token. Elimina il drag&drop per entrambi i canali principali. |
-| A2 | **Stato bozza + nome di chi pubblica** | Tre stati per ogni bozza — *da pubblicare*, *in lavorazione*, *pubblicato* — più il nome del volontario. Risolve tracciabilità e duplicazione del lavoro senza bisogno di un login vero: basta un campo nel database e due bottoni in dashboard. |
-| A3 | **Accesso condiviso alla dashboard** | Una password condivisa via Basic Auth su Nginx: protegge la dashboard in dieci minuti, senza toccare il codice dell'app. Sufficiente per un piccolo gruppo di volontari fidati. |
+| A1 | **Sbloccare Meta API per Instagram** — `da fare` | Verificare `META_PAGE_ID` / `META_PAGE_ACCESS_TOKEN` nel `.env` del server e che l'account Instagram sia davvero collegato come account Business alla Pagina Facebook, con i permessi giusti sul token. Elimina il drag&drop per entrambi i canali principali. |
+| A2 | **Stato bozza + nome di chi pubblica** — `fatto` | Tre stati per ogni bozza — *da pubblicare*, *in lavorazione*, *pubblicato* — più il nome del volontario, salvati nel database e visibili in dashboard con bottoni dedicati. Nome volontario ricordato dal browser tra una sessione e l'altra. |
+| A3 | **Accesso condiviso alla dashboard** — `fatto` | Password condivisa via Basic Auth su Nginx (utente `volontari`), verificata in produzione su bot.effataitalia.it: la dashboard ora richiede login prima di mostrare qualsiasi bozza. |
 
 ### Fase B — dopo, medio sforzo
 
@@ -86,4 +86,4 @@ Da confermare — condiziona se C2 (bozza blog via API) è realisticamente fatti
 
 ## Prossimo passo
 
-Scegliere da dove partire in Fase A. A1 (Meta API Instagram), A2 (stato bozza + nome) e A3 (password condivisa) sono indipendenti tra loro — si può cominciare da uno qualsiasi senza aspettare gli altri.
+A2 (stato bozza + nome) e A3 (password condivisa) sono fatte e verificate in produzione. Resta A1 (sblocco Meta API Instagram): richiede di verificare permessi/collegamento Business Account su Meta, non è risolvibile da codice.
