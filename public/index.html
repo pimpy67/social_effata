@@ -337,6 +337,24 @@
       display: block;
     }
 
+    .photo-share-btn {
+      width: 100%;
+      background: #667eea;
+      color: white;
+      border-radius: 0;
+      padding: 8px;
+      font-size: 13px;
+    }
+
+    .photo-share-btn:hover {
+      background: #5568d3;
+    }
+
+    .photo-share-btn:disabled {
+      background: #ccc;
+      cursor: default;
+    }
+
     .loading {
       text-align: center;
       padding: 40px;
@@ -523,6 +541,30 @@
       window.location.href = `/api/drafts/${id}/zip`;
     }
 
+    async function sharePhoto(filename) {
+      if (!navigator.share || !navigator.canShare) {
+        alert("La condivisione diretta è disponibile solo da telefono (Chrome/Safari recenti).");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/output/${filename}`);
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
+
+        if (!navigator.canShare({ files: [file] })) {
+          alert("Il tuo browser non supporta la condivisione di foto. Scarica lo zip e condividi da lì.");
+          return;
+        }
+
+        await navigator.share({ files: [file] });
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          alert(`Errore nella condivisione: ${err.message}`);
+        }
+      }
+    }
+
     function renderActionButtons(draft) {
       const id = draft.id;
       if (draft.status === "pubblicato") {
@@ -643,11 +685,18 @@
           return;
         }
 
+        const canShareFiles = !!(navigator.share && navigator.canShare);
+
         document.getElementById("photos-content").innerHTML = data.photos
           .map(
             (photo) => `
           <div class="photo">
             <img src="/output/${photo}" alt="Foto della bozza">
+            <button
+              class="photo-share-btn"
+              onclick="sharePhoto('${photo}')"
+              ${canShareFiles ? "" : 'disabled title="Condivisione diretta disponibile solo da telefono"'}
+            >📤 Condividi</button>
           </div>
         `
           )
