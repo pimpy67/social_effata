@@ -1034,6 +1034,62 @@ sudo systemctl restart nginx
 
 ---
 
+### Step 7bis: Proteggi la dashboard con una password condivisa (Basic Auth)
+
+La dashboard (`/api/drafts`, foto, testi delle bozze) è accessibile a chiunque conosca l'URL. Per un piccolo
+gruppo di volontari fidati basta una password condivisa via Nginx Basic Auth — protegge in pochi minuti,
+senza toccare il codice dell'app.
+
+Installa lo strumento per generare la password (se non già presente):
+```bash
+sudo apt install -y apache2-utils
+```
+
+Crea il file delle credenziali (la prima volta con `-c`, che lo crea da zero — **non** ripetere `-c` per
+aggiungere altri volontari, altrimenti sovrascrivi quelli già creati):
+```bash
+sudo htpasswd -c /etc/nginx/.htpasswd volontari
+# Ti chiede la password due volte. Scegline una da condividere col gruppo.
+```
+
+Per aggiungere un secondo utente/password in futuro (senza `-c`):
+```bash
+sudo htpasswd /etc/nginx/.htpasswd nome_altro_utente
+```
+
+Apri di nuovo la configurazione del sito e aggiungi le due righe `auth_basic*` dentro `location`:
+```bash
+sudo nano /etc/nginx/sites-available/bot
+```
+```nginx
+server {
+    listen 80;
+    server_name bot.effataitalia.it;
+
+    location / {
+        auth_basic "Area riservata Effatá";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Verifica e ricarica:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Da ora, aprendo la dashboard il browser chiederà utente e password una volta sola (li ricorda per sessione).
+
+---
+
 **Opzione B: URL `effataitalia.it/bot`** (se preferisci)
 
 Modifica il file di configurazione di effataitalia.it e aggiungi:
