@@ -124,9 +124,70 @@
       background: #e7fff0;
     }
 
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-badge.da_pubblicare {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-badge.in_lavorazione {
+      background: #cce5ff;
+      color: #004085;
+    }
+
+    .status-badge.pubblicato {
+      background: #d4edda;
+      color: #155724;
+    }
+
     .action-buttons {
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-status {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-status:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-status.primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-status.primary:hover {
+      background: #5568d3;
+    }
+
+    .volunteer-name {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+
+    .volunteer-name a {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: underline;
     }
 
     button {
@@ -338,6 +399,10 @@
       <p class="subtitle">Visualizza, approva e scarica le bozze di contenuti generati</p>
     </header>
 
+    <div class="volunteer-name">
+      <a onclick="changeVolunteerName()">🙋 <span id="volunteer-label">Chi sei?</span></a>
+    </div>
+
     <div id="error-container"></div>
     <div id="drafts-container" class="drafts-grid">
       <div class="loading">⏳ Caricamento bozze...</div>
@@ -393,8 +458,80 @@
   <script>
     let currentDraftId = null;
 
+    const STATUS_LABELS = {
+      da_pubblicare: "🕓 Da pubblicare",
+      in_lavorazione: "✋ In lavorazione",
+      pubblicato: "✅ Pubblicato",
+    };
+
     // Carica l'elenco delle bozze al caricamento della pagina
-    document.addEventListener("DOMContentLoaded", loadDrafts);
+    document.addEventListener("DOMContentLoaded", () => {
+      updateVolunteerLabel();
+      loadDrafts();
+    });
+
+    function getVolunteerName() {
+      let name = localStorage.getItem("effata_volunteer_name");
+      if (!name) {
+        name = prompt("Il tuo nome (per tracciare chi prende in carico/pubblica le bozze):");
+        if (!name || !name.trim()) return null;
+        name = name.trim();
+        localStorage.setItem("effata_volunteer_name", name);
+        updateVolunteerLabel();
+      }
+      return name;
+    }
+
+    function changeVolunteerName() {
+      const name = prompt("Il tuo nome:", localStorage.getItem("effata_volunteer_name") || "");
+      if (name && name.trim()) {
+        localStorage.setItem("effata_volunteer_name", name.trim());
+        updateVolunteerLabel();
+      }
+    }
+
+    function updateVolunteerLabel() {
+      const name = localStorage.getItem("effata_volunteer_name");
+      document.getElementById("volunteer-label").textContent = name ? `Tu sei: ${name}` : "Chi sei?";
+    }
+
+    async function updateDraftStatus(id, status, event) {
+      if (event) event.stopPropagation();
+
+      const name = getVolunteerName();
+      if (!name) return;
+
+      try {
+        const response = await fetch(`/api/drafts/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status, publishedBy: name }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Errore nell'aggiornare lo stato");
+        }
+
+        loadDrafts();
+      } catch (err) {
+        alert(`Errore: ${err.message}`);
+      }
+    }
+
+    function renderActionButtons(draft) {
+      const id = draft.id;
+      if (draft.status === "pubblicato") {
+        return `<button class="btn-status" onclick="updateDraftStatus('${id}', 'da_pubblicare', event)">↩️ Riapri</button>`;
+      }
+      if (draft.status === "in_lavorazione") {
+        return `
+          <button class="btn-status primary" onclick="updateDraftStatus('${id}', 'pubblicato', event)">✅ Segna pubblicato</button>
+          <button class="btn-status" onclick="updateDraftStatus('${id}', 'da_pubblicare', event)">↩️ Rilascia</button>
+        `;
+      }
+      return `<button class="btn-status primary" onclick="updateDraftStatus('${id}', 'in_lavorazione', event)">✋ Prendo in carico</button>`;
+    }
 
     async function loadDrafts() {
       try {
@@ -426,6 +563,9 @@
               </div>
             </div>
             <div class="draft-card-body">
+              <div class="status-row">
+                <span class="status-badge ${draft.status}">${STATUS_LABELS[draft.status]}${draft.publishedBy ? ` — ${draft.publishedBy}` : ""}</span>
+              </div>
               <div class="draft-formats">
                 ${draft.files.facebook ? '<span class="format-badge facebook">Facebook</span>' : ''}
                 ${draft.files.instagram ? '<span class="format-badge instagram">Instagram</span>' : ''}
@@ -435,6 +575,7 @@
               </div>
               <div class="action-buttons">
                 <button class="btn-view" onclick="openDraft('${draft.id}'); event.stopPropagation();">👁️ Visualizza</button>
+                ${renderActionButtons(draft)}
               </div>
             </div>
           </div>

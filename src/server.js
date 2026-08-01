@@ -3,7 +3,16 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
-import { getAllDrafts, queryDrafts, getStatistics, getMonthlyReport, getYearlyReport } from "./database.js";
+import {
+  getAllDrafts,
+  queryDrafts,
+  getStatistics,
+  getMonthlyReport,
+  getYearlyReport,
+  getDraftStatuses,
+  updateDraftStatus,
+  DRAFT_STATUSES,
+} from "./database.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
@@ -45,6 +54,14 @@ app.get("/api/drafts", (req, res) => {
     const result = Object.values(drafts).sort(
       (a, b) => parseInt(b.id) - parseInt(a.id)
     );
+
+    // Arricchisce ogni bozza con stato e volontario dal database
+    const statuses = getDraftStatuses();
+    result.forEach((draft) => {
+      const info = statuses[draft.id];
+      draft.status = info?.status || "da_pubblicare";
+      draft.publishedBy = info?.publishedBy || null;
+    });
 
     logger.info(`API /drafts: ${result.length} bozze trovate`);
     res.json(result);
@@ -98,6 +115,30 @@ app.get("/api/drafts/:id/:type", (req, res) => {
     res.json({ content });
   } catch (err) {
     logger.error(`Errore nel leggere draft: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Aggiornare stato (da_pubblicare / in_lavorazione / pubblicato) e nome del volontario
+app.patch("/api/drafts/:id/status", (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, publishedBy } = req.body;
+
+    if (!DRAFT_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Stato non valido. Usa: ${DRAFT_STATUSES.join(", ")}` });
+    }
+
+    const updated = updateDraftStatus(id, status, publishedBy || null);
+
+    if (!updated) {
+      return res.status(404).json({ error: "Bozza non trovata nel database" });
+    }
+
+    logger.info(`API /drafts/${id}/status: aggiornato a ${status} (${publishedBy || "nessun nome"})`);
+    res.json({ success: true, status, publishedBy: publishedBy || null });
+  } catch (err) {
+    logger.error(`Errore nell'aggiornare stato bozza: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

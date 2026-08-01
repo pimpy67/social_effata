@@ -7,6 +7,8 @@ import { logger } from "./logger.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, "..", "effata.db");
 
+export const DRAFT_STATUSES = ["da_pubblicare", "in_lavorazione", "pubblicato"];
+
 let db = null;
 let SQL = null;
 
@@ -50,9 +52,31 @@ function createTables() {
       )
     `);
 
+    // Aggiunte in modo retrocompatibile: i DB creati prima di questa
+    // versione non hanno ancora queste colonne.
+    ensureColumn("drafts", "status", "TEXT NOT NULL DEFAULT 'da_pubblicare'");
+    ensureColumn("drafts", "publishedBy", "TEXT");
+
     logger.debug("Tabella 'drafts' creata/verificata");
   } catch (err) {
     logger.error(`Errore nella creazione tabelle: ${err.message}`);
+  }
+}
+
+function ensureColumn(table, column, definition) {
+  const stmt = db.prepare(`PRAGMA table_info(${table})`);
+  let exists = false;
+  while (stmt.step()) {
+    if (stmt.getAsObject().name === column) {
+      exists = true;
+      break;
+    }
+  }
+  stmt.free();
+
+  if (!exists) {
+    db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    logger.info(`Colonna '${column}' aggiunta a '${table}'`);
   }
 }
 
@@ -77,7 +101,7 @@ export function saveDraft(timestamp, photoCount, formats, textLength, category =
 export function getAllDrafts() {
   try {
     const stmt = db.prepare(`
-      SELECT timestamp, createdAt, photoCount, formats, textLength
+      SELECT timestamp, createdAt, photoCount, formats, textLength, status, publishedBy
       FROM drafts
       ORDER BY timestamp DESC
     `);
@@ -91,6 +115,8 @@ export function getAllDrafts() {
         photoCount: row.photoCount,
         formats: JSON.parse(row.formats),
         textLength: row.textLength,
+        status: row.status,
+        publishedBy: row.publishedBy,
       });
     }
 
@@ -99,6 +125,58 @@ export function getAllDrafts() {
   } catch (err) {
     logger.error(`Errore nel recuperare bozze: ${err.message}`);
     return [];
+  }
+}
+
+// Ritorna stato + volontario per ogni bozza, indicizzati per timestamp
+// (come stringa, per essere confrontabili con gli id derivati dai nomi file).
+export function getDraftStatuses() {
+  try {
+    const stmt = db.prepare(`SELECT timestamp, status, publishedBy FROM drafts`);
+    const statuses = {};
+
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      statuses[String(row.timestamp)] = {
+        status: row.status,
+        publishedBy: row.publishedBy,
+      };
+    }
+
+    stmt.free();
+    return statuses;
+  } catch (err) {
+    logger.error(`Errore nel recuperare stato bozze: ${err.message}`);
+    return {};
+  }
+}
+
+// Aggiorna stato e/o nome del volontario per una bozza esistente.
+// Ritorna false se lo stato non è valido o se non esiste nessuna bozza con quel timestamp.
+export function updateDraftStatus(timestamp, status, publishedBy = null) {
+  if (!DRAFT_STATUSES.includes(status)) {
+    logger.warn(`Stato bozza non valido: ${status}`);
+    return false;
+  }
+
+  try {
+    db.run(`UPDATE drafts SET status = ?, publishedBy = ? WHERE timestamp = ?`, [
+      status,
+      publishedBy,
+      timestamp,
+    ]);
+
+    const changed = db.getRowsModified() > 0;
+    if (changed) {
+      saveDatabase();
+      logger.info(`Bozza ${timestamp}: stato -> ${status}${publishedBy ? ` (${publishedBy})` : ""}`);
+    } else {
+      logger.warn(`Aggiornamento stato: nessuna bozza trovata con timestamp=${timestamp}`);
+    }
+    return changed;
+  } catch (err) {
+    logger.error(`Errore nell'aggiornare stato bozza: ${err.message}`);
+    return false;
   }
 }
 
@@ -144,6 +222,8 @@ export function queryDrafts(filters = {}) {
         photoCount: row.photoCount,
         formats: JSON.parse(row.formats),
         textLength: row.textLength,
+        status: row.status,
+        publishedBy: row.publishedBy,
       });
     }
 
