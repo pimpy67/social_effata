@@ -2,9 +2,9 @@
 
 Piano di lavoro per accessi, tracciabilità delle pubblicazioni e riduzione dell'attrito nel passaggio foto → bozza → post pubblicato, dal PC e dal telefono.
 
-*01/08/2026 — Bozza per discussione. Aggiornato 01/08/2026: Fase A completata (A1, A2, A3) e verificata in produzione.*
+*01/08/2026 — Bozza per discussione. Aggiornato 01/08/2026: Fase A e Fase B completate e verificate in produzione.*
 
-**In breve:** 8 categorie di storia già attive nel bot · 2 canali su 2 con bozza automatica via API (Facebook e Instagram) · dashboard protetta da password condivisa e con stato/nome volontario per ogni bozza.
+**In breve:** 8 categorie di storia già attive nel bot · 2 canali su 2 con bozza automatica via API (Facebook e Instagram) · dashboard protetta da password condivisa, con stato/nome volontario, download zip e condivisione mobile per ogni bozza.
 
 ---
 
@@ -42,13 +42,13 @@ In ordine di rapporto beneficio/sforzo. Nessuna fase presuppone la precedente co
 | A2 | **Stato bozza + nome di chi pubblica** — `fatto` | Tre stati per ogni bozza — *da pubblicare*, *in lavorazione*, *pubblicato* — più il nome del volontario, salvati nel database e visibili in dashboard con bottoni dedicati. Nome volontario ricordato dal browser tra una sessione e l'altra. |
 | A3 | **Accesso condiviso alla dashboard** — `fatto` | Password condivisa via Basic Auth su Nginx (utente `volontari`), verificata in produzione su bot.effataitalia.it: la dashboard ora richiede login prima di mostrare qualsiasi bozza. |
 
-### Fase B — dopo, medio sforzo
+### Fase B — dopo, medio sforzo — `completata 01/08/2026`
 
 | # | Cosa | Perché |
 |---|------|--------|
-| B1 | **Bottone "prendo in carico"** | Marca una storia come in lavorazione da una persona specifica, visibile a tutti al refresh della pagina — evita che due volontari pubblichino la stessa storia due volte, senza bisogno di aggiornamenti in tempo reale. |
-| B2 | **Scarica tutto in un colpo (zip)** | Per i canali senza pubblicazione via API (blog, LinkedIn): un bottone che impacchetta testo e foto della bozza in uno zip, comodo da desktop. |
-| B3 | **Condivisione diretta da mobile** | Un bottone "condividi foto" che sul telefono apre il menu nativo di condivisione e passa l'immagine direttamente all'app Instagram/Facebook, senza salvarla prima in galleria. |
+| B1 | **Bottone "prendo in carico"** — `fatto (incluso in A2)` | Marca una storia come in lavorazione da una persona specifica, visibile a tutti al refresh della pagina. Già coperto dai bottoni stato/volontario costruiti per A2, nessun lavoro aggiuntivo servito. |
+| B2 | **Scarica tutto in un colpo (zip)** — `fatto` | Bottone "📦 Zip" su ogni bozza in dashboard: scarica testo e foto in un unico archivio via `GET /api/drafts/:id/zip` (streaming, nessun file temporaneo su disco). Utile per i canali senza pubblicazione via API (blog, LinkedIn, Reel). |
+| B3 | **Condivisione diretta da mobile** — `fatto` | Bottone "📤 Condividi" su ogni foto nel tab Foto della bozza: su telefono (Chrome/Safari recenti) apre il menu nativo di condivisione via Web Share API, passando la foto direttamente a Instagram/Facebook senza salvarla in galleria. Da desktop il bottone è disabilitato (i browser desktop non supportano la condivisione di file). |
 
 ### Fase C — solo se serve davvero
 
@@ -86,6 +86,6 @@ Da confermare — condiziona se C2 (bozza blog via API) è realisticamente fatti
 
 ## Prossimo passo
 
-Fase A completata (A1, A2, A3) e verificata in produzione il 01/08/2026. Il prossimo passo naturale è scegliere da dove iniziare la Fase B — B1 (bottone "prendo in carico"), B2 (zip bozze) e B3 (condivisione mobile) sono indipendenti tra loro.
+Fase A (A1, A2, A3) e Fase B (B1, B2, B3) completate e verificate il 01/08/2026. Restano solo le voci di Fase C, da valutare solo se servono davvero (vedi sopra): C1 (account individuali) ha senso solo con molti volontari; C2 (LinkedIn/blog via API) richiede approvazioni esterne non banali.
 
 **Nota operativa per manutenzione futura:** il `META_PAGE_ACCESS_TOKEN` è ora un token di sistema/pagina a lunga durata, ma non è impostato per non scadere mai in senso assoluto — se in futuro tornano errori "Session has expired" nei log, va rigenerato seguendo la stessa procedura (Graph API Explorer → estendi token → `me/accounts` per il Page Access Token). Sul server, usare sempre `docker compose` (con lo spazio, non `docker-compose` con il trattino) per evitare il bug di ricreazione container riscontrato il 01/08/2026.
