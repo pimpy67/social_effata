@@ -191,6 +191,30 @@ export class MetaAPI {
     });
   }
 
+  // Instagram elabora l'immagine in modo asincrono dopo la creazione del container:
+  // bisogna aspettare status_code === "FINISHED" prima di poter chiamare media_publish,
+  // altrimenti fallisce con "Media ID is not available" (code=9007).
+  async waitForMediaReady(creationId, maxAttempts = 10, delayMs = 2000) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const response = await axios.get(`https://graph.facebook.com/v26.0/${creationId}`, {
+        params: {
+          fields: "status_code",
+          access_token: this.pageAccessToken,
+        },
+      });
+
+      const statusCode = response.data.status_code;
+      if (statusCode === "FINISHED") return;
+      if (statusCode === "ERROR") {
+        throw new Error("Elaborazione del media Instagram fallita (status ERROR)");
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    throw new Error("Timeout in attesa che Instagram elaborasse il media");
+  }
+
   // ATTENZIONE: a differenza di Facebook, Instagram non supporta le bozze via API.
   // Questo pubblica il post immediatamente e pubblicamente sul profilo Instagram.
   async publishToInstagram(text, imageBuffer) {
@@ -217,6 +241,8 @@ export class MetaAPI {
 
       const creationId = createResponse.data.id;
       logger.info(`Media Instagram creato (container): ${creationId}`);
+
+      await this.waitForMediaReady(creationId);
 
       const publishResponse = await axios.post(
         `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
