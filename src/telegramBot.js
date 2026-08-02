@@ -457,7 +457,7 @@ export async function startBot() {
             metaMessage += "📘 Facebook: pubblicato (bozza)\n";
           }
           if (metaResults.instagram?.success) {
-            metaMessage += "📷 Instagram: pubblicato (bozza)\n";
+            metaMessage += "📷 Instagram: pubblicato online (già visibile a tutti)\n";
           }
           if (metaResults.errors.length > 0) {
             metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;

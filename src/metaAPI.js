@@ -116,6 +116,28 @@ export class MetaAPI {
     return response.data.id;
   }
 
+  // Instagram non accetta l'upload diretto del file per creare un media: vuole un
+  // image_url pubblico che i suoi server possano scaricare da soli. Riusiamo il
+  // caricamento come "foto non pubblicata" su Facebook (sopra) per ottenere un URL
+  // sul CDN di Facebook, pubblico ma senza comparire nella pagina.
+  async getPublicImageUrl(imageBuffer) {
+    const photoId = await this.uploadUnpublishedPhoto(imageBuffer);
+
+    const response = await axios.get(`https://graph.facebook.com/v26.0/${photoId}`, {
+      params: {
+        fields: "images",
+        access_token: this.pageAccessToken,
+      },
+    });
+
+    const images = response.data.images;
+    if (!images || images.length === 0) {
+      throw new Error("Impossibile ottenere un URL pubblico per l'immagine");
+    }
+
+    return images[0].source;
+  }
+
   async publishToFacebook(text, imageBuffers) {
     if (!this.pageAccessToken || !this.pageId) {
       logger.warn("Meta API: pageAccessToken o pageId non configurati");
@@ -158,6 +180,8 @@ export class MetaAPI {
     }
   }
 
+  // ATTENZIONE: a differenza di Facebook, Instagram non supporta le bozze via API.
+  // Questo pubblica il post immediatamente e pubblicamente sul profilo Instagram.
   async publishToInstagram(text, imageBuffer) {
     if (!this.instagramAccountId || !this.pageAccessToken) {
       logger.warn("Meta API: instagramAccountId o token non disponibili");
@@ -166,24 +190,37 @@ export class MetaAPI {
 
     try {
       if (!imageBuffer) {
-        logger.warn("Instgram richiede un'immagine per i post. Saltando...");
+        logger.warn("Instagram richiede un'immagine per i post. Saltando...");
         return { success: false, error: "Immagine richiesta per Instagram" };
       }
 
-      const formData = new FormData();
-      const blob = new Blob([imageBuffer], { type: "image/jpeg" });
-      formData.append("image_url", blob);
-      formData.append("caption", text);
-      formData.append("access_token", this.pageAccessToken);
+      const imageUrl = await this.getPublicImageUrl(imageBuffer);
 
-      const response = await axios.post(
-        `${GRAPH_API_URL}/${this.instagramAccountId}/media`,
-        formData
+      const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
+        params: {
+          image_url: imageUrl,
+          caption: text,
+          access_token: this.pageAccessToken,
+        },
+      });
+
+      const creationId = createResponse.data.id;
+      logger.info(`Media Instagram creato (container): ${creationId}`);
+
+      const publishResponse = await axios.post(
+        `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
+        null,
+        {
+          params: {
+            creation_id: creationId,
+            access_token: this.pageAccessToken,
+          },
+        }
       );
 
-      logger.info(`Media Instagram creato (draft): ${response.data.id}`);
+      logger.info(`Post Instagram pubblicato: ${publishResponse.data.id}`);
 
-      return { success: true, mediaId: response.data.id, platform: "instagram" };
+      return { success: true, mediaId: publishResponse.data.id, platform: "instagram" };
     } catch (err) {
       const message = metaErrorMessage(err);
       logger.error(`Errore nella pubblicazione Instagram: ${message}`);
