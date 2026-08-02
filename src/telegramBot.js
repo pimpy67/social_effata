@@ -318,6 +318,7 @@ export async function startBot() {
         msg.chat.id,
         `📥 Foto aggiunta (${pending.photos.length}/${validation.getLimits().MAX_TOTAL_PHOTOS}). Manda altre foto/testi, oppure scrivi /genera quando hai finito.`
       );
+      await remindCategoryIfNeeded(msg.chat.id, pending);
     } catch (err) {
       logger.error(`Errore nel scaricare la foto: ${err.message}`);
       await bot.sendMessage(msg.chat.id, "⚠️ Errore nel download della foto, riprova.");
@@ -569,7 +570,39 @@ export async function startBot() {
     saveState();
     logger.info(`Testo aggiunto: ${msg.text.length} char (${pending.notes.length} totali)`);
     await bot.sendMessage(msg.chat.id, "📝 Testo aggiunto al materiale in attesa.");
+    await remindCategoryIfNeeded(msg.chat.id, pending);
   });
+
+  const HELP_TEXT = `👋 Ciao! Ecco come funziona il bot per creare le storie social:
+
+1️⃣ Scegli la categoria della storia con /categoria (es. Adozioni scolastiche, Animali domestici, ...)
+2️⃣ Manda le foto e un testo/descrizione della storia (uno o più messaggi, come preferisci)
+3️⃣ Scrivi /genera per creare le bozze
+
+Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
+
+Altri comandi utili:
+/status - vedi quante foto/testi hai in attesa
+/reset - cancella il materiale in attesa e ricomincia
+/report-mese - riepilogo storie del mese
+/report-anno - riepilogo storie dell'anno`;
+
+  bot.onText(/^\/(start|help|aiuto)$/i, async (msg) => {
+    if (!isAllowed(msg.chat.id)) return;
+    await bot.sendMessage(msg.chat.id, HELP_TEXT);
+  });
+
+  // Ricorda (una sola volta per storia) di scegliere la categoria se non è stata
+  // ancora selezionata quando arrivano foto o testo.
+  async function remindCategoryIfNeeded(chatId, pending) {
+    if (selectedCategory.get(chatId) || pending.categoryReminded) return;
+    pending.categoryReminded = true;
+    saveState();
+    await bot.sendMessage(
+      chatId,
+      "⚠️ Non hai ancora scelto una categoria per questa storia. Usa /categoria prima di scrivere /genera."
+    );
+  }
 
   bot.onText(/^\/status$/i, async (msg) => {
     const chatId = msg.chat.id;
@@ -742,7 +775,10 @@ export async function startBot() {
     const steps = CATEGORY_STEPS[selected.id] || [];
     if (steps.length > 0) {
       categorySessions.set(chatId, { steps, step: 0, data: {} });
-      await bot.sendMessage(chatId, steps[0].question);
+      await bot.sendMessage(
+        chatId,
+        `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.\n\n${steps[0].question}`
+      );
       return;
     }
 
