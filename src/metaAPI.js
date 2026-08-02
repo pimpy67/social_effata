@@ -217,32 +217,66 @@ export class MetaAPI {
 
   // ATTENZIONE: a differenza di Facebook, Instagram non supporta le bozze via API.
   // Questo pubblica il post immediatamente e pubblicamente sul profilo Instagram.
-  async publishToInstagram(text, imageBuffer) {
+  async publishToInstagram(text, imageBuffers) {
     if (!this.instagramAccountId || !this.pageAccessToken) {
       logger.warn("Meta API: instagramAccountId o token non disponibili");
       return { success: false, error: "Account Instagram non collegato" };
     }
 
+    // Instagram supporta al massimo 10 foto per carosello.
+    const photos = (Array.isArray(imageBuffers) ? imageBuffers : imageBuffers ? [imageBuffers] : [])
+      .filter(Boolean)
+      .slice(0, 10);
+
+    if (photos.length === 0) {
+      logger.warn("Instagram richiede almeno un'immagine per i post. Saltando...");
+      return { success: false, error: "Immagine richiesta per Instagram" };
+    }
+
     try {
-      if (!imageBuffer) {
-        logger.warn("Instagram richiede un'immagine per i post. Saltando...");
-        return { success: false, error: "Immagine richiesta per Instagram" };
+      let creationId;
+
+      if (photos.length === 1) {
+        const imageUrl = await this.getPublicImageUrl(photos[0]);
+        const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
+          params: {
+            image_url: imageUrl,
+            caption: text,
+            access_token: this.pageAccessToken,
+          },
+        });
+        creationId = createResponse.data.id;
+        await this.waitForMediaReady(creationId);
+      } else {
+        // Carosello: un container per ogni foto (is_carousel_item, senza caption),
+        // poi un container "genitore" (media_type=CAROUSEL) che le raggruppa con la caption.
+        const itemIds = [];
+        for (const buffer of photos) {
+          const imageUrl = await this.getPublicImageUrl(buffer);
+          const itemResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
+            params: {
+              image_url: imageUrl,
+              is_carousel_item: true,
+              access_token: this.pageAccessToken,
+            },
+          });
+          await this.waitForMediaReady(itemResponse.data.id);
+          itemIds.push(itemResponse.data.id);
+        }
+
+        const carouselResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
+          params: {
+            media_type: "CAROUSEL",
+            children: itemIds.join(","),
+            caption: text,
+            access_token: this.pageAccessToken,
+          },
+        });
+        creationId = carouselResponse.data.id;
+        await this.waitForMediaReady(creationId);
       }
 
-      const imageUrl = await this.getPublicImageUrl(imageBuffer);
-
-      const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
-        params: {
-          image_url: imageUrl,
-          caption: text,
-          access_token: this.pageAccessToken,
-        },
-      });
-
-      const creationId = createResponse.data.id;
-      logger.info(`Media Instagram creato (container): ${creationId}`);
-
-      await this.waitForMediaReady(creationId);
+      logger.info(`Media Instagram creato (container): ${creationId} (${photos.length} foto)`);
 
       const publishResponse = await axios.post(
         `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
@@ -278,7 +312,9 @@ export class MetaAPI {
     const facebookPhotos = optimizedPhotos?.facebook
       ? (Array.isArray(optimizedPhotos.facebook) ? optimizedPhotos.facebook : [optimizedPhotos.facebook])
       : photos.map((p) => p.buffer);
-    const instagramPhoto = optimizedPhotos?.instagram || (photos.length > 0 ? photos[0].buffer : null);
+    const instagramPhotos = optimizedPhotos?.instagram
+      ? (Array.isArray(optimizedPhotos.instagram) ? optimizedPhotos.instagram : [optimizedPhotos.instagram])
+      : photos.map((p) => p.buffer);
 
     try {
       const fbResult = await this.publishToFacebook(facebookText, facebookPhotos);
@@ -291,7 +327,7 @@ export class MetaAPI {
     }
 
     try {
-      const igResult = await this.publishToInstagram(instagramText, instagramPhoto);
+      const igResult = await this.publishToInstagram(instagramText, instagramPhotos);
       results.instagram = igResult;
       if (!igResult.success) {
         results.errors.push(`Instagram: ${igResult.error}`);

@@ -402,7 +402,7 @@ export async function startBot() {
         // Se l'ottimizzazione fallisce, usa le foto originali
         optimizedPhotos = {
           facebook: images.map((img) => img.buffer),
-          instagram: images[0].buffer,
+          instagram: images.map((img) => img.buffer),
           linkedin: images[0].buffer,
           blog: images[0].buffer,
           reel: images[0].buffer,
