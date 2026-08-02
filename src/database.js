@@ -201,11 +201,12 @@ export function getAllDrafts() {
   }
 }
 
-// Ritorna stato + volontario per ogni bozza, indicizzati per timestamp
-// (come stringa, per essere confrontabili con gli id derivati dai nomi file).
+// Ritorna stato, volontario, categoria e dati extra per ogni bozza, indicizzati
+// per timestamp (come stringa, per essere confrontabili con gli id derivati dai
+// nomi file). Usato dalla dashboard per costruire un titolo leggibile.
 export function getDraftStatuses() {
   try {
-    const stmt = db.prepare(`SELECT timestamp, status, publishedBy FROM drafts`);
+    const stmt = db.prepare(`SELECT timestamp, status, publishedBy, category, categoryData FROM drafts`);
     const statuses = {};
 
     while (stmt.step()) {
@@ -213,6 +214,8 @@ export function getDraftStatuses() {
       statuses[String(row.timestamp)] = {
         status: row.status,
         publishedBy: row.publishedBy,
+        category: row.category || null,
+        categoryData: row.categoryData ? JSON.parse(row.categoryData) : null,
       };
     }
 

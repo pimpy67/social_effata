@@ -22,6 +22,16 @@ const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Campi "identità" da mostrare nel titolo se presenti (in ordine di priorità),
+// tra quelli raccolti per le varie categorie (vedi CATEGORY_STEPS in telegramBot.js).
+const TITLE_IDENTITY_KEYS = ["childName", "familyName", "childrenNames", "what"];
+
+function buildDraftTitle(category, categoryData) {
+  if (!category) return null;
+  const identityKey = TITLE_IDENTITY_KEYS.find((k) => categoryData?.[k]);
+  return identityKey ? `${category} — ${categoryData[identityKey]}` : category;
+}
+
 app.use(express.static(PUBLIC_DIR));
 app.use(express.json());
 
@@ -62,6 +72,8 @@ app.get("/api/drafts", (req, res) => {
       const info = statuses[draft.id];
       draft.status = info?.status || "da_pubblicare";
       draft.publishedBy = info?.publishedBy || null;
+      draft.category = info?.category || null;
+      draft.title = buildDraftTitle(info?.category, info?.categoryData);
     });
 
     logger.info(`API /drafts: ${result.length} bozze trovate`);

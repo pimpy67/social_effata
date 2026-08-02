@@ -79,9 +79,15 @@
       font-family: monospace;
     }
 
-    .draft-date {
+    .draft-title {
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .draft-date {
+      font-size: 13px;
+      opacity: 0.85;
     }
 
     .draft-card-body {
@@ -475,6 +481,7 @@
 
   <script>
     let currentDraftId = null;
+    let allDrafts = [];
 
     const STATUS_LABELS = {
       da_pubblicare: "🕓 Da pubblicare",
@@ -583,6 +590,7 @@
       try {
         const response = await fetch("/api/drafts");
         const drafts = await response.json();
+        allDrafts = drafts;
 
         const container = document.getElementById("drafts-container");
 
@@ -604,6 +612,7 @@
           <div class="draft-card" onclick="openDraft('${draft.id}')">
             <div class="draft-card-header">
               <div>
+                ${draft.title ? `<div class="draft-title">${draft.title}</div>` : ''}
                 <div class="draft-date">${new Date(draft.createdAt).toLocaleString('it-IT')}</div>
                 <div class="draft-id">#${draft.id}</div>
               </div>
@@ -641,7 +650,10 @@
     async function openDraft(draftId) {
       currentDraftId = draftId;
       document.getElementById("modal").classList.add("active");
-      document.getElementById("modal-title").textContent = `Bozza #${draftId}`;
+      const draft = allDrafts.find((d) => d.id === draftId);
+      document.getElementById("modal-title").textContent = draft?.title
+        ? `${draft.title} (#${draftId})`
+        : `Bozza #${draftId}`;
       document.getElementById("modal-date").textContent = new Date(
         parseInt(draftId)
       ).toLocaleString('it-IT');
