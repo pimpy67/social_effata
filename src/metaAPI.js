@@ -2,7 +2,7 @@ import axios from "axios";
 import { logger } from "./logger.js";
 
 const GRAPH_API_VERSION = "v26.0";
-const GRAPH_API_URL = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
+const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
 // Estrae il messaggio d'errore reale restituito da Meta (es. token scaduto,
 // permesso mancante) invece del generico "Request failed with status code 4xx"
