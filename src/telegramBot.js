@@ -498,6 +498,40 @@ export async function startBot() {
     }
   }
 
+  // Foto originali (non ottimizzate/non troncoli) salvate per una bozza, in ordine.
+  function getDraftPhotoPaths(timestamp) {
+    const pattern = new RegExp(`^${timestamp}_(\\d+)\\.(jpg|jpeg|png|webp|gif)$`, "i");
+    return fs
+      .readdirSync(OUTPUT_DIR)
+      .filter((f) => pattern.test(f))
+      .sort((a, b) => parseInt(a.match(pattern)[1], 10) - parseInt(b.match(pattern)[1], 10))
+      .map((f) => path.join(OUTPUT_DIR, f));
+  }
+
+  // Manda lo stesso post (testo + foto) anche sul canale Telegram configurato,
+  // se TELEGRAM_CHANNEL_ID è impostato nel .env.
+  async function publishToChannel(timestamp, text) {
+    const channelId = process.env.TELEGRAM_CHANNEL_ID;
+    if (!channelId) return;
+
+    const photoPaths = getDraftPhotoPaths(timestamp).slice(0, 10); // limite Telegram per media group
+
+    if (photoPaths.length === 0) {
+      await bot.sendMessage(channelId, text);
+    } else if (photoPaths.length === 1) {
+      await bot.sendPhoto(channelId, photoPaths[0], { caption: text });
+    } else {
+      const media = photoPaths.map((p, i) => ({
+        type: "photo",
+        media: p,
+        ...(i === 0 ? { caption: text } : {}),
+      }));
+      await bot.sendMediaGroup(channelId, media);
+    }
+
+    logger.info(`Post pubblicato anche sul canale Telegram (bozza ${timestamp})`);
+  }
+
   // Log dei messaggi ricevuti
   bot.on("message", (msg) => {
     logger.debug(`Messaggio da chat ${msg.chat.id} (${msg.chat.title || msg.chat.first_name})`);
@@ -592,7 +626,7 @@ export async function startBot() {
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
 
-Facebook viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto. Instagram invece va online subito, automaticamente.
+Facebook viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto (pubblica anche sul canale Telegram, se configurato). Instagram invece va online subito, automaticamente.
 
 Altri comandi utili:
 /status - vedi quante foto/testi hai in attesa
@@ -711,7 +745,21 @@ Altri comandi utili:
         await metaAPI.publishFacebookDraft(draft.facebookPostId);
         markFacebookDraftPublished(draft.timestamp);
         await bot.answerCallbackQuery(query.id, { text: "Pubblicato su Facebook!" });
-        await bot.sendMessage(chatId, `✅ Post del ${draft.createdAt} (${draft.category || "senza categoria"}) pubblicato su Facebook.`);
+
+        let confirmMsg = `✅ Post del ${draft.createdAt} (${draft.category || "senza categoria"}) pubblicato su Facebook.`;
+
+        if (process.env.TELEGRAM_CHANNEL_ID) {
+          try {
+            const text = fs.readFileSync(path.join(OUTPUT_DIR, `${draft.timestamp}_facebook.txt`), "utf-8");
+            await publishToChannel(draft.timestamp, text);
+            confirmMsg += "\n📢 Pubblicato anche sul canale Telegram.";
+          } catch (err) {
+            logger.error(`Errore nel pubblicare sul canale Telegram: ${err.message}`);
+            confirmMsg += `\n⚠️ Non pubblicato sul canale Telegram: ${err.message}`;
+          }
+        }
+
+        await bot.sendMessage(chatId, confirmMsg);
       } catch (err) {
         logger.error(`Errore nel pubblicare la bozza Facebook ${draft.timestamp}: ${err.message}`);
         await bot.answerCallbackQuery(query.id, { text: "Errore nella pubblicazione." });
