@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ZipArchive } from "archiver";
 import { logger } from "./logger.js";
+import { getLinkedInAuthUrl, exchangeLinkedInCode } from "./linkedinAPI.js";
 import {
   getAllDrafts,
   queryDrafts,
@@ -279,6 +280,45 @@ app.get("/output/:filename", (req, res) => {
   } catch (err) {
     logger.error(`Errore nel servire file: ${err.message}`);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Avvia il collegamento LinkedIn: reindirizza alla pagina di autorizzazione OAuth
+app.get("/auth/linkedin", (req, res) => {
+  try {
+    res.redirect(getLinkedInAuthUrl());
+  } catch (err) {
+    res.status(500).send(`Errore: ${err.message}`);
+  }
+});
+
+// Riceve il codice di autorizzazione da LinkedIn, lo scambia con un access token
+// e lo mostra a schermo perché un amministratore lo copi nel .env
+// (LINKEDIN_ACCESS_TOKEN). Non c'è ancora un modo per salvarlo automaticamente.
+app.get("/auth/linkedin/callback", async (req, res) => {
+  const { code, error, error_description } = req.query;
+
+  if (error) {
+    return res.status(400).send(`<h2>Autorizzazione LinkedIn rifiutata</h2><p>${error}: ${error_description || ""}</p>`);
+  }
+
+  if (!code) {
+    return res.status(400).send("<h2>Manca il parametro code nella risposta di LinkedIn</h2>");
+  }
+
+  try {
+    const tokenData = await exchangeLinkedInCode(code);
+    logger.info("Collegamento LinkedIn completato");
+
+    res.send(`
+      <h2>✅ Collegamento LinkedIn completato</h2>
+      <p>Copia questo access token nel file <code>.env</code> del server come <code>LINKEDIN_ACCESS_TOKEN</code>:</p>
+      <textarea style="width:100%;height:80px;font-family:monospace;">${tokenData.access_token}</textarea>
+      <p>Scade tra ${Math.round(tokenData.expires_in / 86400)} giorni (${new Date(Date.now() + tokenData.expires_in * 1000).toLocaleDateString("it-IT")}) — andrà rinnovato ripetendo questo collegamento prima di allora.</p>
+    `);
+  } catch (err) {
+    logger.error(`Errore nello scambio del codice LinkedIn: ${err.message}`);
+    res.status(500).send(`<h2>Errore nel completare il collegamento LinkedIn</h2><p>${err.message}</p>`);
   }
 });
 
