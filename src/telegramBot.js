@@ -670,7 +670,14 @@ Altri comandi utili:
       if (categoryName) {
         selectedCategory.set(chatId, { id: categoryId, name: categoryName });
         await bot.answerCallbackQuery(query.id);
-        await bot.sendMessage(chatId, `✅ Categoria selezionata: **${categoryName}**\n\nOra manda foto e testo, poi scrivi /genera`);
+
+        const pending = pendingByChat.get(chatId);
+        const hasMaterial = pending && (pending.photos.length > 0 || pending.notes.length > 0);
+        const nextStep = hasMaterial
+          ? "Hai già del materiale in attesa: scrivi /genera quando vuoi procedere."
+          : "Ora manda foto e testo, poi scrivi /genera.";
+
+        await bot.sendMessage(chatId, `✅ Categoria selezionata: **${categoryName}**\n\n${nextStep}`);
         logger.info(`Categoria selezionata: ${categoryName} (chat ${chatId})`);
       }
     }
