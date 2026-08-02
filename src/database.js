@@ -59,6 +59,10 @@ function createTables() {
     // JSON con i campi opzionali specifici della categoria (es. nome bambino/sostenitore
     // per le adozioni, specie/numero animali per gli animali domestici, ecc.)
     ensureColumn("drafts", "categoryData", "TEXT");
+    // ID del post Facebook creato come bozza non pubblica (published:false), per
+    // poterlo pubblicare in seguito su richiesta senza doverlo cercare su Meta.
+    ensureColumn("drafts", "facebookPostId", "TEXT");
+    ensureColumn("drafts", "facebookPublishedAt", "TEXT");
 
     logger.debug("Tabella 'drafts' creata/verificata");
   } catch (err) {
@@ -90,7 +94,8 @@ export function saveDraft(
   textLength,
   category = null,
   categoryNumber = null,
-  categoryData = null
+  categoryData = null,
+  facebookPostId = null
 ) {
   try {
     const createdAt = new Date(parseInt(timestamp)).toISOString();
@@ -99,15 +104,70 @@ export function saveDraft(
       categoryData && Object.keys(categoryData).length > 0 ? JSON.stringify(categoryData) : null;
 
     db.run(
-      `INSERT OR REPLACE INTO drafts (timestamp, createdAt, category, categoryNumber, photoCount, formats, textLength, categoryData)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [timestamp, createdAt, category, categoryNumber, photoCount, formatsJson, textLength, categoryDataJson]
+      `INSERT OR REPLACE INTO drafts (timestamp, createdAt, category, categoryNumber, photoCount, formats, textLength, categoryData, facebookPostId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        timestamp,
+        createdAt,
+        category,
+        categoryNumber,
+        photoCount,
+        formatsJson,
+        textLength,
+        categoryDataJson,
+        facebookPostId,
+      ]
     );
 
     saveDatabase();
     logger.info(`Bozza salvata: timestamp=${timestamp}, categoria=${category || "nessuna"}, foto=${photoCount}`);
   } catch (err) {
     logger.error(`Errore nel salvare bozza: ${err.message}`);
+  }
+}
+
+// Bozze Facebook non ancora pubblicate (creato con successo, non ancora spinte online).
+export function getUnpublishedFacebookDrafts(limit = 10) {
+  try {
+    const stmt = db.prepare(`
+      SELECT timestamp, createdAt, category, facebookPostId
+      FROM drafts
+      WHERE facebookPostId IS NOT NULL AND facebookPublishedAt IS NULL
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `);
+
+    const drafts = [];
+    stmt.bind([limit]);
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      drafts.push({
+        timestamp: row.timestamp,
+        createdAt: row.createdAt,
+        category: row.category,
+        facebookPostId: row.facebookPostId,
+      });
+    }
+
+    stmt.free();
+    return drafts;
+  } catch (err) {
+    logger.error(`Errore nel recuperare le bozze Facebook non pubblicate: ${err.message}`);
+    return [];
+  }
+}
+
+// Segna una bozza Facebook come pubblicata, dopo aver chiamato l'API per pubblicarla davvero.
+export function markFacebookDraftPublished(timestamp) {
+  try {
+    db.run(`UPDATE drafts SET facebookPublishedAt = ? WHERE timestamp = ?`, [
+      new Date().toISOString(),
+      timestamp,
+    ]);
+    saveDatabase();
+    logger.info(`Bozza Facebook ${timestamp}: segnata come pubblicata`);
+  } catch (err) {
+    logger.error(`Errore nel segnare la bozza Facebook come pubblicata: ${err.message}`);
   }
 }
 

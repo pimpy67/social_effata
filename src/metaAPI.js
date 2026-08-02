@@ -180,6 +180,17 @@ export class MetaAPI {
     }
   }
 
+  // Pubblica davvero (rende visibile sulla pagina) un post Facebook creato in
+  // precedenza come bozza non pubblica con publishToFacebook.
+  async publishFacebookDraft(postId) {
+    await axios.post(`https://graph.facebook.com/v26.0/${postId}`, null, {
+      params: {
+        is_published: true,
+        access_token: this.pageAccessToken,
+      },
+    });
+  }
+
   // ATTENZIONE: a differenza di Facebook, Instagram non supporta le bozze via API.
   // Questo pubblica il post immediatamente e pubblicamente sul profilo Instagram.
   async publishToInstagram(text, imageBuffer) {

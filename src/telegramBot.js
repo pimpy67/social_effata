@@ -8,7 +8,13 @@ import { logger } from "./logger.js";
 import { validation } from "./validation.js";
 import { initMetaAPI } from "./metaAPI.js";
 import { optimizePhotosForSocial } from "./photoOptimizer.js";
-import { saveDraft, getMonthlyReport, getYearlyReport } from "./database.js";
+import {
+  saveDraft,
+  getMonthlyReport,
+  getYearlyReport,
+  getUnpublishedFacebookDrafts,
+  markFacebookDraftPublished,
+} from "./database.js";
 
 // Categorie disponibili
 const CATEGORIES = {
@@ -428,22 +434,12 @@ export async function startBot() {
 
       const totalTextLength = rawText.length;
       const category = selectedCategory.get(chatId);
-      saveDraft(
-        timestamp,
-        pending.photos.length,
-        formats,
-        totalTextLength,
-        category?.name || null,
-        category?.id || null,
-        categoryData
-      );
-
-      // Pulisci la categoria dopo la generazione
-      selectedCategory.delete(chatId);
 
       let metaMessage = "";
+      let facebookPostId = null;
 
-      // Pubblica su Facebook e Instagram (come bozze) se Meta API è configurata
+      // Pubblica su Facebook (come bozza non pubblica) e Instagram (subito, online)
+      // se Meta API è configurata.
       if (metaAPI) {
         try {
           const metaResults = await metaAPI.publishToMetaBusiness(
@@ -454,7 +450,8 @@ export async function startBot() {
           );
 
           if (metaResults.facebook?.success) {
-            metaMessage += "📘 Facebook: pubblicato (bozza)\n";
+            facebookPostId = metaResults.facebook.postId;
+            metaMessage += "📘 Facebook: bozza creata (usa /bozze per pubblicarla quando sei pronto)\n";
           }
           if (metaResults.instagram?.success) {
             metaMessage += "📷 Instagram: pubblicato online (già visibile a tutti)\n";
@@ -470,6 +467,20 @@ export async function startBot() {
           metaMessage = `⚠️ Errore Meta API: ${err.message}\n`;
         }
       }
+
+      saveDraft(
+        timestamp,
+        pending.photos.length,
+        formats,
+        totalTextLength,
+        category?.name || null,
+        category?.id || null,
+        categoryData,
+        facebookPostId
+      );
+
+      // Pulisci la categoria dopo la generazione
+      selectedCategory.delete(chatId);
 
       await bot.sendMessage(
         chatId,
@@ -581,9 +592,12 @@ export async function startBot() {
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
 
+Facebook viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto. Instagram invece va online subito, automaticamente.
+
 Altri comandi utili:
 /status - vedi quante foto/testi hai in attesa
 /reset - cancella il materiale in attesa e ricomincia
+/bozze - pubblica su Facebook le bozze in attesa
 /report-mese - riepilogo storie del mese
 /report-anno - riepilogo storie dell'anno`;
 
@@ -680,7 +694,53 @@ Altri comandi utili:
         await bot.sendMessage(chatId, `✅ Categoria selezionata: **${categoryName}**\n\n${nextStep}`);
         logger.info(`Categoria selezionata: ${categoryName} (chat ${chatId})`);
       }
+    } else if (query.data.startsWith("publish_fb_")) {
+      const timestamp = query.data.replace("publish_fb_", "");
+      const draft = getUnpublishedFacebookDrafts(50).find((d) => String(d.timestamp) === timestamp);
+
+      if (!draft) {
+        await bot.answerCallbackQuery(query.id, { text: "Bozza non trovata o già pubblicata." });
+        return;
+      }
+      if (!metaAPI) {
+        await bot.answerCallbackQuery(query.id, { text: "Meta API non configurata." });
+        return;
+      }
+
+      try {
+        await metaAPI.publishFacebookDraft(draft.facebookPostId);
+        markFacebookDraftPublished(draft.timestamp);
+        await bot.answerCallbackQuery(query.id, { text: "Pubblicato su Facebook!" });
+        await bot.sendMessage(chatId, `✅ Post del ${draft.createdAt} (${draft.category || "senza categoria"}) pubblicato su Facebook.`);
+      } catch (err) {
+        logger.error(`Errore nel pubblicare la bozza Facebook ${draft.timestamp}: ${err.message}`);
+        await bot.answerCallbackQuery(query.id, { text: "Errore nella pubblicazione." });
+        await bot.sendMessage(chatId, `⚠️ Errore nel pubblicare su Facebook: ${err.message}`);
+      }
     }
+  });
+
+  // Comando /bozze - Elenco delle bozze Facebook non ancora pubblicate, con pulsante per pubblicarle
+  bot.onText(/^\/bozze$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    const drafts = getUnpublishedFacebookDrafts(10);
+    if (drafts.length === 0) {
+      await bot.sendMessage(chatId, "📋 Nessuna bozza Facebook in attesa di pubblicazione.");
+      return;
+    }
+
+    const buttons = drafts.map((d) => [
+      {
+        text: `${d.createdAt.slice(0, 16).replace("T", " ")} - ${d.category || "senza categoria"}`,
+        callback_data: `publish_fb_${d.timestamp}`,
+      },
+    ]);
+
+    await bot.sendMessage(chatId, "📋 Bozze Facebook in attesa (tocca per pubblicare):", {
+      reply_markup: { inline_keyboard: buttons },
+    });
   });
 
   // Comando /report-mese - Report mensile
