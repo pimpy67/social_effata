@@ -56,9 +56,9 @@ function createTables() {
     // versione non hanno ancora queste colonne.
     ensureColumn("drafts", "status", "TEXT NOT NULL DEFAULT 'da_pubblicare'");
     ensureColumn("drafts", "publishedBy", "TEXT");
-    ensureColumn("drafts", "childName", "TEXT");
-    ensureColumn("drafts", "sponsorName", "TEXT");
-    ensureColumn("drafts", "sponsorProvince", "TEXT");
+    // JSON con i campi opzionali specifici della categoria (es. nome bambino/sostenitore
+    // per le adozioni, specie/numero animali per gli animali domestici, ecc.)
+    ensureColumn("drafts", "categoryData", "TEXT");
 
     logger.debug("Tabella 'drafts' creata/verificata");
   } catch (err) {
@@ -90,27 +90,18 @@ export function saveDraft(
   textLength,
   category = null,
   categoryNumber = null,
-  adoption = null
+  categoryData = null
 ) {
   try {
     const createdAt = new Date(parseInt(timestamp)).toISOString();
     const formatsJson = JSON.stringify(formats);
+    const categoryDataJson =
+      categoryData && Object.keys(categoryData).length > 0 ? JSON.stringify(categoryData) : null;
 
     db.run(
-      `INSERT OR REPLACE INTO drafts (timestamp, createdAt, category, categoryNumber, photoCount, formats, textLength, childName, sponsorName, sponsorProvince)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        timestamp,
-        createdAt,
-        category,
-        categoryNumber,
-        photoCount,
-        formatsJson,
-        textLength,
-        adoption?.childName || null,
-        adoption?.sponsorName || null,
-        adoption?.sponsorProvince || null,
-      ]
+      `INSERT OR REPLACE INTO drafts (timestamp, createdAt, category, categoryNumber, photoCount, formats, textLength, categoryData)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [timestamp, createdAt, category, categoryNumber, photoCount, formatsJson, textLength, categoryDataJson]
     );
 
     saveDatabase();
@@ -308,10 +299,11 @@ export function getMonthlyReport(year, month) {
     const startTime = startDate.getTime();
     const endTime = endDate.getTime();
 
+    // La categoria "Vari" (10) è solo descrittiva: esclusa dal conteggio/report.
     const stmt = db.prepare(`
       SELECT category, COUNT(*) as count
       FROM drafts
-      WHERE timestamp >= ? AND timestamp < ? AND category IS NOT NULL
+      WHERE timestamp >= ? AND timestamp < ? AND category IS NOT NULL AND categoryNumber != 10
       GROUP BY category
       ORDER BY category
     `);
@@ -334,7 +326,7 @@ export function getMonthlyReport(year, month) {
       monthName: new Date(year, month - 1).toLocaleString("it-IT", { month: "long", year: "numeric" }),
       report,
       total,
-      adoptions: getAdoptionsInRange(startTime, endTime),
+      details: getCategoryDetailsInRange(startTime, endTime),
     };
   } catch (err) {
     logger.error(`Errore nel generare report mensile: ${err.message}`);
@@ -342,33 +334,34 @@ export function getMonthlyReport(year, month) {
   }
 }
 
-// Elenco delle adozioni scolastiche (categoryNumber 1) in un intervallo di tempo,
-// coi dati opzionali di bambino/sostenitore/provincia se forniti dal volontario.
-function getAdoptionsInRange(startTime, endTime) {
+// Elenco dei campi extra raccolti per categoria (es. nome bambino/sostenitore per le
+// adozioni, specie/numero animali per gli animali domestici, ecc.) in un intervallo di
+// tempo. La categoria "Vari" (10) è esclusa perché solo descrittiva.
+function getCategoryDetailsInRange(startTime, endTime) {
   try {
     const stmt = db.prepare(`
-      SELECT createdAt, childName, sponsorName, sponsorProvince
+      SELECT category, categoryNumber, createdAt, categoryData
       FROM drafts
-      WHERE timestamp >= ? AND timestamp < ? AND categoryNumber = 1
+      WHERE timestamp >= ? AND timestamp < ? AND categoryNumber IS NOT NULL AND categoryNumber != 10
       ORDER BY timestamp
     `);
 
-    const adoptions = [];
+    const details = [];
     stmt.bind([startTime, endTime]);
     while (stmt.step()) {
       const row = stmt.getAsObject();
-      adoptions.push({
+      details.push({
+        category: row.category,
+        categoryNumber: row.categoryNumber,
         createdAt: row.createdAt,
-        childName: row.childName || null,
-        sponsorName: row.sponsorName || null,
-        sponsorProvince: row.sponsorProvince || null,
+        data: row.categoryData ? JSON.parse(row.categoryData) : {},
       });
     }
 
     stmt.free();
-    return adoptions;
+    return details;
   } catch (err) {
-    logger.error(`Errore nel recuperare le adozioni: ${err.message}`);
+    logger.error(`Errore nel recuperare i dettagli per categoria: ${err.message}`);
     return [];
   }
 }
@@ -383,7 +376,7 @@ export function getYearlyReport(year) {
     const stmt = db.prepare(`
       SELECT category, COUNT(*) as count
       FROM drafts
-      WHERE timestamp >= ? AND timestamp < ? AND category IS NOT NULL
+      WHERE timestamp >= ? AND timestamp < ? AND category IS NOT NULL AND categoryNumber != 10
       GROUP BY category
       ORDER BY category
     `);
@@ -404,7 +397,7 @@ export function getYearlyReport(year) {
       year,
       report,
       total,
-      adoptions: getAdoptionsInRange(startTime, endTime),
+      details: getCategoryDetailsInRange(startTime, endTime),
     };
   } catch (err) {
     logger.error(`Errore nel generare report annuale: ${err.message}`);

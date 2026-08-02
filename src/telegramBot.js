@@ -41,31 +41,81 @@ const CATEGORY_RULES = {
 // Categoria selezionata per ogni chat
 const selectedCategory = new Map();
 
-// Id della categoria "Adozioni scolastiche": per questa categoria il bot chiede
-// (in sequenza, tutti campi opzionali) nome bambino, nome sostenitore e provincia.
-const ADOPTION_CATEGORY_ID = "1";
-const ADOPTION_STEPS = [
-  { key: "childName", question: "👶 Nome del bambino/a adottato/a? (scrivi - per saltare)" },
-  { key: "sponsorName", question: "🙏 Nome del sostenitore/padrino/madrina? (scrivi - per saltare)" },
-  { key: "sponsorProvince", question: "📍 Provincia di residenza del sostenitore/padrino/madrina? (scrivi - per saltare)" },
-];
+// Per ogni categoria (tranne "Vari", solo descrittiva), il bot chiede in sequenza
+// alcuni campi opzionali specifici (scrivi "-" per saltare un campo). Le risposte
+// vengono salvate nel database e mostrate nel dettaglio dei report mensili/annuali.
+const CATEGORY_STEPS = {
+  "1": [
+    { key: "childName", label: "Bambino/a", question: "👶 Nome del bambino/a adottato/a? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+    { key: "sponsorProvince", label: "Provincia", question: "📍 Provincia del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+  ],
+  "2": [
+    { key: "childName", label: "Bambino/a", question: "👶 Nome del bambino/a? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+    { key: "sponsorProvince", label: "Provincia", question: "📍 Provincia del sostenitore? (scrivi - per saltare)" },
+  ],
+  "3": [
+    { key: "childrenNames", label: "Bambini coinvolti", question: "👶 Nomi dei bambini coinvolti? (scrivi - per saltare)" },
+    { key: "wheelchairCount", label: "Carrozzine donate", question: "🦽 Numero di carrozzine donate? (scrivi - per saltare)" },
+  ],
+  "4": [
+    { key: "familyName", label: "Famiglia", question: "🏠 Nome della famiglia? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+    { key: "sponsorProvince", label: "Provincia", question: "📍 Provincia del sostenitore? (scrivi - per saltare)" },
+  ],
+  "5": [
+    { key: "familyName", label: "Famiglia", question: "🏠 Nome della famiglia? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+  ],
+  "6": [
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+    { key: "animalSpecies", label: "Specie", question: "🐾 Specie di animale donato (mucca, maiale, capretta, gallina, ...)? (scrivi - per saltare)" },
+    { key: "animalCount", label: "Numero animali", question: "🔢 Numero di animali donati? (scrivi - per saltare)" },
+  ],
+  "7": [
+    { key: "familyName", label: "Famiglia", question: "🏠 Nome della famiglia? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+    { key: "mattressCount", label: "Materassi donati", question: "🛏️ Numero di materassi donati? (scrivi - per saltare)" },
+  ],
+  "8": [
+    { key: "familyName", label: "Famiglia", question: "🏠 Nome della famiglia? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+    { key: "shoeCount", label: "Scarpe donate", question: "👟 Numero di paia di scarpe donate? (scrivi - per saltare)" },
+  ],
+  "9": [
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore? (scrivi - per saltare)" },
+    { key: "what", label: "Cosa", question: "🎁 Cosa è stato donato/fatto? (scrivi - per saltare)" },
+  ],
+  "10": [], // Vari: nessuna domanda, categoria solo descrittiva (esclusa dai report)
+};
 
-// Sessione di domande adozione in corso per ogni chat: { step, data }
-const adoptionSessions = new Map();
+// Sessione di domande per categoria in corso per ogni chat: { steps, step, data }
+const categorySessions = new Map();
 
-// Formatta il dettaglio delle adozioni scolastiche (bambino/sostenitore/provincia,
-// campi opzionali) per i report mensili/annuali.
-function formatAdoptionsDetail(adoptions) {
-  if (!adoptions || adoptions.length === 0) return "";
+// Formatta il dettaglio dei campi extra raccolti per categoria (bambino/sostenitore,
+// specie/numero animali, ecc.) per i report mensili/annuali, raggruppato per categoria.
+function formatCategoryDetail(details) {
+  if (!details || details.length === 0) return "";
 
-  const lines = adoptions.map((a, i) => {
-    const child = a.childName || "(nome non inserito)";
-    const sponsorParts = [a.sponsorName, a.sponsorProvince].filter(Boolean);
-    const sponsor = sponsorParts.length ? ` — sostenitore: ${sponsorParts.join(", ")}` : "";
-    return `${i + 1}. ${child}${sponsor}`;
+  const byCategory = new Map();
+  details.forEach((d) => {
+    if (!byCategory.has(d.category)) byCategory.set(d.category, []);
+    byCategory.get(d.category).push(d);
   });
 
-  return `\n👶 **Adozioni scolastiche - dettaglio:**\n${lines.join("\n")}\n`;
+  let out = "";
+  for (const [categoryName, entries] of byCategory) {
+    const steps = CATEGORY_STEPS[String(entries[0].categoryNumber)] || [];
+    out += `\n📋 **${categoryName} - dettaglio:**\n`;
+    entries.forEach((entry, i) => {
+      const parts = steps
+        .map((s) => (entry.data?.[s.key] ? `${s.label}: ${entry.data[s.key]}` : null))
+        .filter(Boolean);
+      out += `${i + 1}. ${parts.length ? parts.join(", ") : "(dati non inseriti)"}\n`;
+    });
+  }
+  return out;
 }
 
 // Stato dell'invio automatico del report mensile: memorizza l'ultimo mese per cui
@@ -117,7 +167,7 @@ async function sendAutomaticMonthlyReportIfDue(bot) {
       Object.entries(report.report).forEach(([category, count]) => {
         message += `• ${category}: ${count}\n`;
       });
-      message += formatAdoptionsDetail(report.adoptions);
+      message += formatCategoryDetail(report.details);
       await bot.sendMessage(chatId, message);
     }
     logger.info(`Report mensile automatico inviato per ${monthKey}`);
@@ -274,9 +324,9 @@ export async function startBot() {
     }
   }
 
-  // Genera le bozze social dal materiale in attesa. adoptionData contiene gli eventuali
-  // campi opzionali (bambino/sostenitore/provincia) raccolti per le adozioni scolastiche.
-  async function runGenerate(chatId, adoptionData = {}) {
+  // Genera le bozze social dal materiale in attesa. categoryData contiene gli eventuali
+  // campi opzionali specifici della categoria selezionata (bambino/sostenitore, animali, ecc.).
+  async function runGenerate(chatId, categoryData = {}) {
     const pending = pendingByChat.get(chatId);
     if (!pending) return;
 
@@ -286,13 +336,14 @@ export async function startBot() {
         `📥 Genero le bozze da ${pending.photos.length} foto e ${pending.notes.length} testi extra...`
       );
 
-      const adoptionLines = [];
-      if (adoptionData.childName) adoptionLines.push(`Bambino/a adottato/a: ${adoptionData.childName}`);
-      if (adoptionData.sponsorName) adoptionLines.push(`Sostenitore/padrino/madrina: ${adoptionData.sponsorName}`);
-      if (adoptionData.sponsorProvince) adoptionLines.push(`Provincia del sostenitore: ${adoptionData.sponsorProvince}`);
+      const selected = selectedCategory.get(chatId);
+      const steps = selected ? CATEGORY_STEPS[selected.id] || [] : [];
+      const categoryLines = steps
+        .map((s) => (categoryData[s.key] ? `${s.label}: ${categoryData[s.key]}` : null))
+        .filter(Boolean);
 
       const rawText = [
-        ...(adoptionLines.length ? [adoptionLines.join("\n")] : []),
+        ...(categoryLines.length ? [categoryLines.join("\n")] : []),
         ...pending.photos.map((p) => p.caption).filter(Boolean),
         ...pending.notes,
       ].join("\n\n");
@@ -301,7 +352,6 @@ export async function startBot() {
         mediaType: p.mediaType || "image/jpeg",
       }));
 
-      const selected = selectedCategory.get(chatId);
       const result = await generateSocialContent(rawText, images, {
         name: selected?.name,
         rules: selected ? CATEGORY_RULES[selected.id] : "",
@@ -384,7 +434,7 @@ export async function startBot() {
         totalTextLength,
         category?.name || null,
         category?.id || null,
-        adoptionData
+        categoryData
       );
 
       // Pulisci la categoria dopo la generazione
@@ -473,24 +523,24 @@ export async function startBot() {
 
     const chatId = msg.chat.id;
 
-    // Se è in corso la sequenza di domande per l'adozione scolastica, questo testo
+    // Se è in corso la sequenza di domande per la categoria selezionata, questo testo
     // è la risposta alla domanda corrente (campo opzionale: "-" per saltarlo).
-    const adoptionSession = adoptionSessions.get(chatId);
-    if (adoptionSession) {
-      const step = ADOPTION_STEPS[adoptionSession.step];
+    const categorySession = categorySessions.get(chatId);
+    if (categorySession) {
+      const step = categorySession.steps[categorySession.step];
       const answer = msg.text.trim();
       if (answer !== "-") {
-        adoptionSession.data[step.key] = answer;
+        categorySession.data[step.key] = answer;
       }
 
-      const nextIndex = adoptionSession.step + 1;
-      if (nextIndex < ADOPTION_STEPS.length) {
-        adoptionSession.step = nextIndex;
-        await bot.sendMessage(chatId, ADOPTION_STEPS[nextIndex].question);
+      const nextIndex = categorySession.step + 1;
+      if (nextIndex < categorySession.steps.length) {
+        categorySession.step = nextIndex;
+        await bot.sendMessage(chatId, categorySession.steps[nextIndex].question);
       } else {
-        const adoptionData = adoptionSession.data;
-        adoptionSessions.delete(chatId);
-        await runGenerate(chatId, adoptionData);
+        const categoryData = categorySession.data;
+        categorySessions.delete(chatId);
+        await runGenerate(chatId, categoryData);
       }
       return;
     }
@@ -620,7 +670,7 @@ export async function startBot() {
       message += `• ${category}: ${count}\n`;
     });
 
-    message += formatAdoptionsDetail(report.adoptions);
+    message += formatCategoryDetail(report.details);
 
     await bot.sendMessage(chatId, message);
     logger.info(`Report mensile: ${year}-${month}`);
@@ -651,7 +701,7 @@ export async function startBot() {
       message += `• ${category}: ${count}\n`;
     });
 
-    message += formatAdoptionsDetail(report.adoptions);
+    message += formatCategoryDetail(report.details);
 
     await bot.sendMessage(chatId, message);
     logger.info(`Report annuale: ${year}`);
@@ -687,11 +737,12 @@ export async function startBot() {
       return;
     }
 
-    // Per le adozioni scolastiche, chiedi prima (in sequenza, campi opzionali)
-    // bambino/sostenitore/provincia; la generazione parte dopo l'ultima risposta.
-    if (selected.id === ADOPTION_CATEGORY_ID) {
-      adoptionSessions.set(chatId, { step: 0, data: {} });
-      await bot.sendMessage(chatId, ADOPTION_STEPS[0].question);
+    // Per le categorie che lo prevedono, chiedi prima (in sequenza, campi opzionali)
+    // i dati specifici; la generazione parte dopo l'ultima risposta.
+    const steps = CATEGORY_STEPS[selected.id] || [];
+    if (steps.length > 0) {
+      categorySessions.set(chatId, { steps, step: 0, data: {} });
+      await bot.sendMessage(chatId, steps[0].question);
       return;
     }
 
