@@ -7,6 +7,7 @@ import { generateSocialContent } from "./generateContent.js";
 import { logger } from "./logger.js";
 import { validation } from "./validation.js";
 import { initMetaAPI } from "./metaAPI.js";
+import { initWordPressAPI } from "./wordpressAPI.js";
 import { optimizePhotosForSocial } from "./photoOptimizer.js";
 import {
   saveDraft,
@@ -205,6 +206,9 @@ const pendingByChat = new Map();
 // Client Meta API (per pubblicare su Facebook/Instagram)
 let metaAPI = null;
 
+// Client WordPress API (per creare bozze articoli sul blog)
+let wordpressAPI = null;
+
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
@@ -246,6 +250,9 @@ export async function startBot() {
 
   // Inizializza Meta API (se configurato)
   metaAPI = await initMetaAPI();
+
+  // Inizializza WordPress API (se configurato)
+  wordpressAPI = await initWordPressAPI();
 
   const bot = new TelegramBot(token, { polling: true });
   logger.info("Bot Telegram avviato, in ascolto...");
@@ -479,6 +486,21 @@ export async function startBot() {
         }
       }
 
+      // Crea la bozza dell'articolo sul blog WordPress, se configurato
+      if (wordpressAPI && result.blogTitle && result.blogBody) {
+        try {
+          const wpResult = await wordpressAPI.createDraftPost(result.blogTitle, result.blogBody);
+          if (wpResult.success) {
+            metaMessage += `📝 Blog: bozza creata su WordPress (${wpResult.editLink})\n`;
+          } else {
+            metaMessage += `⚠️ Blog: errore nel creare la bozza (${wpResult.error})\n`;
+          }
+        } catch (err) {
+          logger.error(`Errore nella pubblicazione WordPress: ${err.message}`);
+          metaMessage += `⚠️ Blog: errore WordPress (${err.message})\n`;
+        }
+      }
+
       saveDraft(
         timestamp,
         pending.photos.length,
@@ -637,7 +659,7 @@ export async function startBot() {
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
 
-Facebook (post) viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto (pubblica anche sul canale Telegram, se configurato). Instagram (post) invece va online subito, automaticamente. Anche le Storie (Facebook e Instagram, se configurate) vengono pubblicate subito, in automatico, e spariscono dopo 24h.
+Facebook (post) viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto (pubblica anche sul canale Telegram, se configurato). Instagram (post) invece va online subito, automaticamente. Anche le Storie (Facebook e Instagram, se configurate) vengono pubblicate subito, in automatico, e spariscono dopo 24h. L'articolo per il blog (se WordPress è configurato) viene creato come bozza su WordPress, da rivedere e pubblicare da wp-admin.
 
 Altri comandi utili:
 /status - vedi quante foto/testi hai in attesa
