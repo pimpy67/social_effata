@@ -56,6 +56,9 @@ function createTables() {
     // versione non hanno ancora queste colonne.
     ensureColumn("drafts", "status", "TEXT NOT NULL DEFAULT 'da_pubblicare'");
     ensureColumn("drafts", "publishedBy", "TEXT");
+    ensureColumn("drafts", "childName", "TEXT");
+    ensureColumn("drafts", "sponsorName", "TEXT");
+    ensureColumn("drafts", "sponsorProvince", "TEXT");
 
     logger.debug("Tabella 'drafts' creata/verificata");
   } catch (err) {
@@ -80,15 +83,34 @@ function ensureColumn(table, column, definition) {
   }
 }
 
-export function saveDraft(timestamp, photoCount, formats, textLength, category = null, categoryNumber = null) {
+export function saveDraft(
+  timestamp,
+  photoCount,
+  formats,
+  textLength,
+  category = null,
+  categoryNumber = null,
+  adoption = null
+) {
   try {
     const createdAt = new Date(parseInt(timestamp)).toISOString();
     const formatsJson = JSON.stringify(formats);
 
     db.run(
-      `INSERT OR REPLACE INTO drafts (timestamp, createdAt, category, categoryNumber, photoCount, formats, textLength)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [timestamp, createdAt, category, categoryNumber, photoCount, formatsJson, textLength]
+      `INSERT OR REPLACE INTO drafts (timestamp, createdAt, category, categoryNumber, photoCount, formats, textLength, childName, sponsorName, sponsorProvince)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        timestamp,
+        createdAt,
+        category,
+        categoryNumber,
+        photoCount,
+        formatsJson,
+        textLength,
+        adoption?.childName || null,
+        adoption?.sponsorName || null,
+        adoption?.sponsorProvince || null,
+      ]
     );
 
     saveDatabase();
@@ -297,7 +319,7 @@ export function getMonthlyReport(year, month) {
     const report = {};
     let total = 0;
 
-    db.bind([startTime, endTime]);
+    stmt.bind([startTime, endTime]);
     while (stmt.step()) {
       const row = stmt.getAsObject();
       report[row.category] = row.count;
@@ -312,10 +334,42 @@ export function getMonthlyReport(year, month) {
       monthName: new Date(year, month - 1).toLocaleString("it-IT", { month: "long", year: "numeric" }),
       report,
       total,
+      adoptions: getAdoptionsInRange(startTime, endTime),
     };
   } catch (err) {
     logger.error(`Errore nel generare report mensile: ${err.message}`);
     return {};
+  }
+}
+
+// Elenco delle adozioni scolastiche (categoryNumber 1) in un intervallo di tempo,
+// coi dati opzionali di bambino/sostenitore/provincia se forniti dal volontario.
+function getAdoptionsInRange(startTime, endTime) {
+  try {
+    const stmt = db.prepare(`
+      SELECT createdAt, childName, sponsorName, sponsorProvince
+      FROM drafts
+      WHERE timestamp >= ? AND timestamp < ? AND categoryNumber = 1
+      ORDER BY timestamp
+    `);
+
+    const adoptions = [];
+    stmt.bind([startTime, endTime]);
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      adoptions.push({
+        createdAt: row.createdAt,
+        childName: row.childName || null,
+        sponsorName: row.sponsorName || null,
+        sponsorProvince: row.sponsorProvince || null,
+      });
+    }
+
+    stmt.free();
+    return adoptions;
+  } catch (err) {
+    logger.error(`Errore nel recuperare le adozioni: ${err.message}`);
+    return [];
   }
 }
 
@@ -337,7 +391,7 @@ export function getYearlyReport(year) {
     const report = {};
     let total = 0;
 
-    db.bind([startTime, endTime]);
+    stmt.bind([startTime, endTime]);
     while (stmt.step()) {
       const row = stmt.getAsObject();
       report[row.category] = row.count;
@@ -350,6 +404,7 @@ export function getYearlyReport(year) {
       year,
       report,
       total,
+      adoptions: getAdoptionsInRange(startTime, endTime),
     };
   } catch (err) {
     logger.error(`Errore nel generare report annuale: ${err.message}`);

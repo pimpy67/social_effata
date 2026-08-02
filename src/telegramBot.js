@@ -1,6 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { generateSocialContent } from "./generateContent.js";
 import { logger } from "./logger.js";
@@ -17,17 +18,122 @@ const CATEGORIES = {
   "4": "Costruzione casette",
   "5": "Affitto terreni agricoli",
   "6": "Animali domestici",
-  "7": "Materassi e scarpe",
-  "8": "Casafamiglia (Vari)",
+  "7": "Materassi",
+  "8": "Scarpe",
+  "9": "Casafamiglia (opere)",
+  "10": "Vari",
+};
+
+// Frasi/link fissi da includere sempre nei testi di una specifica categoria (opzionale, per id)
+const CATEGORY_RULES = {
+  "1": "Includi sempre il link effataitalia.it/adozioni.",
+  "2": "",
+  "3": "",
+  "4": "",
+  "5": "",
+  "6": "",
+  "7": "",
+  "8": "",
+  "9": "",
+  "10": "",
 };
 
 // Categoria selezionata per ogni chat
 const selectedCategory = new Map();
 
+// Id della categoria "Adozioni scolastiche": per questa categoria il bot chiede
+// (in sequenza, tutti campi opzionali) nome bambino, nome sostenitore e provincia.
+const ADOPTION_CATEGORY_ID = "1";
+const ADOPTION_STEPS = [
+  { key: "childName", question: "👶 Nome del bambino/a adottato/a? (scrivi - per saltare)" },
+  { key: "sponsorName", question: "🙏 Nome del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+  { key: "sponsorProvince", question: "📍 Provincia di residenza del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+];
+
+// Sessione di domande adozione in corso per ogni chat: { step, data }
+const adoptionSessions = new Map();
+
+// Formatta il dettaglio delle adozioni scolastiche (bambino/sostenitore/provincia,
+// campi opzionali) per i report mensili/annuali.
+function formatAdoptionsDetail(adoptions) {
+  if (!adoptions || adoptions.length === 0) return "";
+
+  const lines = adoptions.map((a, i) => {
+    const child = a.childName || "(nome non inserito)";
+    const sponsorParts = [a.sponsorName, a.sponsorProvince].filter(Boolean);
+    const sponsor = sponsorParts.length ? ` — sostenitore: ${sponsorParts.join(", ")}` : "";
+    return `${i + 1}. ${child}${sponsor}`;
+  });
+
+  return `\n👶 **Adozioni scolastiche - dettaglio:**\n${lines.join("\n")}\n`;
+}
+
+// Stato dell'invio automatico del report mensile: memorizza l'ultimo mese per cui
+// è già stato inviato, per non rimandarlo più volte (es. dopo un riavvio del bot).
+function getAutoReportState() {
+  try {
+    if (fs.existsSync(AUTO_REPORT_STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(AUTO_REPORT_STATE_FILE, "utf-8"));
+    }
+  } catch (err) {
+    logger.warn(`Errore nel leggere lo stato del report automatico: ${err.message}`);
+  }
+  return {};
+}
+
+function saveAutoReportState(state) {
+  try {
+    fs.writeFileSync(AUTO_REPORT_STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
+  } catch (err) {
+    logger.warn(`Errore nel salvare lo stato del report automatico: ${err.message}`);
+  }
+}
+
+// Il primo giorno del mese manda automaticamente (una sola volta) il report
+// riassuntivo del mese appena concluso alla chat configurata in ALLOWED_CHAT_ID.
+async function sendAutomaticMonthlyReportIfDue(bot) {
+  const now = new Date();
+  if (now.getDate() !== 1) return;
+
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const state = getAutoReportState();
+  if (state.lastSentMonth === monthKey) return;
+
+  const chatId = process.env.ALLOWED_CHAT_ID;
+  if (!chatId) {
+    logger.warn("Report mensile automatico non inviato: ALLOWED_CHAT_ID non configurato nel .env");
+    return;
+  }
+
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const report = getMonthlyReport(prevMonth.getFullYear(), prevMonth.getMonth() + 1);
+
+  try {
+    if (!report.monthName || report.total === 0) {
+      await bot.sendMessage(chatId, `📊 **Report automatico**: nessuna storia generata nel mese di ${prevMonth.toLocaleString("it-IT", { month: "long", year: "numeric" })}.`);
+    } else {
+      let message = `📊 **Report automatico ${report.monthName}**\n\n`;
+      message += `**Totale storie: ${report.total}**\n\n`;
+      Object.entries(report.report).forEach(([category, count]) => {
+        message += `• ${category}: ${count}\n`;
+      });
+      message += formatAdoptionsDetail(report.adoptions);
+      await bot.sendMessage(chatId, message);
+    }
+    logger.info(`Report mensile automatico inviato per ${monthKey}`);
+    state.lastSentMonth = monthKey;
+    saveAutoReportState(state);
+  } catch (err) {
+    logger.error(`Errore nell'invio del report mensile automatico: ${err.message}`);
+    // Non aggiorniamo lo stato: verrà ritentato al prossimo controllo orario.
+  }
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const INTAKE_DIR = path.join(__dirname, "..", "intake");
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
 const STATE_FILE = path.join(__dirname, "..", "state.json");
+const AUTO_REPORT_STATE_FILE = path.join(__dirname, "..", "auto-report-state.json");
 
 const EXT_BY_MIME = {
   "image/jpeg": "jpg",
@@ -140,6 +246,13 @@ export async function startBot() {
         return;
       }
 
+      // Verifica che non sia un duplicato di una foto già in attesa
+      const hash = crypto.createHash("sha256").update(buffer).digest("hex");
+      if (pending.photos.some((p) => p.hash === hash)) {
+        await bot.sendMessage(msg.chat.id, "⚠️ Questa foto è già stata caricata, non è stata aggiunta di nuovo.");
+        return;
+      }
+
       const timestamp = Date.now();
       const imgPath = path.join(INTAKE_DIR, `${timestamp}.${ext}`);
       const txtPath = path.join(INTAKE_DIR, `${timestamp}.txt`);
@@ -147,7 +260,7 @@ export async function startBot() {
       fs.writeFileSync(imgPath, buffer);
       fs.writeFileSync(txtPath, caption);
 
-      pending.photos.push({ imgPath, caption, mediaType });
+      pending.photos.push({ imgPath, caption, mediaType, hash });
       saveState();
 
       logger.info(`Foto aggiunta: ${buffer.length / 1024}KB (${pending.photos.length} totali)`);
@@ -158,6 +271,168 @@ export async function startBot() {
     } catch (err) {
       logger.error(`Errore nel scaricare la foto: ${err.message}`);
       await bot.sendMessage(msg.chat.id, "⚠️ Errore nel download della foto, riprova.");
+    }
+  }
+
+  // Genera le bozze social dal materiale in attesa. adoptionData contiene gli eventuali
+  // campi opzionali (bambino/sostenitore/provincia) raccolti per le adozioni scolastiche.
+  async function runGenerate(chatId, adoptionData = {}) {
+    const pending = pendingByChat.get(chatId);
+    if (!pending) return;
+
+    try {
+      await bot.sendMessage(
+        chatId,
+        `📥 Genero le bozze da ${pending.photos.length} foto e ${pending.notes.length} testi extra...`
+      );
+
+      const adoptionLines = [];
+      if (adoptionData.childName) adoptionLines.push(`Bambino/a adottato/a: ${adoptionData.childName}`);
+      if (adoptionData.sponsorName) adoptionLines.push(`Sostenitore/padrino/madrina: ${adoptionData.sponsorName}`);
+      if (adoptionData.sponsorProvince) adoptionLines.push(`Provincia del sostenitore: ${adoptionData.sponsorProvince}`);
+
+      const rawText = [
+        ...(adoptionLines.length ? [adoptionLines.join("\n")] : []),
+        ...pending.photos.map((p) => p.caption).filter(Boolean),
+        ...pending.notes,
+      ].join("\n\n");
+      const images = pending.photos.map((p) => ({
+        buffer: fs.readFileSync(p.imgPath),
+        mediaType: p.mediaType || "image/jpeg",
+      }));
+
+      const selected = selectedCategory.get(chatId);
+      const result = await generateSocialContent(rawText, images, {
+        name: selected?.name,
+        rules: selected ? CATEGORY_RULES[selected.id] : "",
+      });
+
+      const timestamp = Date.now();
+      const outBase = path.join(OUTPUT_DIR, `${timestamp}`);
+      fs.writeFileSync(`${outBase}_facebook.txt`, result.facebookPost);
+      fs.writeFileSync(`${outBase}_instagram.txt`, result.instagramStory);
+      fs.writeFileSync(`${outBase}_linkedin.txt`, result.linkedinPost);
+      fs.writeFileSync(`${outBase}_blog.txt`, `${result.blogTitle}\n\n${result.blogBody}`);
+      fs.writeFileSync(`${outBase}_reel.txt`, result.reelScript);
+
+      // YouTube Shorts
+      if (result.youtubeShorts) {
+        const youtubeContent = `TITOLO:\n${result.youtubeShorts.titolo}\n\nSCRIPT:\n${result.youtubeShorts.script}\n\nISTRUZIONI:\n${result.youtubeShorts.istruzioni}\n\nCTA:\n${result.youtubeShorts.cta}`;
+        fs.writeFileSync(`${outBase}_youtube.txt`, youtubeContent);
+      }
+
+      // Salva le foto originali
+      pending.photos.forEach((p, i) => {
+        const ext = path.extname(p.imgPath);
+        fs.copyFileSync(p.imgPath, `${outBase}_${i + 1}${ext}`);
+      });
+
+      // Ottimizza le foto per ogni social
+      let optimizedPhotos = {};
+      try {
+        optimizedPhotos = await optimizePhotosForSocial(images);
+        // Salva le foto ottimizzate con suffissi social
+        for (const [social, buffer] of Object.entries(optimizedPhotos)) {
+          if (Array.isArray(buffer)) {
+            buffer.forEach((b, idx) => fs.writeFileSync(`${outBase}_optimized_${social}_${idx + 1}.jpg`, b));
+          } else {
+            fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
+          }
+        }
+        logger.info(`Foto ottimizzate salvate per ${Object.keys(optimizedPhotos).length} social`);
+      } catch (err) {
+        logger.warn(`Errore nell'ottimizzazione foto: ${err.message}`);
+        // Se l'ottimizzazione fallisce, usa le foto originali
+        optimizedPhotos = {
+          facebook: images.map((img) => img.buffer),
+          instagram: images[0].buffer,
+          linkedin: images[0].buffer,
+          blog: images[0].buffer,
+          reel: images[0].buffer,
+        };
+      }
+
+      // Cleanup: cancella i file temporanei da intake/
+      pending.photos.forEach((p) => {
+        try {
+          const txtPath = p.imgPath.replace(/\.[^.]+$/, ".txt");
+          if (fs.existsSync(p.imgPath)) fs.unlinkSync(p.imgPath);
+          if (fs.existsSync(txtPath)) fs.unlinkSync(txtPath);
+        } catch (err) {
+          logger.warn(`Errore nel cancellare file temporaneo: ${err.message}`);
+        }
+      });
+
+      pendingByChat.delete(chatId);
+      saveState();
+
+      // Salva la bozza nel database SQLite con categoria
+      const formats = [];
+      if (result.facebookPost) formats.push("facebook");
+      if (result.instagramStory) formats.push("instagram");
+      if (result.linkedinPost) formats.push("linkedin");
+      if (result.blogTitle) formats.push("blog");
+      if (result.reelScript) formats.push("reel");
+      if (result.youtubeShorts) formats.push("youtube");
+
+      const totalTextLength = rawText.length;
+      const category = selectedCategory.get(chatId);
+      saveDraft(
+        timestamp,
+        pending.photos.length,
+        formats,
+        totalTextLength,
+        category?.name || null,
+        category?.id || null,
+        adoptionData
+      );
+
+      // Pulisci la categoria dopo la generazione
+      selectedCategory.delete(chatId);
+
+      let metaMessage = "";
+
+      // Pubblica su Facebook e Instagram (come bozze) se Meta API è configurata
+      if (metaAPI) {
+        try {
+          const metaResults = await metaAPI.publishToMetaBusiness(
+            result.facebookPost,
+            result.instagramStory,
+            images,
+            optimizedPhotos
+          );
+
+          if (metaResults.facebook?.success) {
+            metaMessage += "📘 Facebook: pubblicato (bozza)\n";
+          }
+          if (metaResults.instagram?.success) {
+            metaMessage += "📷 Instagram: pubblicato (bozza)\n";
+          }
+          if (metaResults.errors.length > 0) {
+            metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;
+          }
+          if (!metaResults.facebook?.success && !metaResults.instagram?.success) {
+            metaMessage = "⚠️ Nessun canale Meta pubblicato\n";
+          }
+        } catch (err) {
+          logger.error(`Errore nella pubblicazione Meta: ${err.message}`);
+          metaMessage = `⚠️ Errore Meta API: ${err.message}\n`;
+        }
+      }
+
+      await bot.sendMessage(
+        chatId,
+        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n\n${metaMessage}`
+      );
+    } catch (err) {
+      logger.error(`Errore nel generare i contenuti: ${err.message}`);
+      logger.error(`Stack trace: ${err.stack}`);
+
+      const materialsLeft = `${pending.photos.length} foto, ${pending.notes.length} testi`;
+      await bot.sendMessage(
+        chatId,
+        `⚠️ Errore nella generazione. Il tuo materiale rimane intatto (${materialsLeft}).\n\nRiprova con /genera.\n\nDettagli errore: ${err.message}`
+      );
     }
   }
 
@@ -195,6 +470,30 @@ export async function startBot() {
   bot.on("text", async (msg) => {
     if (!isAllowed(msg.chat.id)) return;
     if (msg.text.startsWith("/")) return; // i comandi si gestiscono a parte
+
+    const chatId = msg.chat.id;
+
+    // Se è in corso la sequenza di domande per l'adozione scolastica, questo testo
+    // è la risposta alla domanda corrente (campo opzionale: "-" per saltarlo).
+    const adoptionSession = adoptionSessions.get(chatId);
+    if (adoptionSession) {
+      const step = ADOPTION_STEPS[adoptionSession.step];
+      const answer = msg.text.trim();
+      if (answer !== "-") {
+        adoptionSession.data[step.key] = answer;
+      }
+
+      const nextIndex = adoptionSession.step + 1;
+      if (nextIndex < ADOPTION_STEPS.length) {
+        adoptionSession.step = nextIndex;
+        await bot.sendMessage(chatId, ADOPTION_STEPS[nextIndex].question);
+      } else {
+        const adoptionData = adoptionSession.data;
+        adoptionSessions.delete(chatId);
+        await runGenerate(chatId, adoptionData);
+      }
+      return;
+    }
 
     // Valida la lunghezza del messaggio singolo
     const msgCheck = validation.validateTextMessage(msg.text);
@@ -321,6 +620,8 @@ export async function startBot() {
       message += `• ${category}: ${count}\n`;
     });
 
+    message += formatAdoptionsDetail(report.adoptions);
+
     await bot.sendMessage(chatId, message);
     logger.info(`Report mensile: ${year}-${month}`);
   });
@@ -350,6 +651,8 @@ export async function startBot() {
       message += `• ${category}: ${count}\n`;
     });
 
+    message += formatAdoptionsDetail(report.adoptions);
+
     await bot.sendMessage(chatId, message);
     logger.info(`Report annuale: ${year}`);
   });
@@ -366,7 +669,8 @@ export async function startBot() {
     }
 
     // Richiedi la categoria prima di generare
-    if (!selectedCategory.get(chatId)) {
+    const selected = selectedCategory.get(chatId);
+    if (!selected) {
       await bot.sendMessage(chatId, "⚠️ Seleziona prima una categoria con /categoria, poi riprova con /genera.");
       return;
     }
@@ -383,147 +687,20 @@ export async function startBot() {
       return;
     }
 
-    try {
-      await bot.sendMessage(
-        chatId,
-        `📥 Genero le bozze da ${pending.photos.length} foto e ${pending.notes.length} testi extra...`
-      );
-
-      const rawText = [...pending.photos.map((p) => p.caption).filter(Boolean), ...pending.notes].join("\n\n");
-      const images = pending.photos.map((p) => ({
-        buffer: fs.readFileSync(p.imgPath),
-        mediaType: p.mediaType || "image/jpeg",
-      }));
-
-      const result = await generateSocialContent(rawText, images);
-
-      const timestamp = Date.now();
-      const outBase = path.join(OUTPUT_DIR, `${timestamp}`);
-      fs.writeFileSync(`${outBase}_facebook.txt`, result.facebookPost);
-      fs.writeFileSync(`${outBase}_instagram.txt`, result.instagramStory);
-      fs.writeFileSync(`${outBase}_linkedin.txt`, result.linkedinPost);
-      fs.writeFileSync(`${outBase}_blog.txt`, `${result.blogTitle}\n\n${result.blogBody}`);
-      fs.writeFileSync(`${outBase}_reel.txt`, result.reelScript);
-
-      // YouTube Shorts
-      if (result.youtubeShorts) {
-        const youtubeContent = `TITOLO:\n${result.youtubeShorts.titolo}\n\nSCRIPT:\n${result.youtubeShorts.script}\n\nISTRUZIONI:\n${result.youtubeShorts.istruzioni}\n\nCTA:\n${result.youtubeShorts.cta}`;
-        fs.writeFileSync(`${outBase}_youtube.txt`, youtubeContent);
-      }
-
-      // Salva le foto originali
-      pending.photos.forEach((p, i) => {
-        const ext = path.extname(p.imgPath);
-        fs.copyFileSync(p.imgPath, `${outBase}_${i + 1}${ext}`);
-      });
-
-      // Ottimizza le foto per ogni social
-      let optimizedPhotos = {};
-      try {
-        optimizedPhotos = await optimizePhotosForSocial(images);
-        // Salva le foto ottimizzate con suffissi social
-        for (const [social, buffer] of Object.entries(optimizedPhotos)) {
-          if (Array.isArray(buffer)) {
-            buffer.forEach((b, idx) => fs.writeFileSync(`${outBase}_optimized_${social}_${idx + 1}.jpg`, b));
-          } else {
-            fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
-          }
-        }
-        logger.info(`Foto ottimizzate salvate per ${Object.keys(optimizedPhotos).length} social`);
-      } catch (err) {
-        logger.warn(`Errore nell'ottimizzazione foto: ${err.message}`);
-        // Se l'ottimizzazione fallisce, usa le foto originali
-        optimizedPhotos = {
-          facebook: images.map((img) => img.buffer),
-          instagram: images[0].buffer,
-          linkedin: images[0].buffer,
-          blog: images[0].buffer,
-          reel: images[0].buffer,
-        };
-      }
-
-      // Cleanup: cancella i file temporanei da intake/
-      pending.photos.forEach((p) => {
-        try {
-          const txtPath = p.imgPath.replace(/\.[^.]+$/, ".txt");
-          if (fs.existsSync(p.imgPath)) fs.unlinkSync(p.imgPath);
-          if (fs.existsSync(txtPath)) fs.unlinkSync(txtPath);
-        } catch (err) {
-          logger.warn(`Errore nel cancellare file temporaneo: ${err.message}`);
-        }
-      });
-
-      pendingByChat.delete(chatId);
-      saveState();
-
-      // Salva la bozza nel database SQLite con categoria
-      const formats = [];
-      if (result.facebookPost) formats.push("facebook");
-      if (result.instagramStory) formats.push("instagram");
-      if (result.linkedinPost) formats.push("linkedin");
-      if (result.blogTitle) formats.push("blog");
-      if (result.reelScript) formats.push("reel");
-      if (result.youtubeShorts) formats.push("youtube");
-
-      const totalTextLength = rawText.length;
-      const category = selectedCategory.get(chatId);
-      saveDraft(
-        timestamp,
-        pending.photos.length,
-        formats,
-        totalTextLength,
-        category?.name || null,
-        category?.id || null
-      );
-
-      // Pulisci la categoria dopo la generazione
-      selectedCategory.delete(chatId);
-
-      let metaMessage = "";
-
-      // Pubblica su Facebook e Instagram (come bozze) se Meta API è configurata
-      if (metaAPI) {
-        try {
-          const metaResults = await metaAPI.publishToMetaBusiness(
-            result.facebookPost,
-            result.instagramStory,
-            images,
-            optimizedPhotos
-          );
-
-          if (metaResults.facebook?.success) {
-            metaMessage += "📘 Facebook: pubblicato (bozza)\n";
-          }
-          if (metaResults.instagram?.success) {
-            metaMessage += "📷 Instagram: pubblicato (bozza)\n";
-          }
-          if (metaResults.errors.length > 0) {
-            metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;
-          }
-          if (!metaResults.facebook?.success && !metaResults.instagram?.success) {
-            metaMessage = "⚠️ Nessun canale Meta pubblicato\n";
-          }
-        } catch (err) {
-          logger.error(`Errore nella pubblicazione Meta: ${err.message}`);
-          metaMessage = `⚠️ Errore Meta API: ${err.message}\n`;
-        }
-      }
-
-      await bot.sendMessage(
-        chatId,
-        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n\n${metaMessage}`
-      );
-    } catch (err) {
-      logger.error(`Errore nel generare i contenuti: ${err.message}`);
-      logger.error(`Stack trace: ${err.stack}`);
-
-      const materialsLeft = `${pending.photos.length} foto, ${pending.notes.length} testi`;
-      await bot.sendMessage(
-        chatId,
-        `⚠️ Errore nella generazione. Il tuo materiale rimane intatto (${materialsLeft}).\n\nRiprova con /genera.\n\nDettagli errore: ${err.message}`
-      );
+    // Per le adozioni scolastiche, chiedi prima (in sequenza, campi opzionali)
+    // bambino/sostenitore/provincia; la generazione parte dopo l'ultima risposta.
+    if (selected.id === ADOPTION_CATEGORY_ID) {
+      adoptionSessions.set(chatId, { step: 0, data: {} });
+      await bot.sendMessage(chatId, ADOPTION_STEPS[0].question);
+      return;
     }
+
+    await runGenerate(chatId, {});
   });
+
+  // Controlla (al via e poi ogni ora) se è il 1° del mese e va inviato il report automatico
+  await sendAutomaticMonthlyReportIfDue(bot);
+  setInterval(() => sendAutomaticMonthlyReportIfDue(bot), 60 * 60 * 1000);
 
   return bot;
 }

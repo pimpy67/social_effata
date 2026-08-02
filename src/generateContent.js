@@ -24,7 +24,7 @@ Se serve citare il sito web dell'associazione, usa esclusivamente "effataitalia.
 Rispondi SOLO in formato JSON con questa struttura, senza markdown né testo aggiuntivo:
 {"facebookPost": "...", "instagramStory": "...", "linkedinPost": "...", "blogTitle": "...", "blogBody": "...", "reelScript": "...", "youtubeShorts": {"titolo": "...", "script": "...", "istruzioni": "...", "cta": "..."}}`;
 
-export async function generateSocialContent(rawText, images = []) {
+export async function generateSocialContent(rawText, images = [], category = null) {
   logger.info(`Generazione contenuti: ${images.length} foto, ${rawText.length} char di testo`);
 
   const content = [
@@ -35,11 +35,16 @@ export async function generateSocialContent(rawText, images = []) {
     { type: "text", text: rawText || "(nessuna descrizione fornita, usa un tono generico)" },
   ];
 
+  const system =
+    category?.rules && category.rules.trim()
+      ? `${SYSTEM_PROMPT}\n\nRegole obbligatorie specifiche per la categoria "${category.name}" (includi sempre queste frasi/link, adattandoli minimamente al contesto se serve, senza snaturarli):\n${category.rules}`
+      : SYSTEM_PROMPT;
+
   try {
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2500,
-      system: SYSTEM_PROMPT,
+      system,
       messages: [{ role: "user", content }],
     });
 
