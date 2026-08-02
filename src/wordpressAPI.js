@@ -21,18 +21,47 @@ export class WordPressAPI {
     });
   }
 
+  // Carica una foto nella libreria media di WordPress. Ritorna l'id da usare come
+  // immagine in evidenza o dentro una galleria.
+  async uploadMedia(buffer, filename, mimeType) {
+    const formData = new FormData();
+    const blob = new Blob([buffer], { type: mimeType || "image/jpeg" });
+    formData.append("file", blob, filename);
+
+    const response = await this.client.post("/media", formData);
+    return { id: response.data.id, url: response.data.source_url };
+  }
+
   // Crea l'articolo come bozza: resta invisibile al pubblico finché non lo
-  // pubblica qualcuno da wp-admin.
-  async createDraftPost(title, bodyText) {
+  // pubblica qualcuno da wp-admin. Se vengono passate delle foto, la prima
+  // caricata diventa l'immagine in evidenza (modificabile dopo in wp-admin) e
+  // tutte insieme vengono inserite come galleria nel corpo dell'articolo.
+  async createDraftPost(title, bodyText, images = []) {
     try {
-      const response = await this.client.post("/posts", {
-        title,
-        content: formatBlogContentHtml(bodyText),
-        status: "draft",
-      });
+      const mediaIds = [];
+      for (const [i, img] of images.entries()) {
+        try {
+          const media = await this.uploadMedia(img.buffer, `storia-${Date.now()}-${i + 1}.jpg`, img.mediaType);
+          mediaIds.push(media.id);
+        } catch (err) {
+          logger.warn(`Errore nel caricare una foto su WordPress: ${err.response?.data?.message || err.message}`);
+        }
+      }
+
+      let content = formatBlogContentHtml(bodyText);
+      if (mediaIds.length > 0) {
+        content += `\n[gallery ids="${mediaIds.join(",")}"]`;
+      }
+
+      const postData = { title, content, status: "draft" };
+      if (mediaIds.length > 0) {
+        postData.featured_media = mediaIds[0];
+      }
+
+      const response = await this.client.post("/posts", postData);
 
       const editLink = `${this.siteUrl}/wp-admin/post.php?post=${response.data.id}&action=edit`;
-      logger.info(`Bozza WordPress creata: id=${response.data.id}`);
+      logger.info(`Bozza WordPress creata: id=${response.data.id} (${mediaIds.length} foto)`);
       return { success: true, postId: response.data.id, editLink };
     } catch (err) {
       const message = err.response?.data?.message || err.message;

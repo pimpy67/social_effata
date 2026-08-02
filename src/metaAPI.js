@@ -203,35 +203,50 @@ export class MetaAPI {
     return response.data.permalink_url || null;
   }
 
-  // Pubblica una Storia Facebook (contenuto effimero, sparisce dopo 24h), in
-  // aggiunta al post normale. A differenza dei post, va online subito: non esiste
-  // un equivalente "bozza" per le Storie.
-  async publishFacebookStory(imageBuffer) {
+  // Pubblica una o più Storie Facebook (contenuto effimero, sparisce dopo 24h), in
+  // aggiunta al post normale. Una Storia mostra sempre una sola foto: con più foto
+  // ne pubblica una in sequenza per ciascuna (chi guarda le scorre una dopo l'altra).
+  // A differenza dei post, vanno online subito: non esiste una "bozza" per le Storie.
+  async publishFacebookStory(imageBuffers) {
     if (!this.pageAccessToken || !this.pageId) {
       logger.warn("Meta API: pageAccessToken o pageId non configurati");
       return { success: false, error: "Credenziali Meta mancanti" };
     }
-    if (!imageBuffer) {
+
+    const photos = (Array.isArray(imageBuffers) ? imageBuffers : imageBuffers ? [imageBuffers] : [])
+      .filter(Boolean)
+      .slice(0, 10);
+
+    if (photos.length === 0) {
       return { success: false, error: "Immagine richiesta per la Storia Facebook" };
     }
 
-    try {
-      const photoId = await this.uploadUnpublishedPhoto(imageBuffer);
+    const storyIds = [];
+    const errors = [];
 
-      const response = await axios.post(`https://graph.facebook.com/v26.0/${this.pageId}/photo_stories`, null, {
-        params: {
-          photo_id: photoId,
-          access_token: this.pageAccessToken,
-        },
-      });
+    for (const buffer of photos) {
+      try {
+        const photoId = await this.uploadUnpublishedPhoto(buffer);
+        const response = await axios.post(`https://graph.facebook.com/v26.0/${this.pageId}/photo_stories`, null, {
+          params: {
+            photo_id: photoId,
+            access_token: this.pageAccessToken,
+          },
+        });
+        storyIds.push(response.data.post_id || response.data.id);
+      } catch (err) {
+        errors.push(metaErrorMessage(err));
+      }
+    }
 
-      logger.info(`Storia Facebook pubblicata: ${JSON.stringify(response.data)}`);
-      return { success: true, storyId: response.data.post_id || response.data.id, platform: "facebook-story" };
-    } catch (err) {
-      const message = metaErrorMessage(err);
-      logger.error(`Errore nella pubblicazione della Storia Facebook: ${message}`);
+    if (storyIds.length === 0) {
+      const message = errors.join("; ");
+      logger.error(`Errore nella pubblicazione delle Storie Facebook: ${message}`);
       return { success: false, error: message, platform: "facebook-story" };
     }
+
+    logger.info(`Storie Facebook pubblicate: ${storyIds.length}/${photos.length}`);
+    return { success: true, storyIds, platform: "facebook-story" };
   }
 
   // Instagram elabora l'immagine in modo asincrono dopo la creazione del container:
@@ -342,49 +357,66 @@ export class MetaAPI {
     }
   }
 
-  // Pubblica una Storia Instagram (contenuto effimero, sparisce dopo 24h), in
-  // aggiunta al post/carosello normale. Va online subito, come il post Instagram.
-  async publishInstagramStory(imageBuffer) {
+  // Pubblica una o più Storie Instagram (contenuto effimero, sparisce dopo 24h), in
+  // aggiunta al post/carosello normale. Una Storia mostra sempre una sola foto: con
+  // più foto ne pubblica una in sequenza per ciascuna. Va online subito, come il post.
+  async publishInstagramStory(imageBuffers) {
     if (!this.instagramAccountId || !this.pageAccessToken) {
       logger.warn("Meta API: instagramAccountId o token non disponibili");
       return { success: false, error: "Account Instagram non collegato" };
     }
-    if (!imageBuffer) {
+
+    const photos = (Array.isArray(imageBuffers) ? imageBuffers : imageBuffers ? [imageBuffers] : [])
+      .filter(Boolean)
+      .slice(0, 10);
+
+    if (photos.length === 0) {
       return { success: false, error: "Immagine richiesta per la Storia Instagram" };
     }
 
-    try {
-      const imageUrl = await this.getPublicImageUrl(imageBuffer);
+    const storyIds = [];
+    const errors = [];
 
-      const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
-        params: {
-          image_url: imageUrl,
-          media_type: "STORIES",
-          access_token: this.pageAccessToken,
-        },
-      });
+    for (const buffer of photos) {
+      try {
+        const imageUrl = await this.getPublicImageUrl(buffer);
 
-      const creationId = createResponse.data.id;
-      await this.waitForMediaReady(creationId);
-
-      const publishResponse = await axios.post(
-        `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
-        null,
-        {
+        const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
           params: {
-            creation_id: creationId,
+            image_url: imageUrl,
+            media_type: "STORIES",
             access_token: this.pageAccessToken,
           },
-        }
-      );
+        });
 
-      logger.info(`Storia Instagram pubblicata: ${publishResponse.data.id}`);
-      return { success: true, storyId: publishResponse.data.id, platform: "instagram-story" };
-    } catch (err) {
-      const message = metaErrorMessage(err);
-      logger.error(`Errore nella pubblicazione della Storia Instagram: ${message}`);
+        const creationId = createResponse.data.id;
+        await this.waitForMediaReady(creationId);
+
+        const publishResponse = await axios.post(
+          `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
+          null,
+          {
+            params: {
+              creation_id: creationId,
+              access_token: this.pageAccessToken,
+            },
+          }
+        );
+
+        storyIds.push(publishResponse.data.id);
+      } catch (err) {
+        errors.push(metaErrorMessage(err));
+      }
+    }
+
+    if (storyIds.length === 0) {
+      const message = errors.join("; ");
+      logger.error(`Errore nella pubblicazione delle Storie Instagram: ${message}`);
       return { success: false, error: message, platform: "instagram-story" };
     }
+
+    logger.info(`Storie Instagram pubblicate: ${storyIds.length}/${photos.length}`);
+    return { success: true, storyIds, platform: "instagram-story" };
   }
 
   async publishToMetaBusiness(facebookText, instagramText, photos, optimizedPhotos = null) {
@@ -405,7 +437,7 @@ export class MetaAPI {
     const instagramPhotos = optimizedPhotos?.instagram
       ? (Array.isArray(optimizedPhotos.instagram) ? optimizedPhotos.instagram : [optimizedPhotos.instagram])
       : photos.map((p) => p.buffer);
-    const storyPhoto = instagramPhotos[0] || facebookPhotos[0] || null;
+    const storyPhotos = instagramPhotos.length > 0 ? instagramPhotos : facebookPhotos;
 
     try {
       const fbResult = await this.publishToFacebook(facebookText, facebookPhotos);
@@ -428,7 +460,7 @@ export class MetaAPI {
     }
 
     try {
-      const fbStoryResult = await this.publishFacebookStory(storyPhoto);
+      const fbStoryResult = await this.publishFacebookStory(storyPhotos);
       results.facebookStory = fbStoryResult;
       if (!fbStoryResult.success) {
         results.errors.push(`Storia Facebook: ${fbStoryResult.error}`);
@@ -438,7 +470,7 @@ export class MetaAPI {
     }
 
     try {
-      const igStoryResult = await this.publishInstagramStory(storyPhoto);
+      const igStoryResult = await this.publishInstagramStory(storyPhotos);
       results.instagramStory = igStoryResult;
       if (!igStoryResult.success) {
         results.errors.push(`Storia Instagram: ${igStoryResult.error}`);

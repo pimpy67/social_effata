@@ -556,10 +556,12 @@ export async function startBot() {
             metaMessage += "📷 Instagram (post): pubblicato online (già visibile a tutti)\n";
           }
           if (metaResults.facebookStory?.success) {
-            metaMessage += "📘 Facebook (Storia): pubblicata online (visibile 24h)\n";
+            const n = metaResults.facebookStory.storyIds?.length || 1;
+            metaMessage += `📘 Facebook (Storia): ${n > 1 ? `${n} storie pubblicate` : "pubblicata"} online (visibile 24h)\n`;
           }
           if (metaResults.instagramStory?.success) {
-            metaMessage += "📷 Instagram (Storia): pubblicata online (visibile 24h)\n";
+            const n = metaResults.instagramStory.storyIds?.length || 1;
+            metaMessage += `📷 Instagram (Storia): ${n > 1 ? `${n} storie pubblicate` : "pubblicata"} online (visibile 24h)\n`;
           }
           if (metaResults.errors.length > 0) {
             metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;
@@ -581,7 +583,7 @@ export async function startBot() {
       // Crea la bozza dell'articolo sul blog WordPress, se configurato
       if (wordpressAPI && result.blogTitle && result.blogBody) {
         try {
-          const wpResult = await wordpressAPI.createDraftPost(result.blogTitle, result.blogBody);
+          const wpResult = await wordpressAPI.createDraftPost(result.blogTitle, result.blogBody, images);
           if (wpResult.success) {
             metaMessage += `📝 Blog: bozza creata su WordPress (${wpResult.editLink})\n`;
           } else {
