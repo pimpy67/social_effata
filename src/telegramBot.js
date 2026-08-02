@@ -731,16 +731,26 @@ Altri comandi utili:
       return;
     }
 
-    const buttons = drafts.map((d) => [
-      {
-        text: `${d.createdAt.slice(0, 16).replace("T", " ")} - ${d.category || "senza categoria"}`,
-        callback_data: `publish_fb_${d.timestamp}`,
-      },
-    ]);
+    await bot.sendMessage(chatId, `📋 ${drafts.length} bozze Facebook in attesa:`);
 
-    await bot.sendMessage(chatId, "📋 Bozze Facebook in attesa (tocca per pubblicare):", {
-      reply_markup: { inline_keyboard: buttons },
-    });
+    for (const d of drafts) {
+      const date = d.createdAt.slice(0, 16).replace("T", " ");
+      const category = d.category || "senza categoria";
+
+      let preview = "(testo non trovato)";
+      try {
+        const text = fs.readFileSync(path.join(OUTPUT_DIR, `${d.timestamp}_facebook.txt`), "utf-8");
+        preview = text.length > 300 ? `${text.slice(0, 300)}...` : text;
+      } catch (err) {
+        logger.warn(`Impossibile leggere il testo della bozza ${d.timestamp}: ${err.message}`);
+      }
+
+      await bot.sendMessage(chatId, `🗓️ ${date} - ${category}\n\n${preview}`, {
+        reply_markup: {
+          inline_keyboard: [[{ text: "✅ Pubblica su Facebook", callback_data: `publish_fb_${d.timestamp}` }]],
+        },
+      });
+    }
   });
 
   // Comando /report-mese - Report mensile
