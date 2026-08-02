@@ -43,7 +43,7 @@ export async function generateSocialContent(rawText, images = [], category = nul
   try {
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2500,
+      max_tokens: 6000,
       system,
       messages: [{ role: "user", content }],
     });
@@ -56,7 +56,9 @@ export async function generateSocialContent(rawText, images = [], category = nul
     try {
       return JSON.parse(cleaned);
     } catch {
-      logger.warn("Claude non ha rispettato il formato JSON, usando fallback");
+      logger.warn(
+        `Claude non ha rispettato il formato JSON, usando fallback (stop_reason=${message.stop_reason})`
+      );
       return {
         facebookPost: cleaned,
         instagramStory: cleaned,
