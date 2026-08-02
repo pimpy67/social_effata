@@ -41,6 +41,67 @@
     .subtitle {
       color: #666;
       font-size: 16px;
+      margin-bottom: 16px;
+    }
+
+    .btn-guide {
+      background: #667eea;
+      color: white;
+      padding: 10px 18px;
+      font-size: 14px;
+    }
+
+    .btn-guide:hover {
+      background: #5568d3;
+    }
+
+    .guide-content h3 {
+      color: #667eea;
+      font-size: 18px;
+      margin: 24px 0 10px;
+    }
+
+    .guide-content h3:first-child {
+      margin-top: 0;
+    }
+
+    .guide-content p {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .guide-content ol,
+    .guide-content ul {
+      margin: 0 0 14px 22px;
+      line-height: 1.7;
+    }
+
+    .guide-content code {
+      background: #f0f0f0;
+      color: #d6336c;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: "Monaco", "Menlo", monospace;
+      font-size: 13px;
+    }
+
+    .guide-content a.bot-link {
+      display: inline-block;
+      background: #229ed9;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .guide-content .note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin-bottom: 14px;
     }
 
     .drafts-grid {
@@ -421,6 +482,7 @@
     <header>
       <h1>📱 Effatá Social Dashboard</h1>
       <p class="subtitle">Visualizza, approva e scarica le bozze di contenuti generati</p>
+      <button class="btn-guide" onclick="openGuide()">❓ Come funziona (guida passo per passo)</button>
     </header>
 
     <div class="volunteer-name">
@@ -475,6 +537,63 @@
         <div id="photos" class="tab-content">
           <div id="photos-content" class="draft-photos">Caricamento...</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal con la guida completa passo per passo -->
+  <div id="guide-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="font-size: 18px;">❓ Come funziona: guida passo per passo</div>
+        <button class="modal-close" onclick="closeGuide()">✕</button>
+      </div>
+      <div class="modal-body guide-content">
+        <h3>1. Apri il bot Telegram</h3>
+        <p>Tutto parte da lì: è dove mandi le foto e il testo di una storia. Aprilo da qui (funziona anche da telefono):</p>
+        <a class="bot-link" href="https://t.me/+ltqMLIohNbg3N2Jk" target="_blank" rel="noopener">📲 Apri il bot su Telegram</a>
+        <p>Al primo utilizzo scrivi <code>/start</code> (o <code>/help</code> in qualsiasi momento) per rivedere queste istruzioni direttamente nel bot.</p>
+
+        <h3>2. Scegli la categoria della storia</h3>
+        <p>Scrivi <code>/categoria</code> e tocca il pulsante della categoria giusta (es. "Adozioni scolastiche", "Animali domestici", "Costruzione casette", ecc.). Va fatto <strong>prima</strong> di mandare <code>/genera</code>, ma puoi farlo prima o dopo aver mandato le foto/testo.</p>
+
+        <h3>3. Manda le foto e il testo della storia</h3>
+        <p>Manda una o più foto (anche in messaggi separati) e un testo che racconta la storia (didascalia della foto, oppure un messaggio a parte). Il bot conferma ogni volta cosa ha ricevuto.</p>
+        <div class="note">⚠️ Se provi a mandare due volte la stessa foto, il bot se ne accorge e non la aggiunge di nuovo.</div>
+
+        <h3>4. Scrivi /genera</h3>
+        <p>Quando hai finito di mandare foto e testo, scrivi <code>/genera</code>. Il bot genera automaticamente tutti i testi: Facebook, Instagram, LinkedIn, blog, Reel/TikTok e YouTube Shorts.</p>
+
+        <h3>5. Eventuali domande extra (solo per alcune categorie)</h3>
+        <p>Per alcune categorie il bot fa 2-3 domande in più (es. nome del bambino, nome del sostenitore/padrino/madrina, provincia), <strong>una alla volta</strong>: rispondi e invia, poi aspetta che arrivi la domanda successiva prima di rispondere di nuovo.</p>
+        <p>Se non conosci un dato, scrivi solo <code>-</code> (un trattino) e premi invio: quella domanda viene saltata, non è obbligatoria. Dopo l'ultima domanda parte la generazione.</p>
+
+        <h3>6. Cosa viene pubblicato in automatico</h3>
+        <p><strong>📷 Instagram</strong>: viene pubblicato subito, in automatico, appena finisce <code>/genera</code>. È già online e visibile a tutti, non serve fare nient'altro.</p>
+        <p><strong>📘 Facebook</strong>: viene creato come bozza, <strong>non</strong> visibile a nessuno finché non la pubblichi tu (vedi punto 7).</p>
+        <p><strong>💼 LinkedIn, 📝 Blog, 🎬 Reel/TikTok, ▶️ YouTube Shorts</strong>: il bot genera solo il testo. Non viene pubblicato da nessuna parte in automatico: va copiato e pubblicato a mano dove serve (dalla Dashboard, vedi punto 8).</p>
+
+        <h3>7. Pubblicare la bozza Facebook (e sul canale Telegram)</h3>
+        <p>Nel bot Telegram scrivi <code>/bozze</code>: per ogni bozza in attesa ricevi un'anteprima del testo con un pulsante "✅ Pubblica su Facebook". Toccalo quando sei pronto: pubblica il post (con tutte le foto) sulla Pagina Facebook, e se il canale Telegram è collegato lo manda anche lì, tutto con un solo tocco.</p>
+
+        <h3>8. Usare la Dashboard (questa pagina)</h3>
+        <p>Qui vedi tutte le storie generate, una card per ciascuna, con titolo, data e stato:</p>
+        <ul>
+          <li><strong>👁️ Visualizza</strong>: apre tutti i testi generati (Facebook, Instagram, LinkedIn, blog, Reel, YouTube) e le foto della storia — usalo per copiare i testi di LinkedIn/blog/Reel/YouTube e pubblicarli a mano dove serve.</li>
+          <li><strong>📦 Zip</strong>: scarica tutto (testi + foto) in un unico file, comodo da salvare o inoltrare.</li>
+          <li><strong>✋ Prendo in carico</strong>: segnala agli altri volontari che ti stai occupando tu di questa storia.</li>
+          <li><strong>✅ Segna pubblicato</strong>: quando hai pubblicato tutto quello che dovevi pubblicare a mano, segna la storia come completata.</li>
+          <li><strong>🙋 Chi sei?</strong> (in alto a destra): imposta il tuo nome una volta, così il sistema sa chi ha preso in carico/pubblicato ogni storia.</li>
+        </ul>
+
+        <h3>9. Altri comandi utili nel bot</h3>
+        <ul>
+          <li><code>/status</code> — quante foto/testi hai in attesa</li>
+          <li><code>/reset</code> — cancella il materiale in attesa e ricomincia da capo</li>
+          <li><code>/bozze</code> — pubblica su Facebook le bozze in attesa</li>
+          <li><code>/report-mese</code> — riepilogo di quante storie per categoria nel mese</li>
+          <li><code>/report-anno</code> — stesso riepilogo per tutto l'anno</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -738,10 +857,24 @@
       currentDraftId = null;
     }
 
+    function openGuide() {
+      document.getElementById("guide-modal").classList.add("active");
+    }
+
+    function closeGuide() {
+      document.getElementById("guide-modal").classList.remove("active");
+    }
+
     // Chiudi modal quando clicchi fuori dal contenuto
     document.getElementById("modal").addEventListener("click", (e) => {
       if (e.target.id === "modal") {
         closeModal();
+      }
+    });
+
+    document.getElementById("guide-modal").addEventListener("click", (e) => {
+      if (e.target.id === "guide-modal") {
+        closeGuide();
       }
     });
   </script>
