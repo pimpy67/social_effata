@@ -1,13 +1,15 @@
 import sharp from "sharp";
 import { logger } from "./logger.js";
 
-// Dimensioni ottimali per ogni social (width x height in px)
+// Dimensioni massime per ogni social (width x height in px). Usate come limite,
+// non come rapporto forzato: la foto viene rimpicciolita se serve ma non
+// ritagliata, per non tagliare mai volti o dettagli importanti.
 const SOCIAL_DIMENSIONS = {
-  facebook: { width: 1200, height: 628, fit: "cover" },
-  instagram: { width: 1080, height: 1920, fit: "cover" },
-  linkedin: { width: 1200, height: 627, fit: "cover" },
-  blog: { width: 800, height: 600, fit: "cover" },
-  reel: { width: 1080, height: 1920, fit: "cover" },
+  facebook: { width: 1200, height: 1200 },
+  instagram: { width: 1200, height: 1200 },
+  linkedin: { width: 1200, height: 1200 },
+  blog: { width: 1000, height: 1000 },
+  reel: { width: 1200, height: 1200 },
 };
 
 export async function optimizePhotosForSocial(imageBuffers) {
@@ -24,14 +26,14 @@ export async function optimizePhotosForSocial(imageBuffers) {
             imageBuffers.map((img) =>
               sharp(img.buffer)
                 .resize(dimensions.width, dimensions.height, {
-                  fit: dimensions.fit,
-                  position: "center",
+                  fit: "inside",
+                  withoutEnlargement: true,
                 })
                 .jpeg({ quality: 90, progressive: true })
                 .toBuffer()
             )
           );
-          logger.debug(`${imageBuffers.length} foto ottimizzate per ${social} (${dimensions.width}x${dimensions.height})`);
+          logger.debug(`${imageBuffers.length} foto ottimizzate per ${social} (max ${dimensions.width}x${dimensions.height}, senza ritaglio)`);
           continue;
         }
 
@@ -40,13 +42,13 @@ export async function optimizePhotosForSocial(imageBuffers) {
 
         optimized[social] = await sharp(buffer)
           .resize(dimensions.width, dimensions.height, {
-            fit: dimensions.fit,
-            position: "center",
+            fit: "inside",
+            withoutEnlargement: true,
           })
           .jpeg({ quality: 90, progressive: true })
           .toBuffer();
 
-        logger.debug(`Foto ottimizzata per ${social} (${dimensions.width}x${dimensions.height})`);
+        logger.debug(`Foto ottimizzata per ${social} (max ${dimensions.width}x${dimensions.height}, senza ritaglio)`);
       } catch (err) {
         logger.warn(`Errore nell'ottimizzare foto per ${social}: ${err.message}`);
         // Fallback: usa la foto originale se l'ottimizzazione fallisce
