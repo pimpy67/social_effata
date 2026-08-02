@@ -13,6 +13,8 @@ Dato il testo grezzo mandato da un volontario (spesso breve, informale, a volte 
 5. Uno script breve per un Reel/TikTok (max 30-45 secondi di parlato): poche frasi che indicano cosa dire o mostrare in un video verticale, con un gancio iniziale forte e una call-to-action finale.
 6. Uno script per YouTube Shorts (max 30-45 secondi): struttura con TITOLO (catchy, max 60 char), SCRIPT (cosa dire), ISTRUZIONI (foto da mostrare, movimenti, testi sovrapposti), CTA finale.
 
+SE ti viene segnalato che il volontario ha già girato un video reale (vedi indicazione più sotto), i punti 5 e 6 cambiano scopo: il video esiste già, quindi NON generare istruzioni di ripresa/montaggio. Per il punto 5 scrivi solo la didascalia/caption breve da pubblicare insieme al video (con call-to-action e hashtag). Per il punto 6 mantieni TITOLO e CTA, ma usa SCRIPT per la descrizione del video (per il campo descrizione di YouTube) e scrivi in ISTRUZIONI semplicemente "Video già girato dal volontario, nessuna ripresa da fare".
+
 Ti vengono fornite anche le foto associate al racconto: usale come contesto visivo per rendere il testo più vivido e accurato, ma non dedurre né citare dettagli identificativi (nomi, luoghi specifici, scuole) che non sono esplicitamente forniti nel testo, anche se intuibili dall'immagine.
 
 Non inventare dettagli non presenti nel testo originale (età, nomi, luoghi specifici) se non forniti. Se il testo è ambiguo, resta generico ma comunque coinvolgente.
@@ -24,8 +26,8 @@ Se serve citare il sito web dell'associazione, usa esclusivamente "effataitalia.
 Rispondi SOLO in formato JSON con questa struttura, senza markdown né testo aggiuntivo:
 {"facebookPost": "...", "instagramStory": "...", "linkedinPost": "...", "blogTitle": "...", "blogBody": "...", "reelScript": "...", "youtubeShorts": {"titolo": "...", "script": "...", "istruzioni": "...", "cta": "..."}}`;
 
-export async function generateSocialContent(rawText, images = [], category = null) {
-  logger.info(`Generazione contenuti: ${images.length} foto, ${rawText.length} char di testo`);
+export async function generateSocialContent(rawText, images = [], category = null, hasVideo = false) {
+  logger.info(`Generazione contenuti: ${images.length} foto, ${rawText.length} char di testo, video allegato: ${hasVideo}`);
 
   const content = [
     ...images.map(({ buffer, mediaType }) => ({
@@ -35,10 +37,14 @@ export async function generateSocialContent(rawText, images = [], category = nul
     { type: "text", text: rawText || "(nessuna descrizione fornita, usa un tono generico)" },
   ];
 
-  const system =
+  let system =
     category?.rules && category.rules.trim()
       ? `${SYSTEM_PROMPT}\n\nRegole obbligatorie specifiche per la categoria "${category.name}" (includi sempre queste frasi/link, adattandoli minimamente al contesto se serve, senza snaturarli):\n${category.rules}`
       : SYSTEM_PROMPT;
+
+  if (hasVideo) {
+    system += `\n\nIMPORTANTE: per questa storia il volontario ha già girato un video reale. Applica le istruzioni per i punti 5 e 6 previste per questo caso (niente istruzioni di ripresa: solo didascalia per il Reel, e TITOLO/descrizione/CTA per YouTube).`;
+  }
 
   try {
     const message = await client.messages.create({

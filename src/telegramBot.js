@@ -439,10 +439,15 @@ export async function startBot() {
         mediaType: p.mediaType || "image/jpeg",
       }));
 
-      const result = await generateSocialContent(rawText, images, {
-        name: selected?.name,
-        rules: selected ? CATEGORY_RULES[selected.id] : "",
-      });
+      const result = await generateSocialContent(
+        rawText,
+        images,
+        {
+          name: selected?.name,
+          rules: selected ? CATEGORY_RULES[selected.id] : "",
+        },
+        pending.videos.length > 0
+      );
 
       const timestamp = Date.now();
       const outBase = path.join(OUTPUT_DIR, `${timestamp}`);
