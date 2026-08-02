@@ -235,9 +235,11 @@ function saveState() {
 
 function getPending(chatId) {
   if (!pendingByChat.has(chatId)) {
-    pendingByChat.set(chatId, { photos: [], notes: [] });
+    pendingByChat.set(chatId, { photos: [], notes: [], videos: [] });
   }
-  return pendingByChat.get(chatId);
+  const pending = pendingByChat.get(chatId);
+  if (!pending.videos) pending.videos = []; // retrocompatibilità con stato salvato prima dei video
+  return pending;
 }
 
 export async function startBot() {
@@ -338,11 +340,82 @@ export async function startBot() {
     }
   }
 
+  // Scarica un video e lo aggiunge al materiale in attesa (per un futuro caricamento
+  // su YouTube - per ora viene solo conservato insieme alla storia generata).
+  async function addVideoToPending(msg, fileId, mediaType, caption, fileSize = null) {
+    const formatCheck = validation.validateVideo(mediaType, fileSize || 0);
+    if (!formatCheck.valid) {
+      await bot.sendMessage(msg.chat.id, `⚠️ ${formatCheck.error}`);
+      return;
+    }
+
+    const pending = getPending(msg.chat.id);
+    const videoCheck = validation.validateVideoCount(pending.videos.length);
+    if (!videoCheck.valid) {
+      await bot.sendMessage(msg.chat.id, `⚠️ ${videoCheck.error}`);
+      return;
+    }
+
+    const fileLink = await bot.getFileLink(fileId);
+    const ext = mediaType?.includes("quicktime") ? "mov" : mediaType?.includes("webm") ? "webm" : "mp4";
+
+    try {
+      const res = await fetch(fileLink);
+
+      const contentLength = res.headers.get("content-length");
+      if (contentLength) {
+        const sizeMB = parseInt(contentLength) / (1024 * 1024);
+        if (sizeMB > validation.getLimits().MAX_VIDEO_SIZE_MB) {
+          await bot.sendMessage(
+            msg.chat.id,
+            `⚠️ Video troppo grande (${sizeMB.toFixed(1)}MB). Max: ${validation.getLimits().MAX_VIDEO_SIZE_MB}MB — comprimi o accorcia il video e riprova.`
+          );
+          return;
+        }
+      }
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+
+      const sizeMB = buffer.length / (1024 * 1024);
+      if (sizeMB > validation.getLimits().MAX_VIDEO_SIZE_MB) {
+        await bot.sendMessage(
+          msg.chat.id,
+          `⚠️ Video troppo grande (${sizeMB.toFixed(1)}MB). Max: ${validation.getLimits().MAX_VIDEO_SIZE_MB}MB — comprimi o accorcia il video e riprova.`
+        );
+        return;
+      }
+
+      const hash = crypto.createHash("sha256").update(buffer).digest("hex");
+      if (pending.videos.some((v) => v.hash === hash)) {
+        await bot.sendMessage(msg.chat.id, "⚠️ Questo video è già stato caricato, non è stato aggiunto di nuovo.");
+        return;
+      }
+
+      const timestamp = Date.now();
+      const videoPath = path.join(INTAKE_DIR, `${timestamp}.${ext}`);
+      fs.writeFileSync(videoPath, buffer);
+
+      pending.videos.push({ videoPath, caption, mediaType, hash });
+      saveState();
+
+      logger.info(`Video aggiunto: ${(buffer.length / 1024 / 1024).toFixed(1)}MB (${pending.videos.length} totali)`);
+      await bot.sendMessage(
+        msg.chat.id,
+        `🎬 Video aggiunto (${pending.videos.length}/${validation.getLimits().MAX_TOTAL_VIDEOS}). Manda altre foto/video/testi, oppure scrivi /genera quando hai finito.`
+      );
+      await remindCategoryIfNeeded(msg.chat.id, pending);
+    } catch (err) {
+      logger.error(`Errore nel scaricare il video: ${err.message}`);
+      await bot.sendMessage(msg.chat.id, "⚠️ Errore nel download del video, riprova.");
+    }
+  }
+
   // Genera le bozze social dal materiale in attesa. categoryData contiene gli eventuali
   // campi opzionali specifici della categoria selezionata (bambino/sostenitore, animali, ecc.).
   async function runGenerate(chatId, categoryData = {}) {
     const pending = pendingByChat.get(chatId);
     if (!pending) return;
+    if (!pending.videos) pending.videos = []; // retrocompatibilità con stato salvato prima dei video
 
     try {
       await bot.sendMessage(
@@ -391,6 +464,12 @@ export async function startBot() {
         fs.copyFileSync(p.imgPath, `${outBase}_${i + 1}${ext}`);
       });
 
+      // Salva i video originali (in attesa del caricamento su YouTube, non ancora implementato)
+      pending.videos.forEach((v, i) => {
+        const ext = path.extname(v.videoPath);
+        fs.copyFileSync(v.videoPath, `${outBase}_video${i + 1}${ext}`);
+      });
+
       // Ottimizza le foto per ogni social
       let optimizedPhotos = {};
       try {
@@ -422,6 +501,14 @@ export async function startBot() {
           const txtPath = p.imgPath.replace(/\.[^.]+$/, ".txt");
           if (fs.existsSync(p.imgPath)) fs.unlinkSync(p.imgPath);
           if (fs.existsSync(txtPath)) fs.unlinkSync(txtPath);
+        } catch (err) {
+          logger.warn(`Errore nel cancellare file temporaneo: ${err.message}`);
+        }
+      });
+
+      pending.videos.forEach((v) => {
+        try {
+          if (fs.existsSync(v.videoPath)) fs.unlinkSync(v.videoPath);
         } catch (err) {
           logger.warn(`Errore nel cancellare file temporaneo: ${err.message}`);
         }
@@ -515,9 +602,13 @@ export async function startBot() {
       // Pulisci la categoria dopo la generazione
       selectedCategory.delete(chatId);
 
+      const videoNote = pending.videos.length > 0
+        ? `\n🎬 ${pending.videos.length} video salvati (in output/), in attesa dell'integrazione con YouTube.\n`
+        : "";
+
       await bot.sendMessage(
         chatId,
-        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n\n${metaMessage}`
+        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n${videoNote}\n${metaMessage}`
       );
     } catch (err) {
       logger.error(`Errore nel generare i contenuti: ${err.message}`);
@@ -581,17 +672,32 @@ export async function startBot() {
     }
   });
 
-  // Immagini mandate come file/documento (es. "Invia come file" invece che come foto compressa)
+  // Immagini/video mandati come file/documento (es. "Invia come file" invece che compressi)
   bot.on("document", async (msg) => {
     if (!isAllowed(msg.chat.id)) return;
     const mediaType = msg.document.mime_type || "";
-    if (!mediaType.startsWith("image/")) return; // ignora documenti non-immagine
 
     try {
-      await addImageToPending(msg, msg.document.file_id, mediaType, msg.caption || "", msg.document.file_size);
+      if (mediaType.startsWith("image/")) {
+        await addImageToPending(msg, msg.document.file_id, mediaType, msg.caption || "", msg.document.file_size);
+      } else if (mediaType.startsWith("video/")) {
+        await addVideoToPending(msg, msg.document.file_id, mediaType, msg.caption || "", msg.document.file_size);
+      }
+      // ignora documenti di altro tipo
     } catch (err) {
-      logger.error(`Errore nel salvare il documento immagine: ${err.message}`);
-      await bot.sendMessage(msg.chat.id, "⚠️ Si è verificato un errore nel salvare la foto, riprova.");
+      logger.error(`Errore nel salvare il documento: ${err.message}`);
+      await bot.sendMessage(msg.chat.id, "⚠️ Si è verificato un errore nel salvare il file, riprova.");
+    }
+  });
+
+  // Video mandati come video nativo (non compresso da Telegram come i "file")
+  bot.on("video", async (msg) => {
+    if (!isAllowed(msg.chat.id)) return;
+    try {
+      await addVideoToPending(msg, msg.video.file_id, msg.video.mime_type || "video/mp4", msg.caption || "", msg.video.file_size);
+    } catch (err) {
+      logger.error(`Errore nel salvare il video: ${err.message}`);
+      await bot.sendMessage(msg.chat.id, "⚠️ Si è verificato un errore nel salvare il video, riprova.");
     }
   });
 
@@ -654,7 +760,7 @@ export async function startBot() {
   const HELP_TEXT = `👋 Ciao! Ecco come funziona il bot per creare le storie social:
 
 1️⃣ Scegli la categoria della storia con /categoria (es. Adozioni scolastiche, Animali domestici, ...)
-2️⃣ Manda le foto e un testo/descrizione della storia (uno o più messaggi, come preferisci)
+2️⃣ Manda le foto (e, se vuoi, brevi video da telefono, max ${validation.getLimits().MAX_VIDEO_SIZE_MB}MB l'uno) e un testo/descrizione della storia (uno o più messaggi, come preferisci)
 3️⃣ Scrivi /genera per creare le bozze
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
@@ -690,12 +796,12 @@ Altri comandi utili:
     if (!isAllowed(chatId)) return;
 
     const pending = pendingByChat.get(chatId);
-    if (!pending || (pending.photos.length === 0 && pending.notes.length === 0)) {
+    if (!pending || (pending.photos.length === 0 && pending.notes.length === 0 && (pending.videos || []).length === 0)) {
       await bot.sendMessage(chatId, "📋 Nessun materiale in attesa. Manda foto/testi per iniziare.");
       return;
     }
 
-    const status = `📋 Materiale accumulato:\n• ${pending.photos.length} foto\n• ${pending.notes.length} testi extra`;
+    const status = `📋 Materiale accumulato:\n• ${pending.photos.length} foto\n• ${(pending.videos || []).length} video\n• ${pending.notes.length} testi extra`;
     await bot.sendMessage(chatId, status);
   });
 
@@ -704,7 +810,7 @@ Altri comandi utili:
     if (!isAllowed(chatId)) return;
 
     const pending = pendingByChat.get(chatId);
-    if (!pending || (pending.photos.length === 0 && pending.notes.length === 0)) {
+    if (!pending || (pending.photos.length === 0 && pending.notes.length === 0 && (pending.videos || []).length === 0)) {
       await bot.sendMessage(chatId, "⚠️ Nessun materiale da cancellare.");
       return;
     }
@@ -714,6 +820,14 @@ Altri comandi utili:
         const txtPath = p.imgPath.replace(/\.[^.]+$/, ".txt");
         if (fs.existsSync(p.imgPath)) fs.unlinkSync(p.imgPath);
         if (fs.existsSync(txtPath)) fs.unlinkSync(txtPath);
+      } catch (err) {
+        logger.warn(`Errore nel cancellare file: ${err.message}`);
+      }
+    });
+
+    (pending.videos || []).forEach((v) => {
+      try {
+        if (fs.existsSync(v.videoPath)) fs.unlinkSync(v.videoPath);
       } catch (err) {
         logger.warn(`Errore nel cancellare file: ${err.message}`);
       }
@@ -781,10 +895,16 @@ Altri comandi utili:
 
         let confirmMsg = `✅ Post del ${draft.createdAt} (${draft.category || "senza categoria"}) pubblicato su Facebook.`;
 
-        if (process.env.TELEGRAM_CHANNEL_ID) {
+        let facebookText = null;
+        try {
+          facebookText = fs.readFileSync(path.join(OUTPUT_DIR, `${draft.timestamp}_facebook.txt`), "utf-8");
+        } catch (err) {
+          logger.warn(`Impossibile leggere il testo della bozza ${draft.timestamp}: ${err.message}`);
+        }
+
+        if (process.env.TELEGRAM_CHANNEL_ID && facebookText) {
           try {
-            const text = fs.readFileSync(path.join(OUTPUT_DIR, `${draft.timestamp}_facebook.txt`), "utf-8");
-            await publishToChannel(draft.timestamp, text);
+            await publishToChannel(draft.timestamp, facebookText);
             confirmMsg += "\n📢 Pubblicato anche sul canale Telegram.";
           } catch (err) {
             logger.error(`Errore nel pubblicare sul canale Telegram: ${err.message}`);
@@ -792,7 +912,21 @@ Altri comandi utili:
           }
         }
 
-        await bot.sendMessage(chatId, confirmMsg);
+        // Link pronto per WhatsApp: apre l'app con il messaggio già scritto, pronto
+        // da girare a qualsiasi contatto/gruppo con un tocco (nessuna API richiesta).
+        let shareButton = null;
+        try {
+          const permalink = await metaAPI.getFacebookPostPermalink(draft.facebookPostId);
+          if (permalink && facebookText) {
+            const preview = facebookText.length > 200 ? `${facebookText.slice(0, 200)}...` : facebookText;
+            const shareText = `${preview}\n\n${permalink}`;
+            shareButton = { text: "📤 Condividi su WhatsApp", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` };
+          }
+        } catch (err) {
+          logger.warn(`Impossibile generare il link di condivisione WhatsApp: ${err.message}`);
+        }
+
+        await bot.sendMessage(chatId, confirmMsg, shareButton ? { reply_markup: { inline_keyboard: [[shareButton]] } } : undefined);
       } catch (err) {
         logger.error(`Errore nel pubblicare la bozza Facebook ${draft.timestamp}: ${err.message}`);
         await bot.answerCallbackQuery(query.id, { text: "Errore nella pubblicazione." });

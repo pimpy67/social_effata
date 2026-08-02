@@ -191,6 +191,18 @@ export class MetaAPI {
     });
   }
 
+  // Il link diretto al post esiste solo dopo che è stato reso pubblico
+  // (non per le bozze non pubblicate): va richiesto dopo publishFacebookDraft.
+  async getFacebookPostPermalink(postId) {
+    const response = await axios.get(`https://graph.facebook.com/v26.0/${postId}`, {
+      params: {
+        fields: "permalink_url",
+        access_token: this.pageAccessToken,
+      },
+    });
+    return response.data.permalink_url || null;
+  }
+
   // Pubblica una Storia Facebook (contenuto effimero, sparisce dopo 24h), in
   // aggiunta al post normale. A differenza dei post, va online subito: non esiste
   // un equivalente "bozza" per le Storie.

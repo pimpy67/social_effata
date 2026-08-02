@@ -3,6 +3,10 @@ import { logger } from "./logger.js";
 const VALIDATION_CONFIG = {
   MAX_FILE_SIZE_MB: 25,           // Max 25MB per foto
   MAX_TOTAL_PHOTOS: 10,           // Max 10 foto per storia
+  // Limite reale dei bot Telegram per scaricare un file (non aggirabile): oltre
+  // i 20MB l'API di download semplicemente non funziona.
+  MAX_VIDEO_SIZE_MB: 20,
+  MAX_TOTAL_VIDEOS: 3,            // Max 3 video per storia
   MAX_TEXT_LENGTH: 50000,         // Max 50k caratteri totali
   MAX_MESSAGE_LENGTH: 5000,       // Max 5k per messaggio
   GENERATE_COOLDOWN_SECONDS: 30,  // Min 30 secondi tra /genera
@@ -40,6 +44,39 @@ export const validation = {
       return {
         valid: false,
         error: `Limite di foto raggiunto (${VALIDATION_CONFIG.MAX_TOTAL_PHOTOS} max). Genera ora con /genera.`,
+      };
+    }
+    return { valid: true };
+  },
+
+  // Valida un video (formato + dimensione, limite reale di Telegram per il download)
+  validateVideo(mimeType, fileSize) {
+    const ALLOWED_TYPES = ["video/mp4", "video/quicktime", "video/x-matroska", "video/webm"];
+
+    if (mimeType && !ALLOWED_TYPES.includes(mimeType)) {
+      return {
+        valid: false,
+        error: `Formato video non supportato. Usa: MP4, MOV o WebM. Ricevuto: ${mimeType}`,
+      };
+    }
+
+    const fileSizeMB = fileSize / (1024 * 1024);
+    if (fileSizeMB > VALIDATION_CONFIG.MAX_VIDEO_SIZE_MB) {
+      return {
+        valid: false,
+        error: `Video troppo grande (${fileSizeMB.toFixed(1)}MB). Max: ${VALIDATION_CONFIG.MAX_VIDEO_SIZE_MB}MB — comprimi o accorcia il video e riprova.`,
+      };
+    }
+
+    return { valid: true };
+  },
+
+  // Valida il numero totale di video accumulati
+  validateVideoCount(currentCount) {
+    if (currentCount >= VALIDATION_CONFIG.MAX_TOTAL_VIDEOS) {
+      return {
+        valid: false,
+        error: `Limite di video raggiunto (${VALIDATION_CONFIG.MAX_TOTAL_VIDEOS} max). Genera ora con /genera.`,
       };
     }
     return { valid: true };
