@@ -451,15 +451,26 @@ export async function startBot() {
 
           if (metaResults.facebook?.success) {
             facebookPostId = metaResults.facebook.postId;
-            metaMessage += "📘 Facebook: bozza creata (usa /bozze per pubblicarla quando sei pronto)\n";
+            metaMessage += "📘 Facebook (post): bozza creata (usa /bozze per pubblicarla quando sei pronto)\n";
           }
           if (metaResults.instagram?.success) {
-            metaMessage += "📷 Instagram: pubblicato online (già visibile a tutti)\n";
+            metaMessage += "📷 Instagram (post): pubblicato online (già visibile a tutti)\n";
+          }
+          if (metaResults.facebookStory?.success) {
+            metaMessage += "📘 Facebook (Storia): pubblicata online (visibile 24h)\n";
+          }
+          if (metaResults.instagramStory?.success) {
+            metaMessage += "📷 Instagram (Storia): pubblicata online (visibile 24h)\n";
           }
           if (metaResults.errors.length > 0) {
             metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;
           }
-          if (!metaResults.facebook?.success && !metaResults.instagram?.success) {
+          if (
+            !metaResults.facebook?.success &&
+            !metaResults.instagram?.success &&
+            !metaResults.facebookStory?.success &&
+            !metaResults.instagramStory?.success
+          ) {
             metaMessage = "⚠️ Nessun canale Meta pubblicato\n";
           }
         } catch (err) {
@@ -626,7 +637,7 @@ export async function startBot() {
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
 
-Facebook viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto (pubblica anche sul canale Telegram, se configurato). Instagram invece va online subito, automaticamente.
+Facebook (post) viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto (pubblica anche sul canale Telegram, se configurato). Instagram (post) invece va online subito, automaticamente. Anche le Storie (Facebook e Instagram, se configurate) vengono pubblicate subito, in automatico, e spariscono dopo 24h.
 
 Altri comandi utili:
 /status - vedi quante foto/testi hai in attesa
