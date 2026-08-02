@@ -646,18 +646,31 @@ export async function startBot() {
     if (!channelId) return;
 
     const photoPaths = getDraftPhotoPaths(timestamp).slice(0, 10); // limite Telegram per media group
+    // Le didascalie di foto/media group hanno un limite di 1024 caratteri (diverso
+    // dai 4096 dei messaggi di testo): se il post è più lungo, manda le foto senza
+    // didascalia e il testo completo come messaggio a parte, per non troncarlo.
+    const TELEGRAM_CAPTION_LIMIT = 1024;
+    const fitsAsCaption = text.length <= TELEGRAM_CAPTION_LIMIT;
 
     if (photoPaths.length === 0) {
       await bot.sendMessage(channelId, text);
     } else if (photoPaths.length === 1) {
-      await bot.sendPhoto(channelId, photoPaths[0], { caption: text });
+      if (fitsAsCaption) {
+        await bot.sendPhoto(channelId, photoPaths[0], { caption: text });
+      } else {
+        await bot.sendPhoto(channelId, photoPaths[0]);
+        await bot.sendMessage(channelId, text);
+      }
     } else {
       const media = photoPaths.map((p, i) => ({
         type: "photo",
         media: p,
-        ...(i === 0 ? { caption: text } : {}),
+        ...(i === 0 && fitsAsCaption ? { caption: text } : {}),
       }));
       await bot.sendMediaGroup(channelId, media);
+      if (!fitsAsCaption) {
+        await bot.sendMessage(channelId, text);
+      }
     }
 
     logger.info(`Post pubblicato anche sul canale Telegram (bozza ${timestamp})`);
