@@ -4,6 +4,18 @@ import { logger } from "./logger.js";
 const GRAPH_API_VERSION = "v26.0";
 const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
+// Instagram rifiuta (code=36004) qualsiasi caption oltre 2200 caratteri, sia per
+// post singoli che per caroselli: a differenza di Telegram non è possibile pubblicare
+// la foto senza didascalia e mandare il testo completo a parte, quindi qui troncamo
+// per non perdere la pubblicazione.
+const INSTAGRAM_CAPTION_LIMIT = 2200;
+
+function truncateInstagramCaption(text) {
+  if (!text || text.length <= INSTAGRAM_CAPTION_LIMIT) return text;
+  logger.warn(`Caption Instagram troppo lunga (${text.length} caratteri), troncata a ${INSTAGRAM_CAPTION_LIMIT}`);
+  return `${text.slice(0, INSTAGRAM_CAPTION_LIMIT - 1)}…`;
+}
+
 // Estrae il messaggio d'errore reale restituito da Meta (es. token scaduto,
 // permesso mancante) invece del generico "Request failed with status code 4xx"
 // che axios mette in err.message.
@@ -291,6 +303,8 @@ export class MetaAPI {
       return { success: false, error: "Immagine richiesta per Instagram" };
     }
 
+    const caption = truncateInstagramCaption(text);
+
     try {
       let creationId;
 
@@ -299,7 +313,7 @@ export class MetaAPI {
         const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
           params: {
             image_url: imageUrl,
-            caption: text,
+            caption,
             access_token: this.pageAccessToken,
           },
         });
@@ -326,7 +340,7 @@ export class MetaAPI {
           params: {
             media_type: "CAROUSEL",
             children: itemIds.join(","),
-            caption: text,
+            caption,
             access_token: this.pageAccessToken,
           },
         });
