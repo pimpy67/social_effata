@@ -97,6 +97,16 @@ const CATEGORY_STEPS = {
   "10": [], // Vari: nessuna domanda, categoria solo descrittiva (esclusa dai report)
 };
 
+// Domanda sempre presente, in coda alle eventuali domande specifiche di categoria:
+// il link a cui deve rimandare il bottone CTA nell'articolo del blog (raccolta
+// fondi, GoFundMe, adozione a distanza, ecc.). Non va in CATEGORY_STEPS perché non
+// è un dato "di categoria" da mostrare nei report, solo un URL per il bottone.
+const LINK_STEP = {
+  key: "referenceLink",
+  label: "Link",
+  question: "🔗 A quale link deve rimandare il bottone dell'articolo sul blog? (es. raccolta fondi, GoFundMe, adozione a distanza — scrivi il link completo, oppure - per saltare)",
+};
+
 // Sessione di domande per categoria in corso per ogni chat: { steps, step, data }
 const categorySessions = new Map();
 
@@ -584,7 +594,12 @@ export async function startBot() {
       // Crea la bozza dell'articolo sul blog WordPress, se configurato
       if (wordpressAPI && result.blogTitle && result.blogBody) {
         try {
-          const wpResult = await wordpressAPI.createDraftPost(result.blogTitle, result.blogBody, images);
+          const wpResult = await wordpressAPI.createDraftPost(
+            result.blogTitle,
+            result.blogBody,
+            images,
+            categoryData.referenceLink
+          );
           if (wpResult.success) {
             metaMessage += `📝 Blog: bozza creata su WordPress (${wpResult.editLink})\n`;
           } else {
@@ -1083,19 +1098,15 @@ Altri comandi utili:
       return;
     }
 
-    // Per le categorie che lo prevedono, chiedi prima (in sequenza, campi opzionali)
-    // i dati specifici; la generazione parte dopo l'ultima risposta.
-    const steps = CATEGORY_STEPS[selected.id] || [];
-    if (steps.length > 0) {
-      categorySessions.set(chatId, { steps, step: 0, data: {} });
-      await bot.sendMessage(
-        chatId,
-        `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.\n\n${steps[0].question}`
-      );
-      return;
-    }
-
-    await runGenerate(chatId, {});
+    // Chiedi prima (in sequenza, campi opzionali) i dati specifici della categoria
+    // più la domanda sul link CTA, sempre presente; la generazione parte dopo
+    // l'ultima risposta.
+    const steps = [...(CATEGORY_STEPS[selected.id] || []), LINK_STEP];
+    categorySessions.set(chatId, { steps, step: 0, data: {} });
+    await bot.sendMessage(
+      chatId,
+      `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.\n\n${steps[0].question}`
+    );
   });
 
   // Controlla (al via e poi ogni ora) se è il 1° del mese e va inviato il report automatico

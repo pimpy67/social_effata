@@ -28,6 +28,22 @@ export function buildGalleryBlock(mediaItems) {
   return `<!-- wp:gallery {"linkTo":"none"} -->\n<figure class="wp-block-gallery has-nested-images columns-default is-cropped is-layout-flex wp-block-gallery-is-layout-flex">\n${images}\n</figure>\n<!-- /wp:gallery -->`;
 }
 
+const DEFAULT_CTA_LABEL = "SOSTIENI IL PROGETTO";
+
+// Genera il blocco Gutenberg per il bottone di invito all'azione (bottone pieno +
+// spaziatore), nello stesso stile usato negli articoli pubblicati manualmente
+// (es. "SOSTIENI LA CASA FAMIGLIA" che rimanda al calendario delle adozioni).
+export function buildCtaButtonBlock(url, label = DEFAULT_CTA_LABEL) {
+  const trimmed = (url || "").trim();
+  if (!trimmed) return "";
+
+  // I volontari spesso incollano il link senza "https://": senza uno schema
+  // l'href verrebbe interpretato come link relativo al sito, quindi rotto.
+  const href = (/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`).replace(/"/g, "&quot;");
+
+  return `<!-- wp:buttons -->\n<div class="wp-block-buttons"><!-- wp:button -->\n<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="${href}">${label}</a></div>\n<!-- /wp:button --></div>\n<!-- /wp:buttons -->\n\n<!-- wp:spacer {"height":"25px"} -->\n<div style="height:25px" aria-hidden="true" class="wp-block-spacer"></div>\n<!-- /wp:spacer -->`;
+}
+
 export class WordPressAPI {
   constructor(siteUrl, username, appPassword) {
     this.siteUrl = siteUrl.replace(/\/$/, "");
@@ -52,7 +68,7 @@ export class WordPressAPI {
   // pubblica qualcuno da wp-admin. Se vengono passate delle foto, la prima
   // caricata diventa l'immagine in evidenza (modificabile dopo in wp-admin) e
   // tutte insieme vengono inserite come galleria nel corpo dell'articolo.
-  async createDraftPost(title, bodyText, images = []) {
+  async createDraftPost(title, bodyText, images = [], ctaLink = null) {
     try {
       const media = [];
       for (const [i, img] of images.entries()) {
@@ -65,6 +81,10 @@ export class WordPressAPI {
       }
 
       let content = formatBlogContentHtml(bodyText);
+      const ctaBlock = buildCtaButtonBlock(ctaLink);
+      if (ctaBlock) {
+        content += `\n\n${ctaBlock}`;
+      }
       if (media.length > 0) {
         content += `\n\n${buildGalleryBlock(media)}`;
       }
