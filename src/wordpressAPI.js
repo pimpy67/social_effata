@@ -15,7 +15,7 @@ function formatBlogContentHtml(text) {
 // Genera lo stesso markup a blocco Gutenberg (wp:gallery + wp:image annidati) usato
 // negli altri articoli del blog, invece dello shortcode [gallery] che il tema
 // renderizza con thumbnail piccole anziché nella galleria grande "a flex".
-function buildGalleryBlock(mediaItems) {
+export function buildGalleryBlock(mediaItems) {
   if (mediaItems.length === 0) return "";
 
   const images = mediaItems
