@@ -12,6 +12,22 @@ function formatBlogContentHtml(text) {
     .join("\n");
 }
 
+// Genera lo stesso markup a blocco Gutenberg (wp:gallery + wp:image annidati) usato
+// negli altri articoli del blog, invece dello shortcode [gallery] che il tema
+// renderizza con thumbnail piccole anziché nella galleria grande "a flex".
+function buildGalleryBlock(mediaItems) {
+  if (mediaItems.length === 0) return "";
+
+  const images = mediaItems
+    .map(
+      ({ id, url }) =>
+        `<!-- wp:image {"id":${id},"sizeSlug":"large","linkDestination":"none"} -->\n<figure class="wp-block-image size-large"><img src="${url}" alt="" class="wp-image-${id}"/></figure>\n<!-- /wp:image -->`
+    )
+    .join("\n\n");
+
+  return `<!-- wp:gallery {"linkTo":"none"} -->\n<figure class="wp-block-gallery has-nested-images columns-default is-cropped is-layout-flex wp-block-gallery-is-layout-flex">\n${images}\n</figure>\n<!-- /wp:gallery -->`;
+}
+
 export class WordPressAPI {
   constructor(siteUrl, username, appPassword) {
     this.siteUrl = siteUrl.replace(/\/$/, "");
@@ -38,30 +54,30 @@ export class WordPressAPI {
   // tutte insieme vengono inserite come galleria nel corpo dell'articolo.
   async createDraftPost(title, bodyText, images = []) {
     try {
-      const mediaIds = [];
+      const media = [];
       for (const [i, img] of images.entries()) {
         try {
-          const media = await this.uploadMedia(img.buffer, `storia-${Date.now()}-${i + 1}.jpg`, img.mediaType);
-          mediaIds.push(media.id);
+          const uploaded = await this.uploadMedia(img.buffer, `storia-${Date.now()}-${i + 1}.jpg`, img.mediaType);
+          media.push(uploaded);
         } catch (err) {
           logger.warn(`Errore nel caricare una foto su WordPress: ${err.response?.data?.message || err.message}`);
         }
       }
 
       let content = formatBlogContentHtml(bodyText);
-      if (mediaIds.length > 0) {
-        content += `\n[gallery ids="${mediaIds.join(",")}"]`;
+      if (media.length > 0) {
+        content += `\n\n${buildGalleryBlock(media)}`;
       }
 
       const postData = { title, content, status: "draft" };
-      if (mediaIds.length > 0) {
-        postData.featured_media = mediaIds[0];
+      if (media.length > 0) {
+        postData.featured_media = media[0].id;
       }
 
       const response = await this.client.post("/posts", postData);
 
       const editLink = `${this.siteUrl}/wp-admin/post.php?post=${response.data.id}&action=edit`;
-      logger.info(`Bozza WordPress creata: id=${response.data.id} (${mediaIds.length} foto)`);
+      logger.info(`Bozza WordPress creata: id=${response.data.id} (${media.length} foto)`);
       return { success: true, postId: response.data.id, editLink };
     } catch (err) {
       const message = err.response?.data?.message || err.message;
