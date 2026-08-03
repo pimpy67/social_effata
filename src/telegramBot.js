@@ -494,6 +494,7 @@ export async function startBot() {
         optimizedPhotos = {
           facebook: images.map((img) => img.buffer),
           instagram: images.map((img) => img.buffer),
+          story: images.map((img) => img.buffer),
           linkedin: images[0].buffer,
           blog: images[0].buffer,
           reel: images[0].buffer,

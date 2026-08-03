@@ -451,7 +451,13 @@ export class MetaAPI {
     const instagramPhotos = optimizedPhotos?.instagram
       ? (Array.isArray(optimizedPhotos.instagram) ? optimizedPhotos.instagram : [optimizedPhotos.instagram])
       : photos.map((p) => p.buffer);
-    const storyPhotos = instagramPhotos.length > 0 ? instagramPhotos : facebookPhotos;
+    // Le Storie usano un ritaglio verticale 9:16 dedicato (vedi photoOptimizer.js),
+    // diverso da quello usato per i post: non riciclare facebookPhotos/instagramPhotos.
+    const storyPhotos = optimizedPhotos?.story
+      ? (Array.isArray(optimizedPhotos.story) ? optimizedPhotos.story : [optimizedPhotos.story])
+      : instagramPhotos.length > 0
+        ? instagramPhotos
+        : facebookPhotos;
 
     try {
       const fbResult = await this.publishToFacebook(facebookText, facebookPhotos);

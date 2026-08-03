@@ -12,9 +12,34 @@ const SOCIAL_DIMENSIONS = {
   reel: { width: 1200, height: 1200 },
 };
 
+// Storie (Facebook e Instagram) occupano sempre l'intero schermo verticale 9:16: a
+// differenza degli altri formati qui la foto viene RITAGLIATA, non solo rimpicciolita.
+// Si usa il crop "attention" di sharp, che centra il ritaglio sull'area a maggior
+// dettaglio/contrasto della foto (spesso il soggetto/volto) invece del centro
+// geometrico, per ridurre il rischio di tagliare la testa delle persone.
+const STORY_DIMENSIONS = { width: 1080, height: 1920 };
+
 export async function optimizePhotosForSocial(imageBuffers) {
   try {
     const optimized = {};
+
+    try {
+      optimized.story = await Promise.all(
+        imageBuffers.map((img) =>
+          sharp(img.buffer)
+            .resize(STORY_DIMENSIONS.width, STORY_DIMENSIONS.height, {
+              fit: "cover",
+              position: sharp.strategy.attention,
+            })
+            .jpeg({ quality: 90, progressive: true })
+            .toBuffer()
+        )
+      );
+      logger.debug(`${imageBuffers.length} foto ritagliate per le Storie (${STORY_DIMENSIONS.width}x${STORY_DIMENSIONS.height}, crop attention)`);
+    } catch (err) {
+      logger.warn(`Errore nel ritagliare foto per le Storie: ${err.message}`);
+      optimized.story = imageBuffers.map((img) => img.buffer);
+    }
 
     // Crea versioni ottimizzate per ogni social
     for (const [social, dimensions] of Object.entries(SOCIAL_DIMENSIONS)) {
