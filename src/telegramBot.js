@@ -98,14 +98,46 @@ const CATEGORY_STEPS = {
 };
 
 // Domanda sempre presente, in coda alle eventuali domande specifiche di categoria:
-// il link a cui deve rimandare il bottone CTA nell'articolo del blog (raccolta
-// fondi, GoFundMe, adozione a distanza, ecc.). Non va in CATEGORY_STEPS perché non
-// è un dato "di categoria" da mostrare nei report, solo un URL per il bottone.
+// il link a cui deve rimandare la storia (raccolta fondi, GoFundMe, adozione a
+// distanza, ecc.) — usato come bottone CTA sul blog e aggiunto in fondo ai testi di
+// Facebook, Instagram e LinkedIn. Non va in CATEGORY_STEPS perché non è un dato "di
+// categoria" da mostrare nei report, solo un URL.
 const LINK_STEP = {
   key: "referenceLink",
   label: "Link",
-  question: "🔗 A quale link deve rimandare il bottone dell'articolo sul blog? (es. raccolta fondi, GoFundMe, adozione a distanza — scrivi il link completo, oppure - per saltare)",
+  question: "🔗 A quale link deve rimandare questa storia (bottone sul blog + testo social)? (es. raccolta fondi, GoFundMe, adozione a distanza — scrivi il link completo, oppure - per saltare)",
 };
+
+// Link già noti per alcune categorie (per id): se presente, invece di chiedere il
+// link da zero il bot propone questo con conferma Sì/No, e chiede il link solo se
+// il volontario risponde No.
+const CATEGORY_DEFAULT_LINKS = {
+  "1": "https://effataitalia.it/adotta-ora/",
+};
+
+// Manda la domanda del passo corrente della sessione categoria: se è il passo del
+// link CTA e la categoria ha un link di default, chiede conferma Sì/No con bottoni
+// invece del testo libero.
+async function askCurrentStep(bot, chatId, session) {
+  const step = session.steps[session.step];
+  const defaultLink = step === LINK_STEP ? CATEGORY_DEFAULT_LINKS[session.categoryId] : null;
+
+  if (defaultLink) {
+    await bot.sendMessage(chatId, `🔗 Va bene questo link per questa storia (blog + social)?\n${defaultLink}`, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "✅ Sì", callback_data: "link_default_yes" },
+            { text: "✏️ No, altro link", callback_data: "link_default_no" },
+          ],
+        ],
+      },
+    });
+    return;
+  }
+
+  await bot.sendMessage(chatId, step.question);
+}
 
 // Sessione di domande per categoria in corso per ogni chat: { steps, step, data }
 const categorySessions = new Map();
@@ -459,6 +491,16 @@ export async function startBot() {
         pending.videos.length > 0
       );
 
+      // Aggiunge il link CTA (se fornito) in fondo ai testi di Facebook, Instagram e
+      // LinkedIn: Facebook e LinkedIn lo rendono cliccabile in automatico nel testo,
+      // Instagram no (non linkifica mai gli URL in didascalia) ma lo mostriamo comunque.
+      if (categoryData.referenceLink) {
+        const ctaLine = `\n\n🔗 ${categoryData.referenceLink}`;
+        if (result.facebookPost) result.facebookPost += ctaLine;
+        if (result.instagramStory) result.instagramStory += ctaLine;
+        if (result.linkedinPost) result.linkedinPost += ctaLine;
+      }
+
       const timestamp = Date.now();
       const outBase = path.join(OUTPUT_DIR, `${timestamp}`);
       fs.writeFileSync(`${outBase}_facebook.txt`, result.facebookPost);
@@ -757,7 +799,7 @@ export async function startBot() {
       const nextIndex = categorySession.step + 1;
       if (nextIndex < categorySession.steps.length) {
         categorySession.step = nextIndex;
-        await bot.sendMessage(chatId, categorySession.steps[nextIndex].question);
+        await askCurrentStep(bot, chatId, categorySession);
       } else {
         const categoryData = categorySession.data;
         categorySessions.delete(chatId);
@@ -910,6 +952,29 @@ Altri comandi utili:
 
         await bot.sendMessage(chatId, `✅ Categoria selezionata: **${categoryName}**\n\n${nextStep}`);
         logger.info(`Categoria selezionata: ${categoryName} (chat ${chatId})`);
+      }
+    } else if (query.data === "link_default_yes" || query.data === "link_default_no") {
+      const session = categorySessions.get(chatId);
+      if (!session) {
+        await bot.answerCallbackQuery(query.id, { text: "Sessione scaduta, riprova con /genera." });
+        return;
+      }
+      await bot.answerCallbackQuery(query.id);
+
+      if (query.data === "link_default_no") {
+        await bot.sendMessage(chatId, LINK_STEP.question);
+        return;
+      }
+
+      session.data.referenceLink = CATEGORY_DEFAULT_LINKS[session.categoryId];
+      const nextIndex = session.step + 1;
+      if (nextIndex < session.steps.length) {
+        session.step = nextIndex;
+        await askCurrentStep(bot, chatId, session);
+      } else {
+        const categoryData = session.data;
+        categorySessions.delete(chatId);
+        await runGenerate(chatId, categoryData);
       }
     } else if (query.data.startsWith("publish_fb_")) {
       const timestamp = query.data.replace("publish_fb_", "");
@@ -1102,11 +1167,13 @@ Altri comandi utili:
     // più la domanda sul link CTA, sempre presente; la generazione parte dopo
     // l'ultima risposta.
     const steps = [...(CATEGORY_STEPS[selected.id] || []), LINK_STEP];
-    categorySessions.set(chatId, { steps, step: 0, data: {} });
+    const session = { steps, step: 0, data: {}, categoryId: selected.id };
+    categorySessions.set(chatId, session);
     await bot.sendMessage(
       chatId,
-      `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.\n\n${steps[0].question}`
+      `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.`
     );
+    await askCurrentStep(bot, chatId, session);
   });
 
   // Controlla (al via e poi ogni ora) se è il 1° del mese e va inviato il report automatico
