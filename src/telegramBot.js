@@ -113,6 +113,15 @@ const LINK_STEP = {
 // il volontario risponde No.
 const CATEGORY_DEFAULT_LINKS = {
   "1": "https://effataitalia.it/adotta-ora/",
+  "2": "https://effataitalia.it/salute-e-disabilita/",
+  "3": "https://effataitalia.it/salute-e-disabilita/",
+  "4": "https://effataitalia.it/autonomia-economica/",
+  "5": "https://effataitalia.it/autonomia-economica/",
+  "6": "https://effataitalia.it/autonomia-economica/",
+  "7": "https://effataitalia.it/autonomia-economica/",
+  "8": "https://effataitalia.it/autonomia-economica/",
+  "9": "https://effataitalia.it/accoglienza-e-protezione/",
+  "10": "https://effataitalia.it/",
 };
 
 // Manda la domanda del passo corrente della sessione categoria: se è il passo del
