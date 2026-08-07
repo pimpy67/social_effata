@@ -23,12 +23,7 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
 <p>Con la tua adozione scolastica a distanza stai permettendo a ${childRef} di continuare a studiare, sognare e costruire il proprio futuro: un gesto che fa una differenza reale, ogni giorno.</p>
 
-<p>Ti invitiamo a firmare per il 5&times;1000 a favore di Effatà Italia Charity Organisation ODV.</p>
-
-<p>Ecco come contribuire con il cinque per mille: per sostenere Effatà, devi inserire il codice fiscale <strong>92050910261</strong> nello spazio titolato "sostegno degli enti del terzo settore iscritti nel RUNTS" della tua dichiarazione dei redditi.</p>
-
-<p>Ti ricordiamo di mettere una firma che a Te non costa nulla, ma per loro vale moltissimo!<br/>
-Il numero da ricordare è <strong>92050910261</strong>, il nostro codice fiscale.</p>
+<p>Se vuoi, ricordati anche del 5&times;1000: non Ti costa nulla, ma per loro vale moltissimo. Basta inserire il nostro codice fiscale <strong>92050910261</strong> alla voce "sostegno degli enti del terzo settore iscritti nel RUNTS" della dichiarazione dei redditi.</p>
 
 <p>Grazie ancora del Tuo grande cuore...</p>
 
