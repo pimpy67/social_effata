@@ -108,6 +108,12 @@ const LINK_STEP = {
   question: "🔗 A quale link deve rimandare questa storia (bottone sul blog + testo social)? (es. raccolta fondi, GoFundMe, adozione a distanza — scrivi il link completo, oppure - per saltare)",
 };
 
+// LinkedIn è rivolto ad aziende/partner, non ai donatori della singola storia: usa
+// sempre questo link fisso invece del link di categoria (CATEGORY_DEFAULT_LINKS)
+// usato da Facebook/Instagram/blog. Temporaneo: punta alla homepage finché non
+// esiste una pagina dedicata alle partnership aziendali sul sito.
+const LINKEDIN_CTA_LINK = "https://effataitalia.it/";
+
 // Link già noti per alcune categorie (per id): se presente, invece di chiedere il
 // link da zero il bot propone questo con conferma Sì/No, e chiede il link solo se
 // il volontario risponde No.
@@ -500,14 +506,19 @@ export async function startBot() {
         pending.videos.length > 0
       );
 
-      // Aggiunge il link CTA (se fornito) in fondo ai testi di Facebook, Instagram e
-      // LinkedIn: Facebook e LinkedIn lo rendono cliccabile in automatico nel testo,
-      // Instagram no (non linkifica mai gli URL in didascalia) ma lo mostriamo comunque.
+      // Aggiunge il link CTA (se fornito) in fondo ai testi di Facebook e Instagram:
+      // Facebook lo rende cliccabile in automatico nel testo, Instagram no (non
+      // linkifica mai gli URL in didascalia) ma lo mostriamo comunque.
       if (categoryData.referenceLink) {
         const ctaLine = `\n\n🔗 ${categoryData.referenceLink}`;
         if (result.facebookPost) result.facebookPost += ctaLine;
         if (result.instagramStory) result.instagramStory += ctaLine;
-        if (result.linkedinPost) result.linkedinPost += ctaLine;
+      }
+
+      // LinkedIn usa sempre il link fisso verso partnership aziendali, non quello
+      // della categoria della storia (vedi LINKEDIN_CTA_LINK sopra).
+      if (result.linkedinPost) {
+        result.linkedinPost += `\n\n🔗 ${LINKEDIN_CTA_LINK}`;
       }
 
       const timestamp = Date.now();
