@@ -25,6 +25,8 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
 <p>Se vuoi, ricordati anche del 5&times;1000: non Ti costa nulla, ma per loro vale moltissimo. Basta inserire il nostro codice fiscale <strong>92050910261</strong> alla voce "sostegno degli enti del terzo settore iscritti nel RUNTS" della dichiarazione dei redditi.</p>
 
+<p>Ti ricordiamo anche l'iniziativa dei regali solidali: per un compleanno o un'occasione speciale, puoi sostenere la Casa Famiglia attraverso il nostro <a href="https://calendario.effataitalia.it/">calendario solidale</a>.</p>
+
 <p>Grazie ancora del Tuo grande cuore...</p>
 
 <p>Se non l'hai già fatto, iscriviti e seguici sui nostri canali — e se conosci qualcuno che potrebbe voler sostenere un progetto come questo, parlagliene: ogni nuovo sostenitore fa la differenza.</p>
