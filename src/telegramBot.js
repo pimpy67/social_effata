@@ -8,6 +8,7 @@ import { logger } from "./logger.js";
 import { validation } from "./validation.js";
 import { initMetaAPI } from "./metaAPI.js";
 import { initWordPressAPI } from "./wordpressAPI.js";
+import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial } from "./photoOptimizer.js";
 import {
   saveDraft,
@@ -56,6 +57,7 @@ const CATEGORY_STEPS = {
     { key: "childName", label: "Bambino/a", question: "👶 Nome del bambino/a adottato/a? (scrivi - per saltare)" },
     { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore/padrino/madrina? (scrivi - per saltare)" },
     { key: "sponsorProvince", label: "Provincia", question: "📍 Provincia del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+    { key: "sponsorEmail", label: "Email sostenitore", question: "📧 Email del sostenitore/padrina/madrina, per la mail di ringraziamento automatica? (scrivi - per saltare)" },
   ],
   "2": [
     { key: "childName", label: "Bambino/a", question: "👶 Nome del bambino/a? (scrivi - per saltare)" },
@@ -170,7 +172,11 @@ function formatCategoryDetail(details) {
 
   let out = "";
   for (const [categoryName, entries] of byCategory) {
-    const steps = CATEGORY_STEPS[String(entries[0].categoryNumber)] || [];
+    // L'email del sostenitore è raccolta solo per la mail di ringraziamento
+    // automatica, non va mostrata nei report (dato personale, non serve ai volontari).
+    const steps = (CATEGORY_STEPS[String(entries[0].categoryNumber)] || []).filter(
+      (s) => s.key !== "sponsorEmail"
+    );
     out += `\n📋 **${categoryName} - dettaglio:**\n`;
     entries.forEach((entry, i) => {
       const parts = steps
@@ -266,6 +272,9 @@ let metaAPI = null;
 // Client WordPress API (per creare bozze articoli sul blog)
 let wordpressAPI = null;
 
+// Client Email API (per la mail di ringraziamento automatica alle adozioni)
+let emailAPI = null;
+
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
@@ -312,6 +321,9 @@ export async function startBot() {
 
   // Inizializza WordPress API (se configurato)
   wordpressAPI = await initWordPressAPI();
+
+  // Inizializza Email API (se configurato)
+  emailAPI = await initEmailAPI();
 
   const bot = new TelegramBot(token, { polling: true });
   logger.info("Bot Telegram avviato, in ascolto...");
@@ -670,6 +682,29 @@ export async function startBot() {
         } catch (err) {
           logger.error(`Errore nella pubblicazione WordPress: ${err.message}`);
           metaMessage += `⚠️ Blog: errore WordPress (${err.message})\n`;
+        }
+      }
+
+      // Manda la mail fissa di ringraziamento al sostenitore, se ha fornito l'email
+      // (solo per le adozioni scolastiche, categoria "1" — unica con questo campo).
+      if (emailAPI && categoryData.sponsorEmail) {
+        const sponsorEmail = categoryData.sponsorEmail.trim();
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sponsorEmail)) {
+          try {
+            const emailResult = await emailAPI.sendAdoptionThankYou(
+              sponsorEmail,
+              categoryData.sponsorName,
+              categoryData.childName
+            );
+            metaMessage += emailResult.success
+              ? `📧 Mail di ringraziamento inviata a ${sponsorEmail}\n`
+              : `⚠️ Mail di ringraziamento: errore nell'invio (${emailResult.error})\n`;
+          } catch (err) {
+            logger.error(`Errore nell'invio della mail di ringraziamento: ${err.message}`);
+            metaMessage += `⚠️ Mail di ringraziamento: errore (${err.message})\n`;
+          }
+        } else {
+          metaMessage += `⚠️ Mail di ringraziamento non inviata: indirizzo "${sponsorEmail}" non valido\n`;
         }
       }
 
