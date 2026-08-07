@@ -7,13 +7,13 @@ const SOCIAL_LINKS_HTML = `Seguici ed iscriviti nei nostri social:
 <a href="https://www.facebook.com/profile.php?id=61576427205615">Facebook</a> -
 <a href="https://www.youtube.com/@EFFATAUGANDA">YouTube</a>`;
 
-// Immagine di intestazione fissa (caricata una volta sola nella libreria media di
+// Immagine di chiusura fissa (caricata una volta sola nella libreria media di
 // WordPress con scripts/upload-image.js, per avere un URL pubblico stabile senza
-// doverla ricaricare a ogni invio). Nessun limite di larghezza (niente più cap a
+// doverla ricaricare a ogni invio). Nessun limite di larghezza (niente cap a
 // 600px): riempie tutto lo spazio che il client email lascia al contenuto. Il
 // margine bianco più esterno attorno all'intero messaggio è aggiunto dal client
 // (es. Gmail) stesso e non è eliminabile dall'HTML della mail.
-const HEADER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="100%" style="width:100%;height:auto;display:block;" />`;
+const FOOTER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="100%" style="width:100%;height:auto;display:block;" />`;
 
 // Testo fisso di ringraziamento per le adozioni scolastiche a distanza, adattato dal
 // facsimile usato per le risposte alle richieste di certificazione di donazione.
@@ -25,13 +25,12 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
   // dedurre il genere in modo affidabile (es. "Andrea" è maschile in Italia, ma
   // femminile in altri paesi).
   const firstName = sponsorName ? sponsorName.trim().split(/\s+/)[0] : null;
-  const greeting = firstName ? `Gentile ${firstName}` : "Gentile sostenitore";
-  const childRef = childName || "un bambino della nostra comunità";
+  const greeting = firstName ? `Gentile <strong>${firstName}</strong>` : "Gentile sostenitore";
+  const childRef = childName ? `<strong>${childName}</strong>` : "un bambino della nostra comunità";
 
   const subject = "Grazie per il tuo sostegno, Effatà Italia ❤️";
 
   const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-<tr><td>${HEADER_IMAGE_HTML}</td></tr>
 <tr><td style="padding:24px 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#333333;">
 
 <p>${greeting},</p>
@@ -54,6 +53,7 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 Il team di Effatà Italia ODV</p>
 
 </td></tr>
+<tr><td>${FOOTER_IMAGE_HTML}</td></tr>
 </table>`;
 
   return { subject, html };
