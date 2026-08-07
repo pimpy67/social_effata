@@ -9,8 +9,9 @@ const SOCIAL_LINKS_HTML = `Seguici ed iscriviti nei nostri social:
 
 // Immagine di intestazione fissa (caricata una volta sola nella libreria media di
 // WordPress con scripts/upload-image.js, per avere un URL pubblico stabile senza
-// doverla ricaricare a ogni invio).
-const HEADER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="560" style="max-width:100%;height:auto;display:block;border:1px solid #e0e0e0;border-radius:8px;" />`;
+// doverla ricaricare a ogni invio). A tutta larghezza del contenitore (600px),
+// senza cornice: un banner "above the fold" invece di un'immagine incorniciata.
+const HEADER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="600" style="width:100%;max-width:600px;height:auto;display:block;" />`;
 
 // Testo fisso di ringraziamento per le adozioni scolastiche a distanza, adattato dal
 // facsimile usato per le risposte alle richieste di certificazione di donazione.
@@ -27,7 +28,9 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
   const subject = "Grazie per il tuo sostegno, Effatà Italia ❤️";
 
-  const html = `<p>${HEADER_IMAGE_HTML}</p>
+  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0 auto;">
+<tr><td>${HEADER_IMAGE_HTML}</td></tr>
+<tr><td style="padding:24px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#333333;">
 
 <p>${greeting},</p>
 
@@ -46,7 +49,10 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 <p>${SOCIAL_LINKS_HTML}</p>
 
 <p>Un caro saluto,<br/>
-Il team di Effatà Italia ODV</p>`;
+Il team di Effatà Italia ODV</p>
+
+</td></tr>
+</table>`;
 
   return { subject, html };
 }
