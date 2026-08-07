@@ -9,9 +9,11 @@ const SOCIAL_LINKS_HTML = `Seguici ed iscriviti nei nostri social:
 
 // Immagine di intestazione fissa (caricata una volta sola nella libreria media di
 // WordPress con scripts/upload-image.js, per avere un URL pubblico stabile senza
-// doverla ricaricare a ogni invio). A tutta larghezza del contenitore (600px),
-// senza cornice: un banner "above the fold" invece di un'immagine incorniciata.
-const HEADER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="600" style="width:100%;max-width:600px;height:auto;display:block;" />`;
+// doverla ricaricare a ogni invio). Nessun limite di larghezza (niente più cap a
+// 600px): riempie tutto lo spazio che il client email lascia al contenuto. Il
+// margine bianco più esterno attorno all'intero messaggio è aggiunto dal client
+// (es. Gmail) stesso e non è eliminabile dall'HTML della mail.
+const HEADER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="100%" style="width:100%;height:auto;display:block;" />`;
 
 // Testo fisso di ringraziamento per le adozioni scolastiche a distanza, adattato dal
 // facsimile usato per le risposte alle richieste di certificazione di donazione.
@@ -28,9 +30,9 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
   const subject = "Grazie per il tuo sostegno, Effatà Italia ❤️";
 
-  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0 auto;">
+  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
 <tr><td>${HEADER_IMAGE_HTML}</td></tr>
-<tr><td style="padding:24px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#333333;">
+<tr><td style="padding:24px 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#333333;">
 
 <p>${greeting},</p>
 
