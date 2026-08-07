@@ -19,7 +19,7 @@ const FOOTER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/
 // facsimile usato per le risposte alle richieste di certificazione di donazione.
 // sponsorName/childName possono mancare (campo skippato dal volontario con "-"):
 // in quel caso si usano formule generiche invece di lasciare un buco nel testo.
-function buildAdoptionThankYouEmail(sponsorName, childName) {
+export function buildAdoptionThankYouEmail(sponsorName, childName) {
   // Solo il nome (non il cognome): "Andrea Pavan" -> "Andrea". "Gentile" invece di
   // una formula con genere (es. "Carissima/o") perché dal solo nome non si può
   // dedurre il genere in modo affidabile (es. "Andrea" è maschile in Italia, ma
@@ -39,15 +39,17 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
 <p>Con la tua adozione scolastica a distanza stai permettendo a ${childRef} di continuare a studiare, sognare e costruire il proprio futuro: un gesto che fa una differenza reale, ogni giorno.</p>
 
-<p>Se vuoi, ricordati anche del 5&times;1000: non Ti costa nulla, ma per loro vale moltissimo. Basta inserire il nostro codice fiscale <strong>92050910261</strong> alla voce "sostegno degli enti del terzo settore iscritti nel RUNTS" della dichiarazione dei redditi.</p>
-
-<p>Ti ricordiamo anche l'iniziativa dei regali solidali: per un compleanno o un'occasione speciale, puoi sostenere la Casa Famiglia attraverso il nostro <a href="https://calendario.effataitalia.it/">calendario solidale</a>.</p>
+<p>Effatà e Silvia ti terranno sempre aggiornato/a sul percorso di ${childRef}.</p>
 
 <p>Grazie ancora del Tuo grande cuore...</p>
 
 <p>Se non l'hai già fatto, iscriviti e seguici sui nostri canali — e se conosci qualcuno che potrebbe voler sostenere un progetto come questo, parlagliene: ogni nuovo sostenitore fa la differenza.</p>
 
 <p>${SOCIAL_LINKS_HTML}</p>
+
+<p>Se vuoi, ricordati anche del 5&times;1000: non Ti costa nulla, ma per loro vale moltissimo. Basta inserire il nostro codice fiscale <strong>92050910261</strong> alla voce "sostegno degli enti del terzo settore iscritti nel RUNTS" della dichiarazione dei redditi.</p>
+
+<p>Ti ricordiamo anche l'iniziativa dei regali solidali: per un compleanno o un'occasione speciale, puoi sostenere la Casa Famiglia attraverso il nostro <a href="https://calendario.effataitalia.it/">calendario solidale</a>.</p>
 
 <p>Un caro saluto,<br/>
 Il team di Effatà Italia ODV</p>
