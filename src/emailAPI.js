@@ -12,7 +12,12 @@ const SOCIAL_LINKS_HTML = `Seguici ed iscriviti nei nostri social:
 // sponsorName/childName possono mancare (campo skippato dal volontario con "-"):
 // in quel caso si usano formule generiche invece di lasciare un buco nel testo.
 function buildAdoptionThankYouEmail(sponsorName, childName) {
-  const greeting = sponsorName ? `Carissim_ ${sponsorName}` : "Carissim_ sostenitore";
+  // Solo il nome (non il cognome): "Andrea Pavan" -> "Andrea". "Gentile" invece di
+  // una formula con genere (es. "Carissima/o") perché dal solo nome non si può
+  // dedurre il genere in modo affidabile (es. "Andrea" è maschile in Italia, ma
+  // femminile in altri paesi).
+  const firstName = sponsorName ? sponsorName.trim().split(/\s+/)[0] : null;
+  const greeting = firstName ? `Gentile ${firstName}` : "Gentile sostenitore";
   const childRef = childName || "un bambino della nostra comunità";
 
   const subject = "Grazie per il tuo sostegno, Effatà Italia ❤️";
