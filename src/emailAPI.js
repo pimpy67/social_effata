@@ -27,6 +27,8 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
 <p>Grazie ancora del Tuo grande cuore...</p>
 
+<p>Se non l'hai già fatto, iscriviti e seguici sui nostri canali — e se conosci qualcuno che potrebbe voler sostenere un progetto come questo, parlagliene: ogni nuovo sostenitore fa la differenza.</p>
+
 <p>${SOCIAL_LINKS_HTML}</p>
 
 <p>Un caro saluto,<br/>
