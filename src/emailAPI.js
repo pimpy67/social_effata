@@ -7,6 +7,11 @@ const SOCIAL_LINKS_HTML = `Seguici ed iscriviti nei nostri social:
 <a href="https://www.facebook.com/profile.php?id=61576427205615">Facebook</a> -
 <a href="https://www.youtube.com/@EFFATAUGANDA">YouTube</a>`;
 
+// Immagine di intestazione fissa (caricata una volta sola nella libreria media di
+// WordPress con scripts/upload-image.js, per avere un URL pubblico stabile senza
+// doverla ricaricare a ogni invio).
+const HEADER_IMAGE_HTML = `<img src="https://effataitalia.it/wp-content/uploads/2026/08/email-header-silvia.jpg" alt="Effatà Italia" width="560" style="max-width:100%;height:auto;display:block;border:1px solid #e0e0e0;border-radius:8px;" />`;
+
 // Testo fisso di ringraziamento per le adozioni scolastiche a distanza, adattato dal
 // facsimile usato per le risposte alle richieste di certificazione di donazione.
 // sponsorName/childName possono mancare (campo skippato dal volontario con "-"):
@@ -22,7 +27,9 @@ function buildAdoptionThankYouEmail(sponsorName, childName) {
 
   const subject = "Grazie per il tuo sostegno, Effatà Italia ❤️";
 
-  const html = `<p>${greeting},</p>
+  const html = `<p>${HEADER_IMAGE_HTML}</p>
+
+<p>${greeting},</p>
 
 <p>innanzitutto, grazie di cuore per il Tuo aiuto, indispensabile per sostenere i progetti e le attività di Effatà Charity Organisation in Uganda.</p>
 
