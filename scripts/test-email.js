@@ -3,12 +3,12 @@ import { initEmailAPI } from "../src/emailAPI.js";
 
 // Utility per testare l'invio della mail di ringraziamento adozioni senza passare
 // da /genera (che pubblica per davvero su Instagram/Facebook).
-// Uso: node scripts/test-email.js <email> [sponsorName] [childName]
+// Uso: node scripts/test-email.js <email> [sponsorName] [childName] [cc]
 
 async function main() {
-  const [email, sponsorName, childName] = process.argv.slice(2);
+  const [email, sponsorName, childName, cc] = process.argv.slice(2);
   if (!email) {
-    console.error("Uso: node scripts/test-email.js <email> [sponsorName] [childName]");
+    console.error("Uso: node scripts/test-email.js <email> [sponsorName] [childName] [cc]");
     process.exit(1);
   }
 
@@ -18,7 +18,7 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await emailAPI.sendAdoptionThankYou(email, sponsorName, childName);
+  const result = await emailAPI.sendAdoptionThankYou(email, sponsorName, childName, cc);
   console.log(result);
   process.exit(result.success ? 0 : 1);
 }

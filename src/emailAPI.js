@@ -68,13 +68,14 @@ class EmailAPI {
   }
 
   // Manda la mail fissa di ringraziamento per un'adozione scolastica a distanza.
-  async sendAdoptionThankYou(toEmail, sponsorName, childName) {
+  async sendAdoptionThankYou(toEmail, sponsorName, childName, cc = null) {
     const { subject, html } = buildAdoptionThankYouEmail(sponsorName, childName);
 
     try {
       await this.transporter.sendMail({
         from: `"Effatà Italia ODV" <${this.fromAddress}>`,
         to: toEmail,
+        cc: cc || undefined,
         subject,
         html,
       });
