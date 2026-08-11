@@ -22,10 +22,52 @@ Non inventare dettagli non presenti nel testo originale (età, nomi, luoghi spec
 
 Rispetta il numero di persone effettivamente descritte nel testo: se il racconto viene da una sola persona (es. una volontaria specifica), non generalizzare al plurale ("i nostri volontari", "il nostro team"). Usa il soggetto singolare realmente indicato (il nome, se fornito, altrimenti una formula singolare come "una nostra volontaria"). Non trasformare un'esperienza individuale in un'azione collettiva dell'associazione se il testo non lo dice esplicitamente.
 
+Fatto organizzativo fisso, da rispettare sempre: l'unica volontaria e fondatrice di Effatá è Silvia, presente sul campo in Uganda. NON esistono altri "volontari" o "volontarie": non scrivere mai "le nostre volontarie", "i nostri volontari" o "il nostro team di volontari" al plurale. Se il testo menziona Silvia, chiamala "la nostra volontaria/fondatrice" o per nome, sempre al singolare. Il resto del lavoro sul campo è svolto da un team di collaboratori ugandesi: se il testo si riferisce a loro, chiamali "collaboratori"/"team ugandese", mai "volontari".
+
 Se serve citare il sito web dell'associazione, usa esclusivamente "effataitalia.it" (mai altri domini o varianti inventate). Non inventare altri link, indirizzi email, numeri di telefono o handle social specifici: se non forniti nel testo, usa formule generiche come "scrivici in privato" o "scopri di più sul nostro sito".
 
-Rispondi SOLO in formato JSON con questa struttura, senza markdown né testo aggiuntivo:
-{"facebookPost": "...", "instagramStory": "...", "linkedinPost": "...", "blogTitle": "...", "blogBody": "...", "reelScript": "...", "youtubeShorts": {"titolo": "...", "script": "...", "istruzioni": "...", "cta": "..."}, "storySlides": ["...", "..."]}`;
+Restituisci tutti i contenuti chiamando lo strumento "emit_story_content" con tutti i campi richiesti.`;
+
+// Tool a schema fisso invece di chiedere JSON come testo libero: l'input del
+// tool_use arriva già parsato dall'SDK, quindi un testo generato con virgolette
+// non escapate (es. citazioni tra "virgolette") non può più rompere il parsing
+// come succedeva con JSON.parse su un blocco di testo libero.
+const STORY_CONTENT_TOOL = {
+  name: "emit_story_content",
+  description: "Pubblica tutti i contenuti social/blog generati per questa storia.",
+  input_schema: {
+    type: "object",
+    properties: {
+      facebookPost: { type: "string" },
+      instagramStory: { type: "string" },
+      linkedinPost: { type: "string" },
+      blogTitle: { type: "string" },
+      blogBody: { type: "string" },
+      reelScript: { type: "string" },
+      youtubeShorts: {
+        type: "object",
+        properties: {
+          titolo: { type: "string" },
+          script: { type: "string" },
+          istruzioni: { type: "string" },
+          cta: { type: "string" },
+        },
+        required: ["titolo", "script", "istruzioni", "cta"],
+      },
+      storySlides: { type: "array", items: { type: "string" } },
+    },
+    required: [
+      "facebookPost",
+      "instagramStory",
+      "linkedinPost",
+      "blogTitle",
+      "blogBody",
+      "reelScript",
+      "youtubeShorts",
+      "storySlides",
+    ],
+  },
+};
 
 export async function generateSocialContent(rawText, images = [], category = null, hasVideo = false) {
   logger.info(`Generazione contenuti: ${images.length} foto, ${rawText.length} char di testo, video allegato: ${hasVideo}`);
@@ -58,30 +100,30 @@ export async function generateSocialContent(rawText, images = [], category = nul
       model: "claude-sonnet-4-6",
       max_tokens: 6000,
       system,
+      tools: [STORY_CONTENT_TOOL],
+      tool_choice: { type: "tool", name: STORY_CONTENT_TOOL.name },
       messages: [{ role: "user", content }],
     });
 
     logger.debug(`API response: ${message.usage.input_tokens} input, ${message.usage.output_tokens} output tokens`);
 
-    const textBlock = message.content.find((c) => c.type === "text");
-    const cleaned = (textBlock?.text || "{}").replace(/```json|```/g, "").trim();
-
-    try {
-      return JSON.parse(cleaned);
-    } catch {
-      logger.warn(
-        `Claude non ha rispettato il formato JSON, usando fallback (stop_reason=${message.stop_reason})`
-      );
-      return {
-        facebookPost: cleaned,
-        instagramStory: cleaned,
-        linkedinPost: cleaned,
-        blogTitle: "",
-        blogBody: cleaned,
-        reelScript: cleaned,
-        storySlides: [],
-      };
+    const toolUse = message.content.find((c) => c.type === "tool_use" && c.name === STORY_CONTENT_TOOL.name);
+    if (toolUse) {
+      return toolUse.input;
     }
+
+    logger.warn(`Claude non ha chiamato lo strumento previsto (stop_reason=${message.stop_reason}), uso fallback`);
+    const textBlock = message.content.find((c) => c.type === "text");
+    const fallbackText = textBlock?.text || "";
+    return {
+      facebookPost: fallbackText,
+      instagramStory: fallbackText,
+      linkedinPost: fallbackText,
+      blogTitle: "",
+      blogBody: fallbackText,
+      reelScript: fallbackText,
+      storySlides: [],
+    };
   } catch (err) {
     logger.error(`Errore nella chiamata API Claude: ${err.message}`);
     throw err;
