@@ -14,8 +14,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Installa dumb-init per gestire i segnali
-RUN apk add --no-cache dumb-init
+# Installa dumb-init per gestire i segnali e i font necessari a sharp/librsvg
+# per disegnare testo negli overlay delle Storie (Alpine non ha font di sistema
+# di default: senza questo pacchetto il testo SVG composito non verrebbe disegnato).
+RUN apk add --no-cache dumb-init fontconfig ttf-dejavu
 
 # Copia le dipendenze dal builder
 COPY --from=builder /app/node_modules ./node_modules

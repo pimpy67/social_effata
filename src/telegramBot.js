@@ -132,6 +132,23 @@ const CATEGORY_DEFAULT_LINKS = {
   "10": "https://effataitalia.it/",
 };
 
+// Testo fisso di chiusura per le Storie Instagram/Facebook, diverso per categoria
+// (vedi photoOptimizer.buildCategoryInfoSlide): aggiunto come ultima slide della
+// sequenza, sfondo brand + logo, NON generato da Claude. Importi confermati da
+// Andrea l'11/08/2026, netto = importo x 0,65 (detrazione 35%).
+const CATEGORY_STORY_INFO = {
+  "1": "Adotta un bambino con 180€/anno: solo 117€ netti (detraibili al 35%). Scrivici in DM",
+  "2": "Sostieni le cure mediche dei nostri bambini. Scrivici in DM",
+  "3": "Dona una carrozzina o un ausilio con 200€: solo 130€ netti (detraibili al 35%). Scrivici in DM",
+  "4": "Costruisci una casa per una famiglia con 1.500€: solo 975€ netti (detraibili al 35%). Scrivici in DM",
+  "5": "Aiuta una famiglia a coltivare la terra con 80€: solo 52€ netti (detraibili al 35%). Scrivici in DM",
+  "6": "Dona un animale da 5€ a 600€: da 3€ a 390€ netti (detraibili al 35%). Scrivici in DM",
+  "7": "Dona un materasso (20€, 13€ netti) o una coperta (10€, 7€ netti) — detraibili al 35%. Scrivici in DM",
+  "8": "Dona un paio di scarpe con 10€: solo 7€ netti (detraibili al 35%). Scrivici in DM",
+  "9": "Sostieni un bimbo in Casa Famiglia con 500€: solo 325€ netti (detraibili al 35%). Scrivici in DM",
+  "10": "Scopri tutti i nostri progetti. Scrivici in DM",
+};
+
 // Manda la domanda del passo corrente della sessione categoria: se è il passo del
 // link CTA e la categoria ha un link di default, chiede conferma Sì/No con bottoni
 // invece del testo libero.
@@ -540,6 +557,9 @@ export async function startBot() {
       fs.writeFileSync(`${outBase}_linkedin.txt`, result.linkedinPost);
       fs.writeFileSync(`${outBase}_blog.txt`, `${result.blogTitle}\n\n${result.blogBody}`);
       fs.writeFileSync(`${outBase}_reel.txt`, result.reelScript);
+      if (result.storySlides?.length) {
+        fs.writeFileSync(`${outBase}_story_slides.txt`, result.storySlides.join("\n---\n"));
+      }
 
       // YouTube Shorts
       if (result.youtubeShorts) {
@@ -562,7 +582,10 @@ export async function startBot() {
       // Ottimizza le foto per ogni social
       let optimizedPhotos = {};
       try {
-        optimizedPhotos = await optimizePhotosForSocial(images);
+        optimizedPhotos = await optimizePhotosForSocial(images, {
+          storySlideTexts: result.storySlides,
+          categoryInfoText: selected ? CATEGORY_STORY_INFO[selected.id] : null,
+        });
         // Salva le foto ottimizzate con suffissi social
         for (const [social, buffer] of Object.entries(optimizedPhotos)) {
           if (Array.isArray(buffer)) {
