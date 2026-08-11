@@ -139,7 +139,11 @@ const CATEGORY_DEFAULT_LINKS = {
 const CATEGORY_STORY_INFO = {
   "1": "Adotta un bambino con 180€/anno: solo 117€ netti (detraibili al 35%). Scrivici in DM",
   "2": "Sostieni le cure mediche dei nostri bambini. Scrivici in DM",
-  "3": "Dona una carrozzina o un ausilio con 200€: solo 130€ netti (detraibili al 35%). Scrivici in DM",
+  // Due varianti scelte a caso ad ogni generazione (deciso con Andrea l'11/08/2026).
+  "3": [
+    "Restituisci la libertà di muoversi: una carrozzina con 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM",
+    "Una carrozzina cambia una vita: 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM",
+  ],
   "4": "Costruisci una casa per una famiglia con 1.500€: solo 975€ netti (detraibili al 35%). Scrivici in DM",
   "5": "Aiuta una famiglia a coltivare la terra con 80€: solo 52€ netti (detraibili al 35%). Scrivici in DM",
   "6": "Dona un animale da 5€ a 600€: da 3€ a 390€ netti (detraibili al 35%). Scrivici in DM",
@@ -148,6 +152,15 @@ const CATEGORY_STORY_INFO = {
   "9": "Sostieni un bimbo in Casa Famiglia con 500€: solo 325€ netti (detraibili al 35%). Scrivici in DM",
   "10": "Scopri tutti i nostri progetti. Scrivici in DM",
 };
+
+// Alcune categorie hanno più varianti di testo (array): ne sceglie una a caso.
+function getCategoryInfoText(categoryId) {
+  const entry = CATEGORY_STORY_INFO[categoryId];
+  if (Array.isArray(entry)) {
+    return entry[Math.floor(Math.random() * entry.length)];
+  }
+  return entry;
+}
 
 // Manda la domanda del passo corrente della sessione categoria: se è il passo del
 // link CTA e la categoria ha un link di default, chiede conferma Sì/No con bottoni
@@ -584,7 +597,7 @@ export async function startBot() {
       try {
         optimizedPhotos = await optimizePhotosForSocial(images, {
           storySlideTexts: result.storySlides,
-          categoryInfoText: selected ? CATEGORY_STORY_INFO[selected.id] : null,
+          categoryInfoText: selected ? getCategoryInfoText(selected.id) : null,
         });
         // Salva le foto ottimizzate con suffissi social
         for (const [social, buffer] of Object.entries(optimizedPhotos)) {

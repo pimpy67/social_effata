@@ -4,9 +4,10 @@ import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOGO_PATH = path.join(__dirname, "..", "assets", "effata-logo.jpg");
-// Colori campionati dal logo Effatà (assets/effata-logo.jpg): sfondo rosso e scritta gialla.
+const LOGO_PATH = path.join(__dirname, "..", "assets", "effata-logo.png");
+// Colori campionati dal logo Effatà: sfondo rosso e scritta gialla.
 const BRAND_RED = "#c22e20";
+const ORG_HEADER = "Effatà Italia Charity Organisation ODV";
 
 // Dimensioni massime per ogni social (width x height in px). Usate come limite,
 // non come rapporto forzato: la foto viene rimpicciolita se serve ma non
@@ -138,17 +139,31 @@ const INFO_SLIDE_LOGO_SIZE = 260;
 const INFO_SLIDE_FONT_SIZE = 50;
 const INFO_SLIDE_MAX_CHARS_PER_LINE = 24;
 const INFO_SLIDE_LINE_HEIGHT = 66;
+const INFO_SLIDE_HEADER_FONT_SIZE = 42;
+const INFO_SLIDE_HEADER_LINE_HEIGHT = 54;
+const INFO_SLIDE_HEADER_TOP = 300;
+const INFO_SLIDE_HEADER_LOGO_GAP = 70;
 
 // Slide fissa di chiusura per le Storie: sfondo a tinta unita col rosso del logo
-// Effatà, logo centrato, testo fisso (diverso per categoria, vedi CATEGORY_STORY_INFO
-// in telegramBot.js) sotto il logo. Non contiene nessuna foto del volontario.
+// Effatà, intestazione con la ragione sociale completa, logo, testo fisso (diverso
+// per categoria, vedi CATEGORY_STORY_INFO in telegramBot.js) sotto il logo. Non
+// contiene nessuna foto del volontario.
 async function buildCategoryInfoSlide(text) {
   const logoBuffer = await sharp(LOGO_PATH)
-    .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "cover" })
+    .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
     .toBuffer();
 
+  const headerLines = wrapText(ORG_HEADER, INFO_SLIDE_MAX_CHARS_PER_LINE);
+  const headerSvg = headerLines
+    .map(
+      (line, i) =>
+        `<text x="50%" y="${INFO_SLIDE_HEADER_TOP + i * INFO_SLIDE_HEADER_LINE_HEIGHT}" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-weight="bold" font-size="${INFO_SLIDE_HEADER_FONT_SIZE}" fill="#ffffff">${escapeXml(line)}</text>`
+    )
+    .join("");
+
+  const logoTop = INFO_SLIDE_HEADER_TOP + headerLines.length * INFO_SLIDE_HEADER_LINE_HEIGHT + INFO_SLIDE_HEADER_LOGO_GAP;
+
   const lines = wrapText(text.trim(), INFO_SLIDE_MAX_CHARS_PER_LINE);
-  const logoTop = Math.round(STORY_DIMENSIONS.height / 2 - INFO_SLIDE_LOGO_SIZE / 2 - 140);
   const textStartY = logoTop + INFO_SLIDE_LOGO_SIZE + 110;
 
   const textSvg = lines
@@ -161,7 +176,7 @@ async function buildCategoryInfoSlide(text) {
   const background = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">
       <rect width="100%" height="100%" fill="${BRAND_RED}" />
     </svg>`;
-  const textOverlay = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">${textSvg}</svg>`;
+  const textOverlay = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">${headerSvg}${textSvg}</svg>`;
 
   return sharp(Buffer.from(background))
     .composite([
