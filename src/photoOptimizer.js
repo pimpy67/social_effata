@@ -81,6 +81,19 @@ function escapeXml(str) {
     .replace(/'/g, "&apos;");
 }
 
+// Il font DejaVu Sans usato per disegnare il testo sulle immagini non contiene le
+// emoji: librsvg le mostra come un riquadro col codice esadecimale (es. "1F499")
+// invece dell'icona. Le toglie solo dal testo disegnato sulle immagini, non dalle
+// didascalie dei post (quelle restano intatte, le app dei social le renderizzano).
+function stripEmoji(text) {
+  return text
+    .replace(/\p{Extended_Pictographic}(\u{FE0F})?/gu, "")
+    .replace(/[\u{FE0F}\u{FE0E}\u{200D}\u{20E3}]/gu, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([.,!?])/g, "$1")
+    .trim();
+}
+
 // Spezza un testo in righe che stanno all'incirca in maxCharsPerLine caratteri,
 // senza spezzare le parole (approssimazione a caratteri, non a larghezza reale del
 // font: sufficiente per frasi brevi come quelle usate nelle Storie).
@@ -113,7 +126,7 @@ const SUBTITLE_BOTTOM_MARGIN = 220;
 async function addStorySubtitle(buffer, text) {
   if (!text || !text.trim()) return buffer;
 
-  const lines = wrapText(text.trim(), SUBTITLE_MAX_CHARS_PER_LINE).slice(0, 4);
+  const lines = wrapText(stripEmoji(text), SUBTITLE_MAX_CHARS_PER_LINE).slice(0, 4);
   const bandHeight = 80 + lines.length * SUBTITLE_LINE_HEIGHT;
   const bandY = STORY_DIMENSIONS.height - bandHeight - SUBTITLE_BOTTOM_MARGIN;
 
@@ -163,7 +176,7 @@ async function buildCategoryInfoSlide(text) {
 
   const logoTop = INFO_SLIDE_HEADER_TOP + headerLines.length * INFO_SLIDE_HEADER_LINE_HEIGHT + INFO_SLIDE_HEADER_LOGO_GAP;
 
-  const lines = wrapText(text.trim(), INFO_SLIDE_MAX_CHARS_PER_LINE);
+  const lines = wrapText(stripEmoji(text), INFO_SLIDE_MAX_CHARS_PER_LINE);
   const textStartY = logoTop + INFO_SLIDE_LOGO_SIZE + 110;
 
   const textSvg = lines
