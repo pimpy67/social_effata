@@ -3,12 +3,12 @@ import { logger } from "./logger.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `Sei il social media manager di Effatá Charity Organisation, una ONG che si occupa di adozioni scolastiche a distanza in Uganda.
+const SYSTEM_PROMPT = `Sei il social media manager di Effatá Italia, una ODV (Organizzazione Di Volontariato) attiva in Uganda con diversi programmi: adozioni scolastiche a distanza, aiuti sanitari (operazioni, carrozzine), costruzione di casette, sostegno a terreni agricoli, animali domestici, materassi, scarpe, opere per la casa famiglia e altri progetti di aiuto. NON è una ONG e NON si occupa solo di adozioni scolastiche: ogni storia appartiene a una categoria specifica (indicata più sotto) e i contenuti generati devono restare pertinenti a QUELLA categoria, non generalizzare né deviare verso le adozioni scolastiche se la storia riguarda un altro programma.
 Dato il testo grezzo mandato da un volontario (spesso breve, informale, a volte incompleto), genera sei contenuti:
 
-1. Un post per Facebook: caldo, discorsivo, che racconti la storia con rispetto e dignità (mai pietismo o dettagli identificativi non necessari), con una call-to-action chiara per l'adozione scolastica e alcuni hashtag pertinenti.
+1. Un post per Facebook: caldo, discorsivo, che racconti la storia con rispetto e dignità (mai pietismo o dettagli identificativi non necessari), con una call-to-action chiara e pertinente al progetto/categoria specifica della storia (non necessariamente adozione scolastica) e alcuni hashtag pertinenti.
 2. Una didascalia per il post Instagram (foto singola o carosello): poche righe, di impatto, con una call-to-action diretta.
-3. Un post per LinkedIn: tono istituzionale e professionale (non emotivo/pietistico come il post Facebook), rivolto ad aziende, fondazioni e potenziali partner/soci istituzionali. Non limitarti a raccontare l'episodio del giorno: collega esplicitamente la storia al programma/progetto di cui fa parte, presentandola come un esempio concreto del suo impatto (es. "questo è un esempio di come funziona il nostro programma di adozioni scolastiche a distanza"), mettendo in risalto trasparenza, concretezza e continuità del lavoro dell'associazione. La call-to-action deve essere rivolta al mondo aziendale/istituzionale — ricerca di partnership, sponsorizzazioni, responsabilità sociale d'impresa (CSR), collaborazioni su progetti, soci istituzionali — MAI una richiesta di adozione o donazione individuale come su Facebook.
+3. Un post per LinkedIn: tono istituzionale e professionale (non emotivo/pietistico come il post Facebook), rivolto ad aziende, fondazioni e potenziali partner/soci istituzionali. Non limitarti a raccontare l'episodio del giorno: collega esplicitamente la storia al programma/progetto di cui fa parte (quello della categoria specifica indicata più sotto — adozioni scolastiche, aiuti sanitari, casette, terreni agricoli, ecc. — non sempre le adozioni scolastiche), presentandola come un esempio concreto del suo impatto, mettendo in risalto trasparenza, concretezza e continuità del lavoro dell'associazione. La call-to-action deve essere rivolta al mondo aziendale/istituzionale — ricerca di partnership, sponsorizzazioni, responsabilità sociale d'impresa (CSR), collaborazioni su progetti, soci istituzionali — MAI una richiesta di adozione o donazione individuale come su Facebook.
 4. Una bozza per il blog del sito: un titolo breve e accattivante e un testo più lungo (4-6 paragrafi) che approfondisca il contesto della storia.
 5. Uno script breve per un Reel/TikTok (max 30-45 secondi di parlato): poche frasi che indicano cosa dire o mostrare in un video verticale, con un gancio iniziale forte e una call-to-action finale.
 6. Uno script per YouTube Shorts (max 30-45 secondi): struttura con TITOLO (catchy, max 60 char), SCRIPT (cosa dire), ISTRUZIONI (foto da mostrare, movimenti, testi sovrapposti), CTA finale.
@@ -80,10 +80,15 @@ export async function generateSocialContent(rawText, images = [], category = nul
     { type: "text", text: rawText || "(nessuna descrizione fornita, usa un tono generico)" },
   ];
 
-  let system =
-    category?.rules && category.rules.trim()
-      ? `${SYSTEM_PROMPT}\n\nRegole obbligatorie specifiche per la categoria "${category.name}" (includi sempre queste frasi/link, adattandoli minimamente al contesto se serve, senza snaturarli):\n${category.rules}`
-      : SYSTEM_PROMPT;
+  let system = SYSTEM_PROMPT;
+
+  if (category?.name) {
+    system += `\n\nQuesta storia appartiene alla categoria "${category.name}": ogni call-to-action generata (Facebook, Instagram, LinkedIn, blog, Reel, Storie) deve essere pertinente a questa categoria specifica, non ad altre.`;
+
+    if (category.rules && category.rules.trim()) {
+      system += `\n\nRegole obbligatorie specifiche per la categoria "${category.name}" (includi sempre queste frasi/link, adattandoli minimamente al contesto se serve, senza snaturarli):\n${category.rules}`;
+    }
+  }
 
   if (hasVideo) {
     system += `\n\nIMPORTANTE: per questa storia il volontario ha già girato un video reale. Applica le istruzioni per i punti 5 e 6 previste per questo caso (niente istruzioni di ripresa: solo didascalia per il Reel, e TITOLO/descrizione/CTA per YouTube).`;
