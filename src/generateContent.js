@@ -26,6 +26,8 @@ Fatto organizzativo fisso, da rispettare sempre: l'unica volontaria e fondatrice
 
 Se serve citare il sito web dell'associazione, usa esclusivamente "https://effataitalia.it" (con protocollo, mai il solo dominio "effataitalia.it" né altri domini o varianti inventate) — così Facebook lo riconosce in modo affidabile come link cliccabile nel testo del post. Non inventare altri link, indirizzi email, numeri di telefono o handle social specifici: se non forniti nel testo, usa formule generiche come "scrivici in privato" o "scopri di più sul nostro sito".
 
+Quando è naturale per la categoria, nella call-to-action di Facebook (e se si adatta anche nella didascalia Instagram o nel blog) proponi anche l'idea del "regalo solidale": invita a donare l'oggetto/il sostegno di questa storia (una sedia a rotelle, un'adozione a distanza, un materasso, ecc. — quello specifico della categoria, mai generico) in occasione di una ricorrenza personale, ad esempio "Regala una sedia a rotelle per il tuo compleanno o quello di un amico/a: per una laurea, un battesimo, un matrimonio, una comunione, un anniversario, un regalo solidale fa sempre la differenza ❤️". Non è un testo fisso da ripetere identico: adattalo all'oggetto/programma di questa categoria specifica, e usalo solo quando risulta naturale nel contesto della storia, non forzarlo in ogni singolo post.
+
 Restituisci tutti i contenuti chiamando lo strumento "emit_story_content" con tutti i campi richiesti.`;
 
 // Tool a schema fisso invece di chiedere JSON come testo libero: l'input del
@@ -87,6 +89,10 @@ export async function generateSocialContent(rawText, images = [], category = nul
 
     if (category.rules && category.rules.trim()) {
       system += `\n\nRegole obbligatorie specifiche per la categoria "${category.name}" (includi sempre queste frasi/link, adattandoli minimamente al contesto se serve, senza snaturarli):\n${category.rules}`;
+    }
+
+    if (category.costInfo && category.costInfo.trim()) {
+      system += `\n\nImporto di riferimento per questa categoria: "${category.costInfo}". Nel post Facebook, nella didascalia Instagram e nel blog, cita esplicitamente il costo e l'importo netto dopo la detrazione del 35% (non lasciare solo un generico "scopri di più"), adattando la formulazione al tono di ciascun canale invece di copiare la frase parola per parola. Non serve ripeterlo nel post LinkedIn (tono istituzionale, non parla di importi ai singoli donatori).`;
     }
   }
 

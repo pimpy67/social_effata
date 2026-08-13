@@ -544,6 +544,7 @@ export async function startBot() {
         {
           name: selected?.name,
           rules: selected ? CATEGORY_RULES[selected.id] : "",
+          costInfo: selected ? getCategoryInfoText(selected.id) : "",
         },
         pending.videos.length > 0
       );
