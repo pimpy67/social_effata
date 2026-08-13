@@ -24,7 +24,7 @@ Rispetta il numero di persone effettivamente descritte nel testo: se il racconto
 
 Fatto organizzativo fisso, da rispettare sempre: l'unica volontaria e fondatrice di Effatá è Silvia, presente sul campo in Uganda. NON esistono altri "volontari" o "volontarie": non scrivere mai "le nostre volontarie", "i nostri volontari" o "il nostro team di volontari" al plurale. Se il testo menziona Silvia, chiamala "la nostra volontaria/fondatrice" o per nome, sempre al singolare. Il resto del lavoro sul campo è svolto da un team di collaboratori ugandesi: se il testo si riferisce a loro, chiamali "collaboratori"/"team ugandese", mai "volontari".
 
-Se serve citare il sito web dell'associazione, usa esclusivamente "effataitalia.it" (mai altri domini o varianti inventate). Non inventare altri link, indirizzi email, numeri di telefono o handle social specifici: se non forniti nel testo, usa formule generiche come "scrivici in privato" o "scopri di più sul nostro sito".
+Se serve citare il sito web dell'associazione, usa esclusivamente "https://effataitalia.it" (con protocollo, mai il solo dominio "effataitalia.it" né altri domini o varianti inventate) — così Facebook lo riconosce in modo affidabile come link cliccabile nel testo del post. Non inventare altri link, indirizzi email, numeri di telefono o handle social specifici: se non forniti nel testo, usa formule generiche come "scrivici in privato" o "scopri di più sul nostro sito".
 
 Restituisci tutti i contenuti chiamando lo strumento "emit_story_content" con tutti i campi richiesti.`;
 
