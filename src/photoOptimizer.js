@@ -148,36 +148,53 @@ async function addStorySubtitle(buffer, text) {
     .toBuffer();
 }
 
-const INFO_SLIDE_LOGO_SIZE = 260;
-const INFO_SLIDE_FONT_SIZE = 50;
-const INFO_SLIDE_MAX_CHARS_PER_LINE = 24;
-const INFO_SLIDE_LINE_HEIGHT = 66;
-const INFO_SLIDE_HEADER_FONT_SIZE = 42;
-const INFO_SLIDE_HEADER_LINE_HEIGHT = 54;
-const INFO_SLIDE_HEADER_TOP = 300;
-const INFO_SLIDE_HEADER_LOGO_GAP = 70;
+const INFO_SLIDE_LOGO_SIZE = 320;
+const INFO_SLIDE_FONT_SIZE = 54;
+const INFO_SLIDE_MAX_CHARS_PER_LINE = 22;
+const INFO_SLIDE_LINE_HEIGHT = 70;
+const INFO_SLIDE_HEADER_FONT_SIZE = 46;
+const INFO_SLIDE_HEADER_LINE_HEIGHT = 58;
+const INFO_SLIDE_HEADER_LOGO_GAP = 90;
+const INFO_SLIDE_LOGO_TEXT_GAP = 130;
 
 // Slide fissa di chiusura per le Storie: sfondo a tinta unita col rosso del logo
 // Effatà, intestazione con la ragione sociale completa, logo, testo fisso (diverso
 // per categoria, vedi CATEGORY_STORY_INFO in telegramBot.js) sotto il logo. Non
-// contiene nessuna foto del volontario.
+// contiene nessuna foto del volontario. Il blocco intestazione+logo+testo è
+// centrato verticalmente sull'intera altezza 1920 (prima era ancorato in alto,
+// lasciando vuota tutta la metà inferiore della Storia).
 async function buildCategoryInfoSlide(text) {
   const logoBuffer = await sharp(LOGO_PATH)
     .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
     .toBuffer();
 
   const headerLines = wrapText(ORG_HEADER, INFO_SLIDE_MAX_CHARS_PER_LINE);
+  const lines = wrapText(stripEmoji(text), INFO_SLIDE_MAX_CHARS_PER_LINE);
+
+  // Altezza visiva totale del blocco (intestazione + logo + testo), usata per
+  // centrarlo sull'asse verticale invece di ancorarlo a un top fisso.
+  const headerBlockHeight = headerLines.length * INFO_SLIDE_HEADER_LINE_HEIGHT;
+  const textBlockHeight = (lines.length - 1) * INFO_SLIDE_LINE_HEIGHT + INFO_SLIDE_FONT_SIZE;
+  const totalBlockHeight =
+    INFO_SLIDE_HEADER_FONT_SIZE * 0.75 +
+    headerBlockHeight +
+    INFO_SLIDE_HEADER_LOGO_GAP +
+    INFO_SLIDE_LOGO_SIZE +
+    INFO_SLIDE_LOGO_TEXT_GAP +
+    textBlockHeight;
+
+  const headerTop = Math.round((STORY_DIMENSIONS.height - totalBlockHeight) / 2 + INFO_SLIDE_HEADER_FONT_SIZE * 0.75);
+
   const headerSvg = headerLines
     .map(
       (line, i) =>
-        `<text x="50%" y="${INFO_SLIDE_HEADER_TOP + i * INFO_SLIDE_HEADER_LINE_HEIGHT}" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-weight="bold" font-size="${INFO_SLIDE_HEADER_FONT_SIZE}" fill="#ffffff">${escapeXml(line)}</text>`
+        `<text x="50%" y="${headerTop + i * INFO_SLIDE_HEADER_LINE_HEIGHT}" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-weight="bold" font-size="${INFO_SLIDE_HEADER_FONT_SIZE}" fill="#ffffff">${escapeXml(line)}</text>`
     )
     .join("");
 
-  const logoTop = INFO_SLIDE_HEADER_TOP + headerLines.length * INFO_SLIDE_HEADER_LINE_HEIGHT + INFO_SLIDE_HEADER_LOGO_GAP;
+  const logoTop = headerTop + headerLines.length * INFO_SLIDE_HEADER_LINE_HEIGHT + INFO_SLIDE_HEADER_LOGO_GAP;
 
-  const lines = wrapText(stripEmoji(text), INFO_SLIDE_MAX_CHARS_PER_LINE);
-  const textStartY = logoTop + INFO_SLIDE_LOGO_SIZE + 110;
+  const textStartY = logoTop + INFO_SLIDE_LOGO_SIZE + INFO_SLIDE_LOGO_TEXT_GAP;
 
   const textSvg = lines
     .map(

@@ -137,20 +137,20 @@ const CATEGORY_DEFAULT_LINKS = {
 // sequenza, sfondo brand + logo, NON generato da Claude. Importi confermati da
 // Andrea l'11/08/2026, netto = importo x 0,65 (detrazione 35%).
 const CATEGORY_STORY_INFO = {
-  "1": "Adotta un bambino con 180€/anno: solo 117€ netti (detraibili al 35%). Scrivici in DM",
-  "2": "Sostieni le cure mediche dei nostri bambini. Scrivici in DM",
+  "1": "Adotta un bambino con 180€/anno: solo 117€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+  "2": "Sostieni le cure mediche dei nostri bambini. Scrivici in DM o vai al link in bio",
   // Due varianti scelte a caso ad ogni generazione (deciso con Andrea l'11/08/2026).
   "3": [
-    "Restituisci la libertà di muoversi: una carrozzina con 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM",
-    "Una carrozzina cambia una vita: 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM",
+    "Restituisci la libertà di muoversi: una carrozzina con 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+    "Una carrozzina cambia una vita: 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
   ],
-  "4": "Costruisci una casa per una famiglia con 1.500€: solo 975€ netti (detraibili al 35%). Scrivici in DM",
-  "5": "Aiuta una famiglia a coltivare la terra con 80€: solo 52€ netti (detraibili al 35%). Scrivici in DM",
-  "6": "Dona un animale da 5€ a 600€: da 3€ a 390€ netti (detraibili al 35%). Scrivici in DM",
-  "7": "Dona un materasso (20€, 13€ netti) o una coperta (10€, 7€ netti) — detraibili al 35%. Scrivici in DM",
-  "8": "Dona un paio di scarpe con 10€: solo 7€ netti (detraibili al 35%). Scrivici in DM",
-  "9": "Sostieni un bimbo in Casa Famiglia con 500€: solo 325€ netti (detraibili al 35%). Scrivici in DM",
-  "10": "Scopri tutti i nostri progetti. Scrivici in DM",
+  "4": "Costruisci una casa per una famiglia con 1.500€: solo 975€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+  "5": "Aiuta una famiglia a coltivare la terra con 80€: solo 52€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+  "6": "Dona un animale da 5€ a 600€: da 3€ a 390€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+  "7": "Dona un materasso (20€, 13€ netti) o una coperta (10€, 7€ netti) — detraibili al 35%. Scrivici in DM o vai al link in bio",
+  "8": "Dona un paio di scarpe con 10€: solo 7€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+  "9": "Sostieni un bimbo in Casa Famiglia con 500€: solo 325€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+  "10": "Scopri tutti i nostri progetti. Scrivici in DM o vai al link in bio",
 };
 
 // Alcune categorie hanno più varianti di testo (array): ne sceglie una a caso.
