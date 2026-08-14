@@ -43,6 +43,10 @@ services:
       - ./output:/app/output
       - ./logs:/app/logs
       - ./effata.db:/app/effata.db
+      # Foto caricate su Telegram in attesa di /genera: senza questo volume un
+      # rebuild del container (es. deploy di una modifica al codice) le perde,
+      # perché intake viveva solo nel filesystem effimero del container.
+      - ./intake:/app/intake
     networks:
       - effata-network
     labels:
