@@ -49,6 +49,8 @@
       color: white;
       padding: 10px 18px;
       font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 6px;
     }
 
     .btn-guide:hover {
@@ -483,6 +485,7 @@
       <h1>📱 Effatá Social Dashboard</h1>
       <p class="subtitle">Visualizza, approva e scarica le bozze di contenuti generati</p>
       <button class="btn-guide" onclick="openGuide()">❓ Come funziona (guida passo per passo)</button>
+      <button class="btn-guide" onclick="openDiffusionGuide()">📣 Come diffondere di più (guida per volontari)</button>
     </header>
 
     <div class="volunteer-name">
@@ -596,6 +599,67 @@
           <li><code>/report-mese</code> — riepilogo di quante storie per categoria nel mese</li>
           <li><code>/report-anno</code> — stesso riepilogo per tutto l'anno</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal con la guida per i volontari su come diffondere a mano storie e post -->
+  <div id="diffusion-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="font-size: 18px;">📣 Come diffondere di più: guida per volontari</div>
+        <button class="modal-close" onclick="closeDiffusionGuide()">✕</button>
+      </div>
+      <div class="modal-body guide-content">
+        <p>Il bot pubblica già in automatico su Instagram, crea la bozza su Facebook e le Storie. Il resto — far vedere i contenuti a più persone possibile — è lavoro "a mano", ma richiede solo pochi minuti a testa. Ecco cosa farei io, passo per passo.</p>
+
+        <h3>1. Prima di tutto: entra in più gruppi Facebook</h3>
+        <p>Più gruppi conosci, più posti hai dove condividere. Se non sei già in molti gruppi utili, inizia da qui:</p>
+        <ol>
+          <li>Apri l'app Facebook, tocca la lente di ricerca in alto e cerca parole come <em>"volontariato [tua città]"</em>, <em>"adozioni a distanza"</em>, <em>"missioni Uganda"</em>, <em>"beneficenza [tua zona]"</em>, <em>"parrocchia [nome]"</em>, <em>"associazioni ODV [tua città]"</em>.</li>
+          <li>Nei risultati tocca il filtro <strong>"Gruppi"</strong> (di solito in alto, tra le categorie).</li>
+          <li>Apri i gruppi che sembrano attinenti e tocca <strong>"Unisciti al gruppo"</strong> (o "Richiedi di partecipare"). Se chiedono perché vuoi entrare, scrivi semplicemente che sei volontario di Effatà Italia ODV e vuoi condividere le attività dell'associazione.</li>
+          <li>L'approvazione può richiedere qualche giorno: è normale, non serve insistere.</li>
+          <li><strong>Prima di postare qualsiasi cosa</strong>, leggi le regole del gruppo (di solito in cima, o in "Info gruppo"): alcuni vietano post promozionali o chiedono il permesso agli amministratori prima. In quel caso scrivi un messaggio privato all'admin, non pubblicare direttamente.</li>
+        </ol>
+        <div class="note">💡 Meglio se più volontari fanno questo lavoro ciascuno con il proprio profilo personale, invece che una sola persona: si moltiplicano i gruppi raggiungibili, e un post condiviso da un profilo "vero" viene preso meglio di uno che sembra pubblicità.</div>
+
+        <h3>2. Condividi il post della Pagina direttamente nei gruppi</h3>
+        <p>Il modo più veloce, quando il gruppo lo permette:</p>
+        <ol>
+          <li>Apri il post pubblicato sulla Pagina Facebook "Effatà Italia ODV" (il link arriva anche nella conferma del bot dopo <code>/bozze</code>).</li>
+          <li>Sotto al post tocca <strong>"Condividi"</strong>.</li>
+          <li>Scegli <strong>"Condividi in un Gruppo"</strong> e seleziona il gruppo.</li>
+          <li>Puoi aggiungere una riga tua sopra (es. "Guardate questa bella iniziativa!") — aiuta e non è obbligatorio.</li>
+          <li>Tocca <strong>"Pubblica"</strong>.</li>
+        </ol>
+        <p>Ripeti per ogni gruppo, ma con calma: fallo nell'arco della giornata invece che tutto insieme in pochi minuti, sembra più naturale.</p>
+
+        <h3>3. Se il gruppo non permette di condividere il post: usa il testo pronto del bot</h3>
+        <p>Alcuni gruppi bloccano la condivisione diretta di post esterni. In quel caso:</p>
+        <ol>
+          <li>Nel bot Telegram scrivi <code>/bozze</code> e tocca <strong>"✅ Pubblica su Facebook"</strong> (se non l'hai già fatto).</li>
+          <li>Dopo la pubblicazione, sotto al messaggio di conferma trovi il pulsante <strong>"📋 Testo per i gruppi"</strong>: toccalo.</li>
+          <li>Il bot ti manda il testo completo del post: tieni premuto sul messaggio e scegli <strong>"Copia"</strong>.</li>
+          <li>Apri il gruppo Facebook, tocca <strong>"Scrivi qualcosa"</strong>, incolla il testo.</li>
+          <li>Se vuoi aggiungere anche una foto, scaricala prima dalla Dashboard (card della storia → <strong>"📦 Zip"</strong>) e allegala al post nel gruppo.</li>
+          <li>Tocca <strong>"Pubblica"</strong>.</li>
+        </ol>
+
+        <h3>4. Storie: aggiungi musica e link a mano</h3>
+        <p>Instagram e Facebook non permettono di modificare una Storia dopo che è stata pubblicata (niente musica o link aggiunti in un secondo momento), quindi il bot non può farlo. Il modo per averli comunque è <strong>ricondividere</strong> la Storia della Pagina sul tuo profilo personale, aggiungendo gli sticker prima di pubblicarla di nuovo:</p>
+        <ol>
+          <li>Apri l'app Instagram (o Facebook) e vai sul profilo di Effatà Italia.</li>
+          <li>Tocca la Storia per guardarla (visibile solo nelle 24h dopo la pubblicazione).</li>
+          <li>In basso tocca l'icona dell'aeroplanino di carta ("Invia") oppure i tre puntini <strong>"⋯"</strong>, poi scegli <strong>"Aggiungi alla tua storia"</strong> (Instagram) o <strong>"Condividi come storia"</strong> (Facebook).</li>
+          <li>Si apre l'editor con la stessa immagine già inserita: tocca l'icona degli sticker (il quadratino con la faccina, in alto) e scegli lo sticker <strong>"Musica"</strong> — cerca una canzone adatta e posizionala dove vuoi.</li>
+          <li>Tocca di nuovo l'icona sticker, scegli <strong>"Link"</strong> e incolla l'indirizzo del sito (es. <code>https://effataitalia.it/</code>) o della pagina specifica della storia.</li>
+          <li>Tocca <strong>"La tua storia"</strong> per pubblicarla sul tuo profilo.</li>
+        </ol>
+        <div class="note">⚠️ Questa Storia con musica e link comparirà sul <strong>tuo</strong> profilo personale, non su quello della Pagina — ma è comunque vista dai tuoi amici/follower ed è un modo in più per far conoscere la storia, in aggiunta (non al posto) di quella pubblicata dal bot.</div>
+
+        <h3>5. Il modo più semplice di tutti: metti "mi piace" e commenta</h3>
+        <p>Appena un post o una Storia vengono pubblicati, mettere subito un like e un commento da parte di più volontari aiuta Facebook/Instagram a farli vedere a più persone nelle prime ore — è la cosa più veloce che si possa fare, letteralmente pochi secondi a testa.</p>
       </div>
     </div>
   </div>
@@ -867,6 +931,14 @@
       document.getElementById("guide-modal").classList.remove("active");
     }
 
+    function openDiffusionGuide() {
+      document.getElementById("diffusion-modal").classList.add("active");
+    }
+
+    function closeDiffusionGuide() {
+      document.getElementById("diffusion-modal").classList.remove("active");
+    }
+
     // Chiudi modal quando clicchi fuori dal contenuto
     document.getElementById("modal").addEventListener("click", (e) => {
       if (e.target.id === "modal") {
@@ -877,6 +949,12 @@
     document.getElementById("guide-modal").addEventListener("click", (e) => {
       if (e.target.id === "guide-modal") {
         closeGuide();
+      }
+    });
+
+    document.getElementById("diffusion-modal").addEventListener("click", (e) => {
+      if (e.target.id === "diffusion-modal") {
+        closeDiffusionGuide();
       }
     });
   </script>
