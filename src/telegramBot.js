@@ -303,6 +303,13 @@ const pendingByChat = new Map();
 // produzione il 16/08/2026).
 const generationInProgress = new Set();
 
+// Testo pronto (post + permalink) per incollare a mano nei gruppi Facebook,
+// tenuto in cache per timestamp dopo la pubblicazione: la Graph API non
+// permette di pubblicare nei gruppi in automatico (serve app installata
+// dall'admin del gruppo + approvazione Meta), quindi qui si prepara solo il
+// testo da copiare, non un post automatico.
+const groupsShareCache = new Map();
+
 // Client Meta API (per pubblicare su Facebook/Instagram)
 let metaAPI = null;
 
@@ -1123,23 +1130,49 @@ Altri comandi utili:
         // Link pronto per WhatsApp: apre l'app con il messaggio già scritto, pronto
         // da girare a qualsiasi contatto/gruppo con un tocco (nessuna API richiesta).
         let shareButton = null;
+        // Testo pronto per i gruppi Facebook: la Graph API non permette di postare
+        // nei gruppi in automatico, quindi qui si prepara solo il testo completo
+        // da incollare a mano (vedi groupsShareCache sopra).
+        let groupsButton = null;
+        let permalink = null;
         try {
-          const permalink = await metaAPI.getFacebookPostPermalink(draft.facebookPostId);
-          if (permalink && facebookText) {
-            const preview = facebookText.length > 200 ? `${facebookText.slice(0, 200)}...` : facebookText;
-            const shareText = `${preview}\n\n${permalink}`;
-            shareButton = { text: "📤 Condividi su WhatsApp", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` };
-          }
+          permalink = await metaAPI.getFacebookPostPermalink(draft.facebookPostId);
         } catch (err) {
-          logger.warn(`Impossibile generare il link di condivisione WhatsApp: ${err.message}`);
+          logger.warn(`Impossibile recuperare il permalink Facebook: ${err.message}`);
         }
 
-        await bot.sendMessage(chatId, confirmMsg, shareButton ? { reply_markup: { inline_keyboard: [[shareButton]] } } : undefined);
+        if (permalink && facebookText) {
+          const preview = facebookText.length > 200 ? `${facebookText.slice(0, 200)}...` : facebookText;
+          const shareText = `${preview}\n\n${permalink}`;
+          shareButton = { text: "📤 Condividi su WhatsApp", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` };
+        }
+        if (facebookText) {
+          groupsShareCache.set(draft.timestamp, { text: facebookText, permalink });
+          groupsButton = { text: "📋 Testo per i gruppi", callback_data: `groups_text_${draft.timestamp}` };
+        }
+
+        const shareButtons = [shareButton, groupsButton].filter(Boolean);
+        await bot.sendMessage(chatId, confirmMsg, shareButtons.length ? { reply_markup: { inline_keyboard: [shareButtons] } } : undefined);
       } catch (err) {
         logger.error(`Errore nel pubblicare la bozza Facebook ${draft.timestamp}: ${err.message}`);
         await bot.answerCallbackQuery(query.id, { text: "Errore nella pubblicazione." });
         await bot.sendMessage(chatId, `⚠️ Errore nel pubblicare su Facebook: ${err.message}`);
       }
+    } else if (query.data.startsWith("groups_text_")) {
+      const timestamp = query.data.replace("groups_text_", "");
+      const cached = groupsShareCache.get(timestamp);
+
+      if (!cached) {
+        await bot.answerCallbackQuery(query.id, { text: "Testo non più disponibile, ripubblica da /bozze." });
+        return;
+      }
+      await bot.answerCallbackQuery(query.id);
+
+      const fullText = cached.permalink ? `${cached.text}\n\n${cached.permalink}` : cached.text;
+      await bot.sendMessage(
+        chatId,
+        `📋 Testo pronto da incollare nei gruppi Facebook (tieni premuto sul messaggio per copiarlo):\n\n${fullText}`
+      );
     }
   });
 
