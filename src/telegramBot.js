@@ -296,6 +296,13 @@ const EXT_BY_MIME = {
 // Persistente: caricato da state.json all'avvio, salvato dopo ogni operazione.
 const pendingByChat = new Map();
 
+// Chat per cui una generazione è attualmente in corso: evita che due /genera
+// (o due invii della risposta finale al passo del link) partano in parallelo
+// sullo stesso materiale — la seconda cancellerebbe i file di intake usati
+// dalla prima a metà corsa, causando un ENOENT nella copia foto (visto in
+// produzione il 16/08/2026).
+const generationInProgress = new Set();
+
 // Client Meta API (per pubblicare su Facebook/Instagram)
 let metaAPI = null;
 
@@ -515,6 +522,12 @@ export async function startBot() {
     const pending = pendingByChat.get(chatId);
     if (!pending) return;
     if (!pending.videos) pending.videos = []; // retrocompatibilità con stato salvato prima dei video
+
+    if (generationInProgress.has(chatId)) {
+      await bot.sendMessage(chatId, "⏳ C'è già una generazione in corso per questa chat, attendi che finisca prima di riprovare.");
+      return;
+    }
+    generationInProgress.add(chatId);
 
     try {
       await bot.sendMessage(
@@ -776,6 +789,8 @@ export async function startBot() {
         chatId,
         `⚠️ Errore nella generazione. Il tuo materiale rimane intatto (${materialsLeft}).\n\nRiprova con /genera.\n\nDettagli errore: ${err.message}`
       );
+    } finally {
+      generationInProgress.delete(chatId);
     }
   }
 
