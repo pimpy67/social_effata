@@ -24,6 +24,28 @@ function metaErrorMessage(err) {
   return metaError ? `${metaError.message} (code=${metaError.code}, subcode=${metaError.error_subcode ?? "-"})` : err.message;
 }
 
+// Riprova un'operazione un paio di volte prima di rinunciare: usata per le
+// singole slide delle Storie, dove un errore transitorio (rate limit, timeout
+// nell'elaborazione Instagram) su una sola immagine non deve farla scartare
+// in silenzio se il tentativo successivo va a buon fine. Logga ogni tentativo
+// fallito con l'errore reale di Meta, invece di scoprirlo solo se falliscono
+// tutte le slide.
+async function withRetry(fn, { attempts = 3, delayMs = 1500, label = "" } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      logger.warn(`${label}: tentativo ${attempt}/${attempts} fallito (${metaErrorMessage(err)})`);
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export class MetaAPI {
   constructor(pageAccessToken, pageId) {
     this.pageAccessToken = pageAccessToken;
@@ -236,18 +258,24 @@ export class MetaAPI {
     const storyIds = [];
     const errors = [];
 
-    for (const buffer of photos) {
+    for (const [index, buffer] of photos.entries()) {
+      const label = `Storia Facebook slide ${index + 1}/${photos.length}`;
       try {
-        const photoId = await this.uploadUnpublishedPhoto(buffer);
-        const response = await axios.post(`https://graph.facebook.com/v26.0/${this.pageId}/photo_stories`, null, {
-          params: {
-            photo_id: photoId,
-            access_token: this.pageAccessToken,
-          },
-        });
-        storyIds.push(response.data.post_id || response.data.id);
+        const storyId = await withRetry(async () => {
+          const photoId = await this.uploadUnpublishedPhoto(buffer);
+          const response = await axios.post(`https://graph.facebook.com/v26.0/${this.pageId}/photo_stories`, null, {
+            params: {
+              photo_id: photoId,
+              access_token: this.pageAccessToken,
+            },
+          });
+          return response.data.post_id || response.data.id;
+        }, { label });
+        storyIds.push(storyId);
       } catch (err) {
-        errors.push(metaErrorMessage(err));
+        const message = metaErrorMessage(err);
+        errors.push(message);
+        logger.warn(`${label} scartata dopo i tentativi: ${message}`);
       }
     }
 
@@ -391,35 +419,41 @@ export class MetaAPI {
     const storyIds = [];
     const errors = [];
 
-    for (const buffer of photos) {
+    for (const [index, buffer] of photos.entries()) {
+      const label = `Storia Instagram slide ${index + 1}/${photos.length}`;
       try {
-        const imageUrl = await this.getPublicImageUrl(buffer);
+        const storyId = await withRetry(async () => {
+          const imageUrl = await this.getPublicImageUrl(buffer);
 
-        const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
-          params: {
-            image_url: imageUrl,
-            media_type: "STORIES",
-            access_token: this.pageAccessToken,
-          },
-        });
-
-        const creationId = createResponse.data.id;
-        await this.waitForMediaReady(creationId);
-
-        const publishResponse = await axios.post(
-          `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
-          null,
-          {
+          const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
             params: {
-              creation_id: creationId,
+              image_url: imageUrl,
+              media_type: "STORIES",
               access_token: this.pageAccessToken,
             },
-          }
-        );
+          });
 
-        storyIds.push(publishResponse.data.id);
+          const creationId = createResponse.data.id;
+          await this.waitForMediaReady(creationId);
+
+          const publishResponse = await axios.post(
+            `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
+            null,
+            {
+              params: {
+                creation_id: creationId,
+                access_token: this.pageAccessToken,
+              },
+            }
+          );
+
+          return publishResponse.data.id;
+        }, { label });
+        storyIds.push(storyId);
       } catch (err) {
-        errors.push(metaErrorMessage(err));
+        const message = metaErrorMessage(err);
+        errors.push(message);
+        logger.warn(`${label} scartata dopo i tentativi: ${message}`);
       }
     }
 
