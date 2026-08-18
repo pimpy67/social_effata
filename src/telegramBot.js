@@ -99,6 +99,35 @@ const CATEGORY_STEPS = {
   "10": [], // Vari: nessuna domanda, categoria solo descrittiva (esclusa dai report)
 };
 
+// Categorie in cui una stessa storia può avere più padrini/bambini distinti
+// (ognuno con la propria mail di ringraziamento automatica separata). Per ora solo
+// le adozioni scolastiche, unica categoria con il campo sponsorEmail. Dopo l'ultima
+// domanda del gruppo (sponsorEmail) il bot chiede se aggiungerne un altro invece di
+// passare subito alla domanda sul link CTA.
+const MULTI_SPONSOR_CATEGORIES = new Set(["1"]);
+
+// Righe con i dati raccolti per la categoria, da inserire nel prompt per Claude.
+// Nelle categorie multi-padrino, se sono stati raccolti più gruppi (categoryData.sponsors),
+// genera una riga per ciascuno invece che una sola riga con i campi "piatti".
+function buildCategoryLines(categoryId, categoryData) {
+  const steps = CATEGORY_STEPS[categoryId] || [];
+  const groups =
+    MULTI_SPONSOR_CATEGORIES.has(categoryId) && categoryData.sponsors?.length
+      ? categoryData.sponsors
+      : [categoryData];
+
+  return groups
+    .map((group, i) => {
+      const parts = steps
+        .map((s) => (group[s.key] ? `${s.label}: ${group[s.key]}` : null))
+        .filter(Boolean);
+      if (!parts.length) return null;
+      const prefix = groups.length > 1 ? `Bambino/padrino ${i + 1} — ` : "";
+      return prefix + parts.join(", ");
+    })
+    .filter(Boolean);
+}
+
 // Domanda sempre presente, in coda alle eventuali domande specifiche di categoria:
 // il link a cui deve rimandare la storia (raccolta fondi, GoFundMe, adozione a
 // distanza, ecc.) — usato come bottone CTA sul blog e aggiunto in fondo ai testi di
@@ -186,6 +215,27 @@ async function askCurrentStep(bot, chatId, session) {
   await bot.sendMessage(chatId, step.question);
 }
 
+// Chiede, con bottoni Sì/No, se aggiungere un altro padrino/bambino alla stessa
+// storia (categorie in MULTI_SPONSOR_CATEGORIES): ognuno riceverà, alla
+// pubblicazione, una mail di ringraziamento separata e personalizzata.
+async function askAddAnotherSponsor(bot, chatId, session) {
+  const count = session.data.sponsors.length;
+  await bot.sendMessage(
+    chatId,
+    `✅ Padrino/bambino ${count} registrato.\n➕ Vuoi aggiungere un altro bambino/padrino a questa stessa storia? (riceverà una mail di ringraziamento separata)`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "➕ Sì, aggiungi un altro", callback_data: "more_sponsors_yes" },
+            { text: "✅ No, continua", callback_data: "more_sponsors_no" },
+          ],
+        ],
+      },
+    }
+  );
+}
+
 // Sessione di domande per categoria in corso per ogni chat: { steps, step, data }
 const categorySessions = new Map();
 
@@ -202,17 +252,27 @@ function formatCategoryDetail(details) {
 
   let out = "";
   for (const [categoryName, entries] of byCategory) {
+    const categoryNumber = String(entries[0].categoryNumber);
     // L'email del sostenitore è raccolta solo per la mail di ringraziamento
     // automatica, non va mostrata nei report (dato personale, non serve ai volontari).
-    const steps = (CATEGORY_STEPS[String(entries[0].categoryNumber)] || []).filter(
-      (s) => s.key !== "sponsorEmail"
-    );
+    const steps = (CATEGORY_STEPS[categoryNumber] || []).filter((s) => s.key !== "sponsorEmail");
     out += `\n📋 **${categoryName} - dettaglio:**\n`;
     entries.forEach((entry, i) => {
-      const parts = steps
-        .map((s) => (entry.data?.[s.key] ? `${s.label}: ${entry.data[s.key]}` : null))
+      // Storie con più padrini/bambini distinti (vedi MULTI_SPONSOR_CATEGORIES):
+      // un pezzo di testo per ciascun gruppo, separati da " | ".
+      const groups =
+        MULTI_SPONSOR_CATEGORIES.has(categoryNumber) && entry.data?.sponsors?.length
+          ? entry.data.sponsors
+          : [entry.data || {}];
+      const groupTexts = groups
+        .map((group) => {
+          const parts = steps
+            .map((s) => (group[s.key] ? `${s.label}: ${group[s.key]}` : null))
+            .filter(Boolean);
+          return parts.length ? parts.join(", ") : null;
+        })
         .filter(Boolean);
-      out += `${i + 1}. ${parts.length ? parts.join(", ") : "(dati non inseriti)"}\n`;
+      out += `${i + 1}. ${groupTexts.length ? groupTexts.join(" | ") : "(dati non inseriti)"}\n`;
     });
   }
   return out;
@@ -543,10 +603,7 @@ export async function startBot() {
       );
 
       const selected = selectedCategory.get(chatId);
-      const steps = selected ? CATEGORY_STEPS[selected.id] || [] : [];
-      const categoryLines = steps
-        .map((s) => (categoryData[s.key] ? `${s.label}: ${categoryData[s.key]}` : null))
-        .filter(Boolean);
+      const categoryLines = selected ? buildCategoryLines(selected.id, categoryData) : [];
 
       const rawText = [
         ...(categoryLines.length ? [categoryLines.join("\n")] : []),
@@ -742,17 +799,28 @@ export async function startBot() {
         }
       }
 
-      // Manda la mail fissa di ringraziamento al sostenitore, se ha fornito l'email
-      // (solo per le adozioni scolastiche, categoria "1" — unica con questo campo).
-      if (emailAPI && categoryData.sponsorEmail) {
-        const sponsorEmail = categoryData.sponsorEmail.trim();
-        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sponsorEmail)) {
+      // Manda la mail fissa di ringraziamento a ciascun sostenitore che ha fornito
+      // l'email (solo per le adozioni scolastiche, categoria "1" — unica con questo
+      // campo). Una storia può avere più padrini/bambini distinti (categoryData.sponsors,
+      // vedi MULTI_SPONSOR_CATEGORIES): a ciascuno arriva una mail separata,
+      // personalizzata con il proprio nome e quello del proprio bambino.
+      if (emailAPI) {
+        const sponsorGroups =
+          selected && MULTI_SPONSOR_CATEGORIES.has(selected.id) && categoryData.sponsors?.length
+            ? categoryData.sponsors
+            : categoryData.sponsorEmail
+            ? [categoryData]
+            : [];
+
+        for (const group of sponsorGroups) {
+          if (!group.sponsorEmail) continue;
+          const sponsorEmail = group.sponsorEmail.trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sponsorEmail)) {
+            metaMessage += `⚠️ Mail di ringraziamento non inviata: indirizzo "${sponsorEmail}" non valido\n`;
+            continue;
+          }
           try {
-            const emailResult = await emailAPI.sendAdoptionThankYou(
-              sponsorEmail,
-              categoryData.sponsorName,
-              categoryData.childName
-            );
+            const emailResult = await emailAPI.sendAdoptionThankYou(sponsorEmail, group.sponsorName, group.childName);
             metaMessage += emailResult.success
               ? `📧 Mail di ringraziamento inviata a ${sponsorEmail}\n`
               : `⚠️ Mail di ringraziamento: errore nell'invio (${emailResult.error})\n`;
@@ -760,8 +828,6 @@ export async function startBot() {
             logger.error(`Errore nell'invio della mail di ringraziamento: ${err.message}`);
             metaMessage += `⚠️ Mail di ringraziamento: errore (${err.message})\n`;
           }
-        } else {
-          metaMessage += `⚠️ Mail di ringraziamento non inviata: indirizzo "${sponsorEmail}" non valido\n`;
         }
       }
 
@@ -906,8 +972,29 @@ export async function startBot() {
     if (categorySession) {
       const step = categorySession.steps[categorySession.step];
       const answer = msg.text.trim();
-      if (answer !== "-") {
+      const categoryStepsLength = (CATEGORY_STEPS[categorySession.categoryId] || []).length;
+      // Nelle categorie multi-padrino (vedi MULTI_SPONSOR_CATEGORIES) le domande di
+      // categoria (indici 0..categoryStepsLength-1) possono ripetersi più volte, una
+      // per ogni padrino/bambino: le risposte vanno in un gruppo a parte
+      // (currentGroup), non nei campi "piatti" di data, per non mescolare un round
+      // con l'altro (es. un campo saltato con "-" nel secondo giro non deve ereditare
+      // il valore del primo).
+      const isMultiSponsorRound =
+        MULTI_SPONSOR_CATEGORIES.has(categorySession.categoryId) && categorySession.step < categoryStepsLength;
+
+      if (isMultiSponsorRound) {
+        categorySession.currentGroup = categorySession.currentGroup || {};
+        if (answer !== "-") categorySession.currentGroup[step.key] = answer;
+      } else if (answer !== "-") {
         categorySession.data[step.key] = answer;
+      }
+
+      if (isMultiSponsorRound && categorySession.step === categoryStepsLength - 1) {
+        categorySession.data.sponsors = categorySession.data.sponsors || [];
+        categorySession.data.sponsors.push(categorySession.currentGroup || {});
+        categorySession.currentGroup = {};
+        await askAddAnotherSponsor(bot, chatId, categorySession);
+        return;
       }
 
       const nextIndex = categorySession.step + 1;
@@ -956,6 +1043,8 @@ export async function startBot() {
 3️⃣ Scrivi /genera per creare le bozze
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
+
+Per le Adozioni scolastiche: se nella stessa storia ci sono più padrini/bambini distinti (non un solo padrino con più bambini), rispondi alle domande per il primo e poi scegli "➕ Sì, aggiungi un altro" quando il bot lo chiede — ognuno riceverà una mail di ringraziamento separata, con il proprio nome e quello del proprio bambino.
 
 Facebook (post) viene creato come bozza (non visibile a nessuno finché non la pubblichi): usa /bozze per vedere l'elenco e pubblicarle quando sei pronto (pubblica anche sul canale Telegram, se configurato). Instagram (post) invece va online subito, automaticamente. Anche le Storie (Facebook e Instagram, se configurate) vengono pubblicate subito, in automatico, e spariscono dopo 24h. L'articolo per il blog (se WordPress è configurato) viene creato come bozza su WordPress, da rivedere e pubblicare da wp-admin.
 
@@ -1084,6 +1173,32 @@ Altri comandi utili:
       const nextIndex = session.step + 1;
       if (nextIndex < session.steps.length) {
         session.step = nextIndex;
+        await askCurrentStep(bot, chatId, session);
+      } else {
+        const categoryData = session.data;
+        categorySessions.delete(chatId);
+        await runGenerate(chatId, categoryData);
+      }
+    } else if (query.data === "more_sponsors_yes" || query.data === "more_sponsors_no") {
+      const session = categorySessions.get(chatId);
+      if (!session) {
+        await bot.answerCallbackQuery(query.id, { text: "Sessione scaduta, riprova con /genera." });
+        return;
+      }
+      await bot.answerCallbackQuery(query.id);
+
+      if (query.data === "more_sponsors_yes") {
+        // Ricomincia il gruppo di domande di categoria (indice 0) per il prossimo padrino/bambino.
+        session.step = 0;
+        await askCurrentStep(bot, chatId, session);
+        return;
+      }
+
+      // Nessun altro padrino: prosegue al passo successivo (il link CTA), come farebbe
+      // la normale progressione lineare dei passi.
+      const categoryStepsLength = (CATEGORY_STEPS[session.categoryId] || []).length;
+      if (categoryStepsLength < session.steps.length) {
+        session.step = categoryStepsLength;
         await askCurrentStep(bot, chatId, session);
       } else {
         const categoryData = session.data;
