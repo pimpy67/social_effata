@@ -1,8 +1,16 @@
 import axios from "axios";
 import { logger } from "./logger.js";
+import { validation } from "./validation.js";
 
 const GRAPH_API_VERSION = "v26.0";
 const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+
+// Numero massimo di slide per una sequenza di Storie: il massimo di foto caricabili
+// per storia (validation.js, MAX_TOTAL_PHOTOS) + 1 per la slide fissa finale con
+// logo/info categoria che photoOptimizer.js aggiunge in coda all'array. Senza il +1,
+// con una storia al limite massimo di foto lo slice troncava proprio quest'ultima
+// slide (aggiunta per ultima nell'array), facendola sparire dalla pubblicazione.
+const MAX_STORY_SLIDES = validation.getLimits().MAX_TOTAL_PHOTOS + 1;
 
 // Instagram rifiuta (code=36004) qualsiasi caption oltre 2200 caratteri, sia per
 // post singoli che per caroselli: a differenza di Telegram non è possibile pubblicare
@@ -249,7 +257,7 @@ export class MetaAPI {
 
     const photos = (Array.isArray(imageBuffers) ? imageBuffers : imageBuffers ? [imageBuffers] : [])
       .filter(Boolean)
-      .slice(0, 10);
+      .slice(0, MAX_STORY_SLIDES);
 
     if (photos.length === 0) {
       return { success: false, error: "Immagine richiesta per la Storia Facebook" };
@@ -410,7 +418,7 @@ export class MetaAPI {
 
     const photos = (Array.isArray(imageBuffers) ? imageBuffers : imageBuffers ? [imageBuffers] : [])
       .filter(Boolean)
-      .slice(0, 10);
+      .slice(0, MAX_STORY_SLIDES);
 
     if (photos.length === 0) {
       return { success: false, error: "Immagine richiesta per la Storia Instagram" };
