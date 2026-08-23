@@ -96,21 +96,25 @@ function stripEmoji(text) {
 
 // Spezza un testo in righe che stanno all'incirca in maxCharsPerLine caratteri,
 // senza spezzare le parole (approssimazione a caratteri, non a larghezza reale del
-// font: sufficiente per frasi brevi come quelle usate nelle Storie).
+// font: sufficiente per frasi brevi come quelle usate nelle Storie). Un "\n" nel
+// testo forza un a-capo manuale (ogni segmento viene comunque ri-spezzato se troppo
+// lungo per la riga).
 function wrapText(text, maxCharsPerLine) {
-  const words = text.split(/\s+/).filter(Boolean);
   const lines = [];
-  let current = "";
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length > maxCharsPerLine && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = candidate;
+  for (const segment of text.split("\n")) {
+    const words = segment.split(/\s+/).filter(Boolean);
+    let current = "";
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (candidate.length > maxCharsPerLine && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
     }
+    if (current) lines.push(current);
   }
-  if (current) lines.push(current);
   return lines;
 }
 

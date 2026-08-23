@@ -21,6 +21,7 @@ import {
 // Categorie disponibili
 const CATEGORIES = {
   "1": "Adozioni scolastiche",
+  "1b": "Adozioni in casa famiglia",
   "2": "Aiuti sanitari (Operazioni)",
   "3": "Aiuti sanitari (Carozzine)",
   "4": "Costruzione casette",
@@ -32,9 +33,17 @@ const CATEGORIES = {
   "10": "Vari",
 };
 
+// Ordine di visualizzazione dei bottoni /categoria. Necessario perché "1b" non è
+// una chiave intera pura: in un oggetto JS le chiavi che sembrano interi (es. "1",
+// "10") vengono sempre iterate per prime in ordine numerico, seguite dalle chiavi
+// stringa (es. "1b") in ordine di inserimento — quindi senza questo array "1b"
+// finirebbe in fondo alla lista invece che subito dopo "1".
+const CATEGORY_ORDER = ["1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+
 // Frasi/link fissi da includere sempre nei testi di una specifica categoria (opzionale, per id)
 const CATEGORY_RULES = {
   "1": "Includi sempre il link effataitalia.it/adozioni.",
+  "1b": "",
   "2": "",
   "3": "",
   "4": "",
@@ -54,6 +63,13 @@ const selectedCategory = new Map();
 // vengono salvate nel database e mostrate nel dettaglio dei report mensili/annuali.
 const CATEGORY_STEPS = {
   "1": [
+    { key: "childName", label: "Bambino/a", question: "👶 Nome del bambino/a adottato/a? (scrivi - per saltare)" },
+    { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+    { key: "sponsorProvince", label: "Provincia", question: "📍 Provincia del sostenitore/padrino/madrina? (scrivi - per saltare)" },
+    { key: "sponsorEmail", label: "Email sostenitore", question: "📧 Email del sostenitore/padrina/madrina, per la mail di ringraziamento automatica? (scrivi - per saltare)" },
+  ],
+  // Adozioni in casa famiglia: stesse domande delle adozioni scolastiche (id "1").
+  "1b": [
     { key: "childName", label: "Bambino/a", question: "👶 Nome del bambino/a adottato/a? (scrivi - per saltare)" },
     { key: "sponsorName", label: "Sostenitore", question: "🙏 Nome del sostenitore/padrino/madrina? (scrivi - per saltare)" },
     { key: "sponsorProvince", label: "Provincia", question: "📍 Provincia del sostenitore/padrino/madrina? (scrivi - per saltare)" },
@@ -104,7 +120,7 @@ const CATEGORY_STEPS = {
 // le adozioni scolastiche, unica categoria con il campo sponsorEmail. Dopo l'ultima
 // domanda del gruppo (sponsorEmail) il bot chiede se aggiungerne un altro invece di
 // passare subito alla domanda sul link CTA.
-const MULTI_SPONSOR_CATEGORIES = new Set(["1"]);
+const MULTI_SPONSOR_CATEGORIES = new Set(["1", "1b"]);
 
 // Righe con i dati raccolti per la categoria, da inserire nel prompt per Claude.
 // Nelle categorie multi-padrino, se sono stati raccolti più gruppi (categoryData.sponsors),
@@ -150,6 +166,7 @@ const LINKEDIN_CTA_LINK = "https://effataitalia.it/";
 // il volontario risponde No.
 const CATEGORY_DEFAULT_LINKS = {
   "1": "https://effataitalia.it/adotta-ora/",
+  "1b": "https://effataitalia.it/accoglienza-e-protezione/",
   "2": "https://effataitalia.it/salute-e-disabilita/",
   "3": "https://effataitalia.it/salute-e-disabilita/",
   "4": "https://effataitalia.it/autonomia-economica/",
@@ -166,20 +183,22 @@ const CATEGORY_DEFAULT_LINKS = {
 // sequenza, sfondo brand + logo, NON generato da Claude. Importi confermati da
 // Andrea l'11/08/2026, netto = importo x 0,65 (detrazione 35%).
 const CATEGORY_STORY_INFO = {
-  "1": "Adotta un bambino con 180€/anno: solo 117€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-  "2": "Sostieni le cure mediche dei nostri bambini. Scrivici in DM o vai al link in bio",
+  "1": "Adotta un bambino\ncon 180€/anno\n(detraibili al 35%)\nsolo 117€ netti\nScrivici in DM o vai\nal link in bio\nsolo 0,50€ al giorno\ne cambi un domani",
+  "1b": "Adotta un bambino\nin Casa Famiglia\ncon 500€/anno\n(detraibili al 35%)\nsolo 325€ netti\nScrivici in DM o vai\nal link in bio\nsolo 1,37€ al giorno\ne cambi un domani",
+  "2": "Sostieni le cure\nmediche dei bambini\nScrivici in DM o vai\nal link in bio",
   // Due varianti scelte a caso ad ogni generazione (deciso con Andrea l'11/08/2026).
   "3": [
-    "Restituisci la libertà di muoversi: una carrozzina con 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-    "Una carrozzina cambia una vita: 200€, solo 130€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
+    "Restituisci la\nlibertà di muoversi\nUna carrozzina:\n200€, solo 130€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+    "Una carrozzina\ncambia una vita\n200€, solo 130€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
   ],
-  "4": "Costruisci una casa per una famiglia con 1.500€: solo 975€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-  "5": "Aiuta una famiglia a coltivare la terra con 80€: solo 52€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-  "6": "Dona un animale da 5€ a 600€: da 3€ a 390€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-  "7": "Dona un materasso (20€, 13€ netti) o una coperta (10€, 7€ netti) — detraibili al 35%. Scrivici in DM o vai al link in bio",
-  "8": "Dona un paio di scarpe con 10€: solo 7€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-  "9": "Sostieni un bimbo in Casa Famiglia con 500€: solo 325€ netti (detraibili al 35%). Scrivici in DM o vai al link in bio",
-  "10": "Scopri tutti i nostri progetti. Scrivici in DM o vai al link in bio",
+  "4": "Costruisci una casa\nper una famiglia\ncon 1.500€\nsolo 975€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+  "5": "Aiuta una famiglia\na coltivare la terra\ncon 80€\nsolo 52€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+  "6": "Dona un animale\nda 5€ a 600€\nda 3€ a 390€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+  "7": "Dona un materasso\n20€, 13€ netti\no una coperta\n10€, 7€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+  "8": "Dona un paio\ndi scarpe con 10€\nsolo 7€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+  // Nessun prezzo fisso (a differenza delle altre categorie): donazione libera, detraibile al 35%.
+  "9": "Sostieni le opere\ndella Casa Famiglia\nDonazione libera\ndetraibile al 35%\nScrivici in DM o vai\nal link in bio",
+  "10": "Scopri tutti\ni nostri progetti\nScrivici in DM o vai\nal link in bio",
 };
 
 // Alcune categorie hanno più varianti di testo (array): ne sceglie una a caso.
@@ -1125,8 +1144,8 @@ Altri comandi utili:
     const chatId = msg.chat.id;
     if (!isAllowed(chatId)) return;
 
-    const buttons = Object.entries(CATEGORIES).map(([id, name]) => [
-      { text: `${id}. ${name}`, callback_data: `category_${id}` },
+    const buttons = CATEGORY_ORDER.map((id) => [
+      { text: `${id}. ${CATEGORIES[id]}`, callback_data: `category_${id}` },
     ]);
 
     await bot.sendMessage(chatId, "🏷️ Seleziona la categoria per questa storia:", {
