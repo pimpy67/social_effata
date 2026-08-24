@@ -164,6 +164,16 @@ const LINK_STEP = {
 // esiste una pagina dedicata alle partnership aziendali sul sito.
 const LINKEDIN_CTA_LINK = "https://effataitalia.it/";
 
+// Link ai profili social, usati per il bottone WhatsApp "condividi la Storia": una
+// Storia Facebook/Instagram non ha un permalink pubblico via Graph API (a differenza
+// di un post), quindi il massimo che si può condividere è il link al profilo, che
+// mostra la Storia attiva in cima finché è nelle 24h. Stessi URL già usati in
+// emailAPI.js e scripts/certificazione-template.txt, per restare coerenti.
+const STORY_PROFILE_LINKS = {
+  instagram: "https://www.instagram.com/effata_charity_organisation",
+  facebook: "https://www.facebook.com/profile.php?id=61576427205615",
+};
+
 // Link già noti per alcune categorie (per id): se presente, invece di chiedere il
 // link da zero il bot propone questo con conferma Sì/No, e chiede il link solo se
 // il volontario risponde No.
@@ -781,6 +791,10 @@ export async function startBot() {
 
       let metaMessage = "";
       let facebookPostId = null;
+      // Bottone WhatsApp per condividere la Storia appena pubblicata (link al
+      // profilo, non un permalink della Storia in sé: vedi STORY_PROFILE_LINKS).
+      // Preferisce Instagram se pubblicata lì, altrimenti Facebook.
+      let storyShareButton = null;
 
       // Pubblica su Facebook (come bozza non pubblica) e Instagram (subito, online)
       // se Meta API è configurata.
@@ -807,6 +821,13 @@ export async function startBot() {
           if (metaResults.instagramStory?.success) {
             const n = metaResults.instagramStory.storyIds?.length || 1;
             metaMessage += `📷 Instagram (Storia): ${n > 1 ? `${n} storie pubblicate` : "pubblicata"} online (visibile 24h)\n`;
+          }
+          if (metaResults.instagramStory?.success) {
+            const shareText = `Guarda anche la nostra Storia su Instagram 👉 ${STORY_PROFILE_LINKS.instagram}`;
+            storyShareButton = { text: "📤 Storia su WhatsApp", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` };
+          } else if (metaResults.facebookStory?.success) {
+            const shareText = `Guarda anche la nostra Storia su Facebook 👉 ${STORY_PROFILE_LINKS.facebook}`;
+            storyShareButton = { text: "📤 Storia su WhatsApp", url: `https://wa.me/?text=${encodeURIComponent(shareText)}` };
           }
           if (metaResults.errors.length > 0) {
             metaMessage += `⚠️ Errori Meta:\n${metaResults.errors.join("\n")}\n`;
@@ -897,7 +918,8 @@ export async function startBot() {
 
       await bot.sendMessage(
         chatId,
-        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n${videoNote}\n${metaMessage}`
+        `✅ Bozze pronte in output/${timestamp}_*.txt (Facebook, Instagram, LinkedIn, blog, Reel)\n${videoNote}\n${metaMessage}`,
+        storyShareButton ? { reply_markup: { inline_keyboard: [[storyShareButton]] } } : undefined
       );
     } catch (err) {
       logger.error(`Errore nel generare i contenuti: ${err.message}`);
