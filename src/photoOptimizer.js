@@ -155,11 +155,15 @@ async function addStorySubtitle(buffer, text) {
 const INFO_SLIDE_LOGO_SIZE = 320;
 const INFO_SLIDE_FONT_SIZE = 54;
 const INFO_SLIDE_MAX_CHARS_PER_LINE = 22;
-const INFO_SLIDE_LINE_HEIGHT = 70;
+// Interlinea/spaziatura aumentate il 24/08/2026 (feedback: il testo sembrava troppo
+// "attaccato") — più respiro tra le righe e tra i blocchi header/logo/testo. Con il
+// caso più lungo oggi in produzione (9 righe, categorie "1"/"1b") il blocco resta
+// comunque ben dentro i 1920px di altezza della Storia.
+const INFO_SLIDE_LINE_HEIGHT = 88;
 const INFO_SLIDE_HEADER_FONT_SIZE = 46;
-const INFO_SLIDE_HEADER_LINE_HEIGHT = 58;
-const INFO_SLIDE_HEADER_LOGO_GAP = 90;
-const INFO_SLIDE_LOGO_TEXT_GAP = 130;
+const INFO_SLIDE_HEADER_LINE_HEIGHT = 64;
+const INFO_SLIDE_HEADER_LOGO_GAP = 100;
+const INFO_SLIDE_LOGO_TEXT_GAP = 150;
 
 // Una slide fissa di chiusura per le Storie: sfondo a tinta unita col rosso del logo
 // Effatà, intestazione con la ragione sociale completa, logo, testo fisso (diverso

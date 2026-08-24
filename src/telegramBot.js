@@ -241,9 +241,9 @@ const CATEGORY_STORY_SEQUENCES = {
     "Hai due minuti?\nScegli un'azione\ne inizia ora.\nAiutaci a diffondere\nla nostra missione 💙",
   ],
   "12": [
-    "Un GRAZIE gigante\nalla nostra\ncommunity! 💙✨\nGrazie a chi ogni\nmese mette like,\ncommenta o condivide",
-    "Non è solo un\nclick: per noi\nsignifica far\nconoscere volti\ne storie a chi\naltrimenti non\nci raggiungerebbe",
-    "Siete la cassa\ndi risonanza di\nEffatà: grazie per\nquesta catena di\nsolidarietà! 💙\nContinua a far\ngirare il bene 🔄",
+    "Un GRAZIE gigante\nalla nostra\ncommunity! 💙✨\nGrazie a chi mette\nlike, commenta o\ncondivide i post",
+    "Non è \"solo un\nclick\": ci aiuta a\nfar conoscere a\npiù donatori i volti\ne le storie di chi\naiutiamo con Silvia",
+    "Siete la nostra\n\"cassa di\nrisonanza\": grazie\nper questa catena\ndi solidarietà!\nCondividi ancora:\nGRAZIE! 🔄",
   ],
 };
 
