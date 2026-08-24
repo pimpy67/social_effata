@@ -32,6 +32,7 @@ const CATEGORIES = {
   "9": "Casafamiglia (opere)",
   "10": "Vari",
   "11": "Volontariato Digitale",
+  "12": "Grazie Volontari Digitali",
 };
 
 // Ordine di visualizzazione dei bottoni /categoria. Necessario perché "1b" non è
@@ -39,7 +40,7 @@ const CATEGORIES = {
 // "10") vengono sempre iterate per prime in ordine numerico, seguite dalle chiavi
 // stringa (es. "1b") in ordine di inserimento — quindi senza questo array "1b"
 // finirebbe in fondo alla lista invece che subito dopo "1".
-const CATEGORY_ORDER = ["1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
+const CATEGORY_ORDER = ["1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
 // Frasi/link fissi da includere sempre nei testi di una specifica categoria (opzionale, per id)
 const CATEGORY_RULES = {
@@ -55,6 +56,7 @@ const CATEGORY_RULES = {
   "9": "",
   "10": "",
   "11": "La call-to-action NON deve mai chiedere una donazione economica: invita a diventare un \"Volontario Digitale\" condividendo i post/storie sulla propria pagina o nei gruppi, mettendo like e commenti, o lasciando una recensione positiva sulle pagine social di Effatà.",
+  "12": "Questo contenuto è un RINGRAZIAMENTO alla community di Volontari Digitali (chi mette like, commenta, condivide i contenuti di Effatà): il tono deve essere di gratitudine verso chi già lo fa, NON una richiesta di donazione né un nuovo invito a iscriversi. Chiudi invitando a continuare a condividere/interagire come già fanno.",
 };
 
 // Categoria selezionata per ogni chat
@@ -116,6 +118,7 @@ const CATEGORY_STEPS = {
   ],
   "10": [], // Vari: nessuna domanda, categoria solo descrittiva (esclusa dai report)
   "11": [], // Volontariato Digitale: nessuna domanda, categoria solo descrittiva (esclusa dai report)
+  "12": [], // Grazie Volontari Digitali: nessuna domanda, categoria solo descrittiva (esclusa dai report)
 };
 
 // Categorie in cui una stessa storia può avere più padrini/bambini distinti
@@ -190,6 +193,7 @@ const CATEGORY_DEFAULT_LINKS = {
   "9": "https://effataitalia.it/accoglienza-e-protezione/",
   "10": "https://effataitalia.it/",
   "11": "https://effataitalia.it/",
+  "12": "https://effataitalia.it/",
 };
 
 // Testo fisso di chiusura per le Storie Instagram/Facebook, diverso per categoria
@@ -235,6 +239,11 @@ const CATEGORY_STORY_SEQUENCES = {
     "Non serve una\ndonazione per fare\nla differenza:\nbasta un click! 📲",
     "Diventa Volontario\nDigitale:\n• Condividi i post\n• Falli girare\n• Metti like e commenta\n• Scrivi una recensione",
     "Hai due minuti?\nScegli un'azione\ne inizia ora.\nAiutaci a diffondere\nla nostra missione 💙",
+  ],
+  "12": [
+    "Un GRAZIE gigante\nalla nostra\ncommunity! 💙✨\nGrazie a chi ogni\nmese mette like,\ncommenta o condivide",
+    "Non è solo un\nclick: per noi\nsignifica far\nconoscere volti\ne storie a chi\naltrimenti non\nci raggiungerebbe",
+    "Siete la cassa\ndi risonanza di\nEffatà: grazie per\nquesta catena di\nsolidarietà! 💙\nContinua a far\ngirare il bene 🔄",
   ],
 };
 
