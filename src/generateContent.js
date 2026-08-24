@@ -94,6 +94,10 @@ export async function generateSocialContent(rawText, images = [], category = nul
     if (category.costInfo && category.costInfo.trim()) {
       system += `\n\nImporto di riferimento per questa categoria: "${category.costInfo}". Nel post Facebook, nella didascalia Instagram e nel blog, cita esplicitamente il costo e l'importo netto dopo la detrazione del 35% (non lasciare solo un generico "scopri di più"), adattando la formulazione al tono di ciascun canale invece di copiare la frase parola per parola. Non serve ripeterlo nel post LinkedIn (tono istituzionale, non parla di importi ai singoli donatori).`;
     }
+
+    if (category.commentKeyword && category.commentKeyword.trim()) {
+      system += `\n\nParola chiave commenti per questa categoria: "${category.commentKeyword}". Quando risulta naturale nel contesto della storia (non forzarlo in ogni singolo post), proponi nel post Facebook e/o nella didascalia Instagram una CTA del tipo "Scrivi '${category.commentKeyword}' nei commenti o contattaci in privato per saperne di più" (adatta liberamente la formulazione, non ripeterla identica ogni volta). Solo per post/didascalie con commenti pubblici: MAI sulle Storie (storySlides), dove non esistono commenti pubblici e l'unica CTA valida resta scrivere in DM.`;
+    }
   }
 
   if (hasVideo) {

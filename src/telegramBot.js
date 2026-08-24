@@ -59,6 +59,25 @@ const CATEGORY_RULES = {
   "12": "Questo contenuto è un RINGRAZIAMENTO alla community di Volontari Digitali (chi mette like, commenta, condivide i contenuti di Effatà): il tono deve essere di gratitudine verso chi già lo fa, NON una richiesta di donazione né un nuovo invito a iscriversi. Chiudi invitando a continuare a condividere/interagire come già fanno.",
 };
 
+// Parola chiave da suggerire nei commenti del post Facebook/didascalia Instagram
+// (es. "Scrivi 'ADOTTO' nei commenti o contattaci in privato per saperne di più"),
+// diversa per categoria. Usata a discrezione di Claude (vedi generateContent.js),
+// non su ogni post. Assente per "11"/"12" (Volontariato Digitale/Grazie): lì la CTA
+// non è mai una donazione, quindi questo meccanismo non si applica.
+const CATEGORY_COMMENT_KEYWORD = {
+  "1": "ADOTTO",
+  "1b": "FAMIGLIA",
+  "2": "CURA",
+  "3": "CAMMINO",
+  "4": "CASA",
+  "5": "TERRA",
+  "6": "ANIMALE",
+  "7": "MATERASSO",
+  "8": "SCARPE",
+  "9": "CASAFAMIGLIA",
+  "10": "INFO",
+};
+
 // Categoria selezionata per ogni chat
 const selectedCategory = new Map();
 
@@ -687,6 +706,7 @@ export async function startBot() {
           name: selected?.name,
           rules: selected ? CATEGORY_RULES[selected.id] : "",
           costInfo: selected ? getCategoryInfoText(selected.id) : "",
+          commentKeyword: selected ? CATEGORY_COMMENT_KEYWORD[selected.id] : "",
         },
         pending.videos.length > 0
       );
