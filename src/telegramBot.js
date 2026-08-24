@@ -31,6 +31,7 @@ const CATEGORIES = {
   "8": "Scarpe",
   "9": "Casafamiglia (opere)",
   "10": "Vari",
+  "11": "Volontariato Digitale",
 };
 
 // Ordine di visualizzazione dei bottoni /categoria. Necessario perché "1b" non è
@@ -38,7 +39,7 @@ const CATEGORIES = {
 // "10") vengono sempre iterate per prime in ordine numerico, seguite dalle chiavi
 // stringa (es. "1b") in ordine di inserimento — quindi senza questo array "1b"
 // finirebbe in fondo alla lista invece che subito dopo "1".
-const CATEGORY_ORDER = ["1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+const CATEGORY_ORDER = ["1", "1b", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
 
 // Frasi/link fissi da includere sempre nei testi di una specifica categoria (opzionale, per id)
 const CATEGORY_RULES = {
@@ -53,6 +54,7 @@ const CATEGORY_RULES = {
   "8": "",
   "9": "",
   "10": "",
+  "11": "La call-to-action NON deve mai chiedere una donazione economica: invita a diventare un \"Volontario Digitale\" condividendo i post/storie sulla propria pagina o nei gruppi, mettendo like e commenti, o lasciando una recensione positiva sulle pagine social di Effatà.",
 };
 
 // Categoria selezionata per ogni chat
@@ -113,6 +115,7 @@ const CATEGORY_STEPS = {
     { key: "what", label: "Cosa", question: "🎁 Cosa è stato donato/fatto? (scrivi - per saltare)" },
   ],
   "10": [], // Vari: nessuna domanda, categoria solo descrittiva (esclusa dai report)
+  "11": [], // Volontariato Digitale: nessuna domanda, categoria solo descrittiva (esclusa dai report)
 };
 
 // Categorie in cui una stessa storia può avere più padrini/bambini distinti
@@ -176,6 +179,7 @@ const CATEGORY_DEFAULT_LINKS = {
   "8": "https://effataitalia.it/autonomia-economica/",
   "9": "https://effataitalia.it/accoglienza-e-protezione/",
   "10": "https://effataitalia.it/",
+  "11": "https://effataitalia.it/",
 };
 
 // Testo fisso di chiusura per le Storie Instagram/Facebook, diverso per categoria
@@ -208,6 +212,29 @@ function getCategoryInfoText(categoryId) {
     return entry[Math.floor(Math.random() * entry.length)];
   }
   return entry;
+}
+
+// Alcune categorie (es. Volontariato Digitale) hanno un testo di chiusura troppo
+// lungo per stare su un'unica slide: qui ogni voce è un ARRAY DI PIÙ SLIDE mostrate
+// in sequenza (diverso dalle varianti a caso di CATEGORY_STORY_INFO, che restano su
+// una sola slide). Non alimenta il costInfo mandato a Claude: categorie senza un
+// importo di donazione restano fuori da CATEGORY_STORY_INFO, quindi getCategoryInfoText
+// per loro ritorna undefined e la generazione del testo non cita nessun "costo".
+const CATEGORY_STORY_SEQUENCES = {
+  "11": [
+    "Non serve una\ndonazione per fare\nla differenza:\nbasta un click! 📲",
+    "Diventa Volontario\nDigitale:\n• Condividi i post\n• Falli girare\n• Metti like e commenta\n• Scrivi una recensione",
+    "Hai due minuti?\nScegli un'azione\ne inizia ora.\nAiutaci a diffondere\nla nostra missione 💙",
+  ],
+};
+
+// Testi delle slide fisse di chiusura per una categoria: una sequenza di più slide
+// se definita in CATEGORY_STORY_SEQUENCES, altrimenti una singola slide col testo di
+// CATEGORY_STORY_INFO, altrimenti nessuna slide.
+function getCategoryInfoSlideTexts(categoryId) {
+  if (CATEGORY_STORY_SEQUENCES[categoryId]) return CATEGORY_STORY_SEQUENCES[categoryId];
+  const text = getCategoryInfoText(categoryId);
+  return text ? [text] : [];
 }
 
 // Manda la domanda del passo corrente della sessione categoria: se è il passo del
@@ -694,7 +721,7 @@ export async function startBot() {
       try {
         optimizedPhotos = await optimizePhotosForSocial(images, {
           storySlideTexts: result.storySlides,
-          categoryInfoText: selected ? getCategoryInfoText(selected.id) : null,
+          categoryInfoTexts: selected ? getCategoryInfoSlideTexts(selected.id) : [],
         });
         // Salva le foto ottimizzate con suffissi social
         for (const [social, buffer] of Object.entries(optimizedPhotos)) {

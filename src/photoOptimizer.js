@@ -161,12 +161,14 @@ const INFO_SLIDE_HEADER_LINE_HEIGHT = 58;
 const INFO_SLIDE_HEADER_LOGO_GAP = 90;
 const INFO_SLIDE_LOGO_TEXT_GAP = 130;
 
-// Slide fissa di chiusura per le Storie: sfondo a tinta unita col rosso del logo
+// Una slide fissa di chiusura per le Storie: sfondo a tinta unita col rosso del logo
 // Effatà, intestazione con la ragione sociale completa, logo, testo fisso (diverso
-// per categoria, vedi CATEGORY_STORY_INFO in telegramBot.js) sotto il logo. Non
-// contiene nessuna foto del volontario. Il blocco intestazione+logo+testo è
-// centrato verticalmente sull'intera altezza 1920 (prima era ancorato in alto,
-// lasciando vuota tutta la metà inferiore della Storia).
+// per categoria, vedi CATEGORY_STORY_INFO/CATEGORY_STORY_SEQUENCES in telegramBot.js)
+// sotto il logo. Non contiene nessuna foto del volontario. Il blocco
+// intestazione+logo+testo è centrato verticalmente sull'intera altezza 1920 (prima
+// era ancorato in alto, lasciando vuota tutta la metà inferiore della Storia).
+// Chiamata una volta per slide: alcune categorie ne mettono più di una in sequenza
+// (vedi il ciclo su categoryInfoTexts in optimizePhotosForSocial).
 async function buildCategoryInfoSlide(text) {
   const logoBuffer = await sharp(LOGO_PATH)
     .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
@@ -225,7 +227,7 @@ async function buildCategoryInfoSlide(text) {
     .toBuffer();
 }
 
-export async function optimizePhotosForSocial(imageBuffers, { storySlideTexts = [], categoryInfoText = null } = {}) {
+export async function optimizePhotosForSocial(imageBuffers, { storySlideTexts = [], categoryInfoTexts = [] } = {}) {
   try {
     const optimized = {};
 
@@ -238,9 +240,13 @@ export async function optimizePhotosForSocial(imageBuffers, { storySlideTexts = 
       );
       logger.debug(`${imageBuffers.length} foto elaborate per le Storie (${STORY_DIMENSIONS.width}x${STORY_DIMENSIONS.height}, crop attention o blur-pad se troppo panoramiche)`);
 
-      if (categoryInfoText && categoryInfoText.trim()) {
-        optimized.story.push(await buildCategoryInfoSlide(categoryInfoText));
-        logger.debug("Slide fissa 'info di categoria' aggiunta in fondo alle Storie");
+      for (const text of categoryInfoTexts) {
+        if (text && text.trim()) {
+          optimized.story.push(await buildCategoryInfoSlide(text));
+        }
+      }
+      if (categoryInfoTexts.length) {
+        logger.debug(`${categoryInfoTexts.length} slide fisse "info di categoria" aggiunte in fondo alle Storie`);
       }
     } catch (err) {
       logger.warn(`Errore nel ritagliare foto per le Storie: ${err.message}`);

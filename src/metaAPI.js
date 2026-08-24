@@ -5,12 +5,19 @@ import { validation } from "./validation.js";
 const GRAPH_API_VERSION = "v26.0";
 const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
+// Numero massimo di slide fisse con logo/info categoria che photoOptimizer.js
+// aggiunge in coda alle Storie (vedi CATEGORY_STORY_SEQUENCES in telegramBot.js):
+// di solito 1, ma alcune categorie (es. "Volontariato Digitale") ne usano più di
+// una in sequenza per un testo troppo lungo per stare su una sola slide. Va
+// alzato se in futuro una categoria avesse bisogno di più slide di questa.
+const MAX_CATEGORY_INFO_SLIDES = 3;
+
 // Numero massimo di slide per una sequenza di Storie: il massimo di foto caricabili
-// per storia (validation.js, MAX_TOTAL_PHOTOS) + 1 per la slide fissa finale con
-// logo/info categoria che photoOptimizer.js aggiunge in coda all'array. Senza il +1,
-// con una storia al limite massimo di foto lo slice troncava proprio quest'ultima
-// slide (aggiunta per ultima nell'array), facendola sparire dalla pubblicazione.
-const MAX_STORY_SLIDES = validation.getLimits().MAX_TOTAL_PHOTOS + 1;
+// per storia (validation.js, MAX_TOTAL_PHOTOS) + le slide fisse finali con logo/info
+// categoria. Senza questo margine, con una storia al limite massimo di foto lo slice
+// troncava proprio le ultime slide (aggiunte in fondo all'array), facendole sparire
+// dalla pubblicazione.
+const MAX_STORY_SLIDES = validation.getLimits().MAX_TOTAL_PHOTOS + MAX_CATEGORY_INFO_SLIDES;
 
 // Instagram rifiuta (code=36004) qualsiasi caption oltre 2200 caratteri, sia per
 // post singoli che per caroselli: a differenza di Telegram non è possibile pubblicare
