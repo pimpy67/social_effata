@@ -236,9 +236,9 @@ function getCategoryInfoText(categoryId) {
 // per loro ritorna undefined e la generazione del testo non cita nessun "costo".
 const CATEGORY_STORY_SEQUENCES = {
   "11": [
-    "Non serve una\ndonazione per fare\nla differenza:\nbasta un click! 📲",
-    "Diventa Volontario\nDigitale:\n• Condividi i post\n• Falli girare\n• Metti like e commenta\n• Scrivi una recensione",
-    "Hai due minuti?\nScegli un'azione\ne inizia ora.\nAiutaci a diffondere\nla nostra missione 💙",
+    "Fai ancora di più:\ndonaci anche\nun tuo click 📲",
+    "Diventa VOLONTARIO\nDIGITALE:\n• Condividi i post\n• Falli girare\n• Metti like e commenta\n• Scrivi una recensione",
+    "Hai due minuti?\nScegli un'azione\ne inizia ora.\nContribuisci (a\ncosto zero) a farci\nconoscere!!! 💙",
   ],
   "12": [
     "Un GRAZIE gigante\nalla nostra\ncommunity! 💙✨\nGrazie a chi mette\nlike, commenta o\ncondivide i post",
