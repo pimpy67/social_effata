@@ -421,6 +421,60 @@ export class MetaAPI {
     }
   }
 
+  // Pubblica un Reel su Instagram. A differenza delle foto, l'API Instagram non
+  // accetta l'upload diretto del binario video: serve un videoUrl pubblicamente
+  // raggiungibile (a differenza di getPublicImageUrl per le foto, qui il video va
+  // ospitato altrove PRIMA di chiamare questa funzione — vedi runGenerate in
+  // telegramBot.js, che lo carica sulla libreria media di WordPress per ottenere
+  // un URL pubblico stabile). Il video pubblica subito, come i post Instagram
+  // normali: non esiste un concetto di bozza via API.
+  async publishInstagramReel(caption, videoUrl) {
+    if (!this.instagramAccountId || !this.pageAccessToken) {
+      logger.warn("Meta API: instagramAccountId o token non disponibili");
+      return { success: false, error: "Account Instagram non collegato" };
+    }
+
+    try {
+      const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
+        params: {
+          media_type: "REELS",
+          video_url: videoUrl,
+          caption: truncateInstagramCaption(caption),
+          access_token: this.pageAccessToken,
+        },
+      });
+      const creationId = createResponse.data.id;
+
+      // L'elaborazione di un video richiede più tempo di una foto: fino a 90s
+      // invece dei 20s di default (waitForMediaReady, maxAttempts x delayMs).
+      await this.waitForMediaReady(creationId, 30, 3000);
+
+      logger.info(`Media Reel Instagram creato (container): ${creationId}`);
+
+      const publishResponse = await axios.post(
+        `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
+        null,
+        {
+          params: {
+            creation_id: creationId,
+            access_token: this.pageAccessToken,
+          },
+        }
+      );
+
+      logger.info(`Reel Instagram pubblicato: ${publishResponse.data.id}`);
+
+      // Non await-ato di proposito, stesso motivo di publishFacebookDraft.
+      this.postInstagramShareCta(publishResponse.data.id);
+
+      return { success: true, mediaId: publishResponse.data.id, platform: "instagram-reel" };
+    } catch (err) {
+      const message = metaErrorMessage(err);
+      logger.error(`Errore nella pubblicazione del Reel Instagram: ${message}`);
+      return { success: false, error: message, platform: "instagram-reel" };
+    }
+  }
+
   // Pubblica una o più Storie Instagram (contenuto effimero, sparisce dopo 24h), in
   // aggiunta al post/carosello normale. Una Storia mostra sempre una sola foto: con
   // più foto ne pubblica una in sequenza per ciascuna. Va online subito, come il post.

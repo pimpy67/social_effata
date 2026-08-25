@@ -706,12 +706,18 @@ export async function startBot() {
       const rawText = [
         ...(categoryLines.length ? [categoryLines.join("\n")] : []),
         ...pending.photos.map((p) => p.caption).filter(Boolean),
+        ...pending.videos.map((v) => v.caption).filter(Boolean),
         ...pending.notes,
       ].join("\n\n");
       const images = pending.photos.map((p) => ({
         buffer: fs.readFileSync(p.imgPath),
         mediaType: p.mediaType || "image/jpeg",
       }));
+      // Solo il primo video (se presente) diventa un Reel: letto qui, prima che il
+      // cleanup più sotto cancelli il file temporaneo da intake/.
+      const reelVideo = pending.videos[0]
+        ? { buffer: fs.readFileSync(pending.videos[0].videoPath), mediaType: pending.videos[0].mediaType || "video/mp4" }
+        : null;
 
       const result = await generateSocialContent(
         rawText,
@@ -889,6 +895,25 @@ export async function startBot() {
         }
       }
 
+      // Pubblica il Reel su Instagram (solo il primo video, se presente): l'API
+      // Instagram richiede un video_url pubblico, quindi il video va prima caricato
+      // da qualche parte per ottenerne uno — riusa la libreria media di WordPress
+      // (stesso meccanismo già usato per l'immagine fissa email, vedi
+      // scripts/upload-image.js), invece di costruire un hosting dedicato.
+      // Pubblica subito, come i post/carosello Instagram: nessun concetto di bozza.
+      if (metaAPI && wordpressAPI && reelVideo && result.reelScript) {
+        try {
+          const uploadedVideo = await wordpressAPI.uploadMedia(reelVideo.buffer, `reel-${timestamp}.mp4`, reelVideo.mediaType);
+          const reelResult = await metaAPI.publishInstagramReel(result.reelScript, uploadedVideo.url);
+          metaMessage += reelResult.success
+            ? "🎬 Instagram (Reel): pubblicato online (già visibile a tutti)\n"
+            : `⚠️ Reel Instagram: errore (${reelResult.error})\n`;
+        } catch (err) {
+          logger.error(`Errore nella pubblicazione del Reel Instagram: ${err.message}`);
+          metaMessage += `⚠️ Reel Instagram: errore (${err.message})\n`;
+        }
+      }
+
       // Crea la bozza dell'articolo sul blog WordPress, se configurato
       if (wordpressAPI && result.blogTitle && result.blogBody) {
         try {
@@ -955,8 +980,11 @@ export async function startBot() {
       // Pulisci la categoria dopo la generazione
       selectedCategory.delete(chatId);
 
-      const videoNote = pending.videos.length > 0
-        ? `\n🎬 ${pending.videos.length} video salvati (in output/), in attesa dell'integrazione con YouTube.\n`
+      // Il primo video (se presente) è già coperto dalla riga "Reel" in metaMessage
+      // sopra: qui avvisiamo solo degli eventuali video aggiuntivi, che restano
+      // solo salvati (un post può avere un solo Reel).
+      const videoNote = pending.videos.length > 1
+        ? `\n🎬 Altri ${pending.videos.length - 1} video salvati (in output/), non pubblicati: un post ha un solo Reel.\n`
         : "";
 
       await bot.sendMessage(
