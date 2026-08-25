@@ -1,6 +1,7 @@
 import axios from "axios";
 import { logger } from "./logger.js";
 import { validation } from "./validation.js";
+import { SHARE_CTA_COMMENT } from "./shareKeyword.js";
 
 const GRAPH_API_VERSION = "v26.0";
 const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -238,6 +239,9 @@ export class MetaAPI {
         access_token: this.pageAccessToken,
       },
     });
+    // Non await-ato di proposito: il commento CTA è un extra, non deve ritardare
+    // né far fallire la risposta al volontario che ha appena reso pubblico il post.
+    this.postFacebookShareCta(postId);
   }
 
   // Il link diretto al post esiste solo dopo che è stato reso pubblico
@@ -406,6 +410,9 @@ export class MetaAPI {
 
       logger.info(`Post Instagram pubblicato: ${publishResponse.data.id}`);
 
+      // Non await-ato di proposito, stesso motivo di publishFacebookDraft.
+      this.postInstagramShareCta(publishResponse.data.id);
+
       return { success: true, mediaId: publishResponse.data.id, platform: "instagram" };
     } catch (err) {
       const message = metaErrorMessage(err);
@@ -500,6 +507,35 @@ export class MetaAPI {
       params: { message, access_token: this.pageAccessToken },
     });
     return response.data.id;
+  }
+
+  // Pubblica un commento di primo livello sul post/media stesso (non una risposta
+  // a un commento esistente): usata per il commento automatico "Condividi e
+  // scrivici CONDIVISO" che il bot posta come Pagina subito dopo ogni
+  // pubblicazione. Fallisce silenziosamente (solo un warning) perché non deve mai
+  // far fallire la pubblicazione del post/media in sé, solo aggiuntivo.
+  async postFacebookShareCta(postId) {
+    try {
+      await axios.post(`${GRAPH_API_URL}/${postId}/comments`, null, {
+        params: { message: SHARE_CTA_COMMENT, access_token: this.pageAccessToken },
+      });
+      logger.debug(`Commento CTA condivisione pubblicato sul post Facebook ${postId}`);
+    } catch (err) {
+      logger.warn(`Impossibile pubblicare il commento CTA condivisione su Facebook: ${metaErrorMessage(err)}`);
+    }
+  }
+
+  // Equivalente Instagram: endpoint /comments sul media (non /replies, che è solo
+  // per rispondere a un commento esistente).
+  async postInstagramShareCta(mediaId) {
+    try {
+      await axios.post(`${GRAPH_API_URL}/${mediaId}/comments`, null, {
+        params: { message: SHARE_CTA_COMMENT, access_token: this.pageAccessToken },
+      });
+      logger.debug(`Commento CTA condivisione pubblicato sul media Instagram ${mediaId}`);
+    } catch (err) {
+      logger.warn(`Impossibile pubblicare il commento CTA condivisione su Instagram: ${metaErrorMessage(err)}`);
+    }
   }
 
   async publishToMetaBusiness(facebookText, instagramText, photos, optimizedPhotos = null) {

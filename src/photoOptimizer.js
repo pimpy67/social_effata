@@ -160,10 +160,39 @@ const INFO_SLIDE_MAX_CHARS_PER_LINE = 22;
 // caso più lungo oggi in produzione (9 righe, categorie "1"/"1b") il blocco resta
 // comunque ben dentro i 1920px di altezza della Storia.
 const INFO_SLIDE_LINE_HEIGHT = 88;
+// Spazio aggiuntivo tra un "paragrafo" e il successivo (vedi buildInfoSlideLines):
+// il 25/08/2026, su feedback di Andrea, alcune slide (categorie "1"/"1b"/"3") sono
+// state riscritte con una doppia interlinea tra i blocchi logici del testo (intro /
+// prezzo / invito ad agire) invece di un'unica interlinea uniforme.
+const INFO_SLIDE_PARAGRAPH_GAP = 88;
 const INFO_SLIDE_HEADER_FONT_SIZE = 46;
 const INFO_SLIDE_HEADER_LINE_HEIGHT = 64;
 const INFO_SLIDE_HEADER_LOGO_GAP = 100;
-const INFO_SLIDE_LOGO_TEXT_GAP = 150;
+// Ridotto da 150 a 100 il 25/08/2026 (feedback: il testo era troppo lontano dal
+// logo) — il blocco intero resta comunque centrato verticalmente.
+const INFO_SLIDE_LOGO_TEXT_GAP = 100;
+
+// Spezza il testo di una slide in righe, rispettando i paragrafi separati da riga
+// vuota ("\n\n" nel testo sorgente): l'ultima riga di ogni paragrafo (tranne
+// l'ultimo) riceve gapAfter=true, che in buildCategoryInfoSlide si traduce in uno
+// spazio doppio prima del paragrafo successivo. Il maiuscolo/minuscolo non è
+// gestito qui: il testo va scritto già nel case desiderato nella mappa
+// CATEGORY_STORY_INFO/CATEGORY_STORY_SEQUENCES in telegramBot.js.
+function buildInfoSlideLines(text, maxCharsPerLine) {
+  const paragraphs = text.split("\n\n");
+  const result = [];
+  paragraphs.forEach((paragraph, pIndex) => {
+    const paragraphLines = wrapText(paragraph, maxCharsPerLine);
+    paragraphLines.forEach((line, lIndex) => {
+      const isLastLineOfParagraph = lIndex === paragraphLines.length - 1;
+      result.push({
+        text: line,
+        gapAfter: isLastLineOfParagraph && pIndex < paragraphs.length - 1,
+      });
+    });
+  });
+  return result;
+}
 
 // Una slide fissa di chiusura per le Storie: sfondo a tinta unita col rosso del logo
 // Effatà, intestazione con la ragione sociale completa, logo, testo fisso (diverso
@@ -179,12 +208,22 @@ async function buildCategoryInfoSlide(text) {
     .toBuffer();
 
   const headerLines = wrapText(ORG_HEADER, INFO_SLIDE_MAX_CHARS_PER_LINE);
-  const lines = wrapText(stripEmoji(text), INFO_SLIDE_MAX_CHARS_PER_LINE);
+  const lines = buildInfoSlideLines(stripEmoji(text), INFO_SLIDE_MAX_CHARS_PER_LINE);
+
+  // Posizione Y di ogni riga (relativa all'inizio del blocco testo), tenendo conto
+  // degli spazi doppi tra paragrafi (gapAfter).
+  const linePositions = [];
+  let cursor = 0;
+  for (let i = 0; i < lines.length; i++) {
+    linePositions.push(cursor);
+    cursor += INFO_SLIDE_LINE_HEIGHT;
+    if (lines[i].gapAfter) cursor += INFO_SLIDE_PARAGRAPH_GAP;
+  }
 
   // Altezza visiva totale del blocco (intestazione + logo + testo), usata per
   // centrarlo sull'asse verticale invece di ancorarlo a un top fisso.
   const headerBlockHeight = headerLines.length * INFO_SLIDE_HEADER_LINE_HEIGHT;
-  const textBlockHeight = (lines.length - 1) * INFO_SLIDE_LINE_HEIGHT + INFO_SLIDE_FONT_SIZE;
+  const textBlockHeight = cursor - INFO_SLIDE_LINE_HEIGHT + INFO_SLIDE_FONT_SIZE;
   const totalBlockHeight =
     INFO_SLIDE_HEADER_FONT_SIZE * 0.75 +
     headerBlockHeight +
@@ -209,7 +248,7 @@ async function buildCategoryInfoSlide(text) {
   const textSvg = lines
     .map(
       (line, i) =>
-        `<text x="50%" y="${textStartY + i * INFO_SLIDE_LINE_HEIGHT}" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-weight="bold" font-size="${INFO_SLIDE_FONT_SIZE}" fill="#ffffff">${escapeXml(line)}</text>`
+        `<text x="50%" y="${textStartY + linePositions[i]}" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-weight="bold" font-size="${INFO_SLIDE_FONT_SIZE}" fill="#ffffff">${escapeXml(line.text)}</text>`
     )
     .join("");
 

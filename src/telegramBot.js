@@ -219,23 +219,27 @@ const CATEGORY_DEFAULT_LINKS = {
 // (vedi photoOptimizer.buildCategoryInfoSlide): aggiunto come ultima slide della
 // sequenza, sfondo brand + logo, NON generato da Claude. Importi confermati da
 // Andrea l'11/08/2026, netto = importo x 0,65 (detrazione 35%).
+// Testo con doppio "\n\n" dove buildInfoSlideLines (photoOptimizer.js) deve
+// inserire uno spazio doppio tra blocchi, e prime righe già in MAIUSCOLO dove
+// vogliamo il "gancio" iniziale più marcato — formattazione decisa con Andrea il
+// 25/08/2026 (prima categorie "1"/"1b"/"3", poi estesa alle altre per coerenza).
 const CATEGORY_STORY_INFO = {
-  "1": "Adotta un bambino\ncon 180€/anno\n(detraibili al 35%)\nsolo 117€ netti\nScrivici in DM o vai\nal link in bio\nsolo 0,50€ al giorno\ne cambi un domani",
-  "1b": "Adotta un bambino\nin Casa Famiglia\ncon 500€/anno\n(detraibili al 35%)\nsolo 325€ netti\nScrivici in DM o vai\nal link in bio\nsolo 1,37€ al giorno\ne cambi un domani",
-  "2": "Sostieni le cure\nmediche dei bambini\nScrivici in DM o vai\nal link in bio",
+  "1": "ADOTTA UN BAMBINO\ncon 180€/anno\n(detraibili al 35%)\n\nsolo 117€ netti\nScrivici in DM o vai\nal link in bio\n\nsolo 0,50€ al giorno\ne cambi un domani",
+  "1b": "ADOTTA UN BAMBINO\nin Casa Famiglia\ncon 500€/anno\n(detraibili al 35%)\n\nsolo 325€ netti\nScrivici in DM o vai\nal link in bio\n\nsolo 1,37€ al giorno\ne cambi un domani",
+  "2": "SOSTIENI LE CURE\nMEDICHE DEI BAMBINI\n\nScrivici in DM o vai\nal link in bio",
   // Due varianti scelte a caso ad ogni generazione (deciso con Andrea l'11/08/2026).
   "3": [
-    "Restituisci la\nlibertà di muoversi\nUna carrozzina:\n200€, solo 130€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
-    "Una carrozzina\ncambia una vita\n200€, solo 130€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+    "RESTITUISCI LA\nLIBERTÀ DI MUOVERSI\nUna carrozzina:\n\n200€, solo 130€ netti\n\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+    "UNA CARROZZINA\nCAMBIA UNA VITA\n200€, solo 130€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   ],
-  "4": "Costruisci una casa\nper una famiglia\ncon 1.500€\nsolo 975€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
-  "5": "Aiuta una famiglia\na coltivare la terra\ncon 80€\nsolo 52€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
-  "6": "Dona un animale\nda 5€ a 600€\nda 3€ a 390€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
-  "7": "Dona un materasso\n20€, 13€ netti\no una coperta\n10€, 7€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
-  "8": "Dona un paio\ndi scarpe con 10€\nsolo 7€ netti\n(detraibili al 35%)\nScrivici in DM o vai\nal link in bio",
+  "4": "COSTRUISCI UNA CASA\nPER UNA FAMIGLIA\ncon 1.500€\nsolo 975€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
+  "5": "AIUTA UNA FAMIGLIA\nA COLTIVARE LA TERRA\ncon 80€\nsolo 52€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
+  "6": "DONA UN ANIMALE\nda 5€ a 600€\nda 3€ a 390€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
+  "7": "DONA UN MATERASSO\n20€, 13€ netti\no una coperta\n10€, 7€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
+  "8": "DONA UN PAIO\nDI SCARPE CON 10€\nsolo 7€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   // Nessun prezzo fisso (a differenza delle altre categorie): donazione libera, detraibile al 35%.
-  "9": "Sostieni le opere\ndella Casa Famiglia\nDonazione libera\ndetraibile al 35%\nScrivici in DM o vai\nal link in bio",
-  "10": "Scopri tutti\ni nostri progetti\nScrivici in DM o vai\nal link in bio",
+  "9": "SOSTIENI LE OPERE\nDELLA CASA FAMIGLIA\nDonazione libera\ndetraibile al 35%\n\nScrivici in DM o vai\nal link in bio",
+  "10": "SCOPRI TUTTI\nI NOSTRI PROGETTI\n\nScrivici in DM o vai\nal link in bio",
 };
 
 // Alcune categorie hanno più varianti di testo (array): ne sceglie una a caso.
