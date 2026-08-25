@@ -67,6 +67,42 @@ class EmailAPI {
     this.fromAddress = fromAddress;
   }
 
+  // Notifica interna quando qualcuno scrive nei commenti Facebook/Instagram una
+  // parola chiave che segnala un interesse concreto (es. "ADOTTO"): manda a se
+  // stessa (fromAddress = effataitalia@gmail.com, l'indirizzo già noto al team),
+  // non al commentatore, così Silvia non deve controllare i commenti a mano.
+  async sendKeywordAlert({ keyword, commentText, authorName, platform, permalink }) {
+    const platformLabel = platform === "instagram" ? "Instagram" : "Facebook";
+    const subject = `🔔 Commento con parola chiave "${keyword}" (${platformLabel})`;
+
+    const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+<tr><td style="padding:24px 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#333333;">
+
+<p>Qualcuno ha scritto <strong>"${keyword}"</strong> in un commento ${platformLabel}.</p>
+
+<p><strong>Autore:</strong> ${authorName || "sconosciuto"}<br/>
+<strong>Testo del commento:</strong> ${commentText}</p>
+
+${permalink ? `<p><a href="${permalink}">Vai al post</a></p>` : ""}
+
+</td></tr>
+</table>`;
+
+    try {
+      await this.transporter.sendMail({
+        from: `"Effatà Bot" <${this.fromAddress}>`,
+        to: this.fromAddress,
+        subject,
+        html,
+      });
+      logger.info(`Mail di alert commento inviata per parola chiave "${keyword}"`);
+      return { success: true };
+    } catch (err) {
+      logger.error(`Errore nell'invio della mail di alert commento: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
   // Manda la mail fissa di ringraziamento per un'adozione scolastica a distanza.
   async sendAdoptionThankYou(toEmail, sponsorName, childName, cc = null) {
     const { subject, html } = buildAdoptionThankYouEmail(sponsorName, childName);

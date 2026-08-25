@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "./logger.js";
+import { SHARE_KEYWORD } from "./shareKeyword.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -27,6 +28,8 @@ Fatto organizzativo fisso, da rispettare sempre: l'unica volontaria e fondatrice
 Se serve citare il sito web dell'associazione, usa esclusivamente "https://effataitalia.it" (con protocollo, mai il solo dominio "effataitalia.it" né altri domini o varianti inventate) — così Facebook lo riconosce in modo affidabile come link cliccabile nel testo del post. Non inventare altri link, indirizzi email, numeri di telefono o handle social specifici: se non forniti nel testo, usa formule generiche come "scrivici in privato" o "scopri di più sul nostro sito".
 
 Quando è naturale per la categoria, nella call-to-action di Facebook (e se si adatta anche nella didascalia Instagram o nel blog) proponi anche l'idea del "regalo solidale": invita a donare l'oggetto/il sostegno di questa storia (una sedia a rotelle, un'adozione a distanza, un materasso, ecc. — quello specifico della categoria, mai generico) in occasione di una ricorrenza personale, ad esempio "Regala una sedia a rotelle per il tuo compleanno o quello di un amico/a: per una laurea, un battesimo, un matrimonio, una comunione, un anniversario, un regalo solidale fa sempre la differenza ❤️". Non è un testo fisso da ripetere identico: adattalo all'oggetto/programma di questa categoria specifica, e usalo solo quando risulta naturale nel contesto della storia, non forzarlo in ogni singolo post.
+
+Quando risulta naturale (non forzarlo in ogni singolo post), nella call-to-action di Facebook e/o nella didascalia Instagram puoi invitare anche a condividere il post, con una frase tipo "Condividi questo post e scrivici '${SHARE_KEYWORD}' nei commenti: ti ringrazieremo di persona!" (adatta liberamente la formulazione, non ripeterla identica ogni volta). Mai sulle Storie (storySlides) né sul post LinkedIn (tono istituzionale, non si rivolge al pubblico social).
 
 Restituisci tutti i contenuti chiamando lo strumento "emit_story_content" con tutti i campi richiesti.`;
 

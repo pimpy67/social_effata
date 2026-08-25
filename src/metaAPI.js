@@ -482,6 +482,26 @@ export class MetaAPI {
     return { success: true, storyIds, platform: "instagram-story" };
   }
 
+  // Risponde pubblicamente a un commento di un post Facebook (non un DM privato):
+  // usata dal webhook per il ringraziamento automatico a chi scrive la parola
+  // chiave di condivisione nei commenti.
+  async replyToFacebookComment(commentId, message) {
+    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/comments`, null, {
+      params: { message, access_token: this.pageAccessToken },
+    });
+    return response.data.id;
+  }
+
+  // Equivalente per un commento su un post/media Instagram: endpoint diverso
+  // (/replies invece di /comments), stesso Page Access Token perché l'account
+  // IG è collegato alla stessa Pagina.
+  async replyToInstagramComment(commentId, message) {
+    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/replies`, null, {
+      params: { message, access_token: this.pageAccessToken },
+    });
+    return response.data.id;
+  }
+
   async publishToMetaBusiness(facebookText, instagramText, photos, optimizedPhotos = null) {
     logger.info(`Pubblicazione su Meta Business Suite (bozze). Facebook: "${facebookText.slice(0, 50)}..."`);
 

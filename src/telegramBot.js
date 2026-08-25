@@ -64,7 +64,7 @@ const CATEGORY_RULES = {
 // diversa per categoria. Usata a discrezione di Claude (vedi generateContent.js),
 // non su ogni post. Assente per "11"/"12" (Volontariato Digitale/Grazie): lì la CTA
 // non è mai una donazione, quindi questo meccanismo non si applica.
-const CATEGORY_COMMENT_KEYWORD = {
+export const CATEGORY_COMMENT_KEYWORD = {
   "1": "ADOTTO",
   "1b": "FAMIGLIA",
   "2": "CURA",
@@ -494,6 +494,16 @@ function getPending(chatId) {
   const pending = pendingByChat.get(chatId);
   if (!pending.videos) pending.videos = []; // retrocompatibilità con stato salvato prima dei video
   return pending;
+}
+
+// Getter per riusare le stesse istanze (inizializzate qui in startBot) nel
+// webhook Meta gestito da server.js, senza inizializzarle una seconda volta.
+export function getMetaAPI() {
+  return metaAPI;
+}
+
+export function getEmailAPI() {
+  return emailAPI;
 }
 
 export async function startBot() {

@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { ZipArchive } from "archiver";
 import { logger } from "./logger.js";
 import { getLinkedInAuthUrl, exchangeLinkedInCode } from "./linkedinAPI.js";
+import { verifyMetaWebhook, handleMetaWebhookEvent } from "./metaWebhook.js";
 import {
   getAllDrafts,
   queryDrafts,
@@ -282,6 +283,12 @@ app.get("/output/:filename", (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Webhook Meta: intercetta i commenti su Facebook/Instagram per l'alert email
+// (parole chiave categoria, es. "ADOTTO") e il ringraziamento automatico a chi
+// scrive la parola chiave di condivisione (vedi metaWebhook.js).
+app.get("/webhook/meta", verifyMetaWebhook);
+app.post("/webhook/meta", handleMetaWebhookEvent);
 
 // Avvia il collegamento LinkedIn: reindirizza alla pagina di autorizzazione OAuth
 app.get("/auth/linkedin", (req, res) => {
