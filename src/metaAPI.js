@@ -26,6 +26,70 @@ const MAX_STORY_SLIDES = validation.getLimits().MAX_TOTAL_PHOTOS + MAX_CATEGORY_
 // per non perdere la pubblicazione.
 const INSTAGRAM_CAPTION_LIMIT = 2200;
 
+// Instagram rifiuta l'elaborazione di un Reel (status_code=ERROR, senza altro
+// dettaglio via API) se il video è sotto questa risoluzione minima sul lato
+// corto — scoperto il 25/08/2026 con un video da 478x850 inoltrato via WhatsApp
+// (che spesso comprime la risoluzione durante l'inoltro). Meglio avvisare
+// chiaramente prima di provare, invece del generico errore di Meta.
+export const MIN_INSTAGRAM_REEL_WIDTH = 500;
+
+// Legge le dimensioni (width x height) del primo video track di un file MP4,
+// senza dipendere da ffmpeg (non installato in produzione, per non rischiare di
+// rompere la build Docker sull'immagine Alpine — stessa scelta già fatta per
+// l'elaborazione foto, vedi photoOptimizer.js). Naviga a mano l'albero di box
+// ftyp/moov/trak/mdia, cerca il trak con handler "vide" (per non confondersi con
+// la traccia audio) e ne legge width/height da tkhd (fixed-point 16.16, ultimi 8
+// byte del box). Ritorna null se non trovate (file non valido/non MP4, o
+// struttura box non gestita — in quel caso si prosegue senza bloccare la
+// pubblicazione, il controllo è un extra, non una validazione completa).
+export function getMp4VideoDimensions(buffer) {
+  function readBoxes(start, end) {
+    const boxes = [];
+    let offset = start;
+    while (offset < end - 8) {
+      let size = buffer.readUInt32BE(offset);
+      let headerSize = 8;
+      const type = buffer.toString("ascii", offset + 4, offset + 8);
+      if (size === 1) {
+        // Box con size a 64 bit (raro, file molto grandi)
+        size = Number(buffer.readBigUInt64BE(offset + 8));
+        headerSize = 16;
+      }
+      if (size < headerSize) break;
+      boxes.push({ type, start: offset, end: offset + size, headerSize });
+      offset += size;
+    }
+    return boxes;
+  }
+
+  try {
+    const moov = readBoxes(0, buffer.length).find((b) => b.type === "moov");
+    if (!moov) return null;
+
+    const traks = readBoxes(moov.start + 8, moov.end).filter((b) => b.type === "trak");
+    for (const trak of traks) {
+      const trakChildren = readBoxes(trak.start + 8, trak.end);
+      const mdia = trakChildren.find((b) => b.type === "mdia");
+      if (!mdia) continue;
+      const hdlr = readBoxes(mdia.start + 8, mdia.end).find((b) => b.type === "hdlr");
+      if (!hdlr) continue;
+
+      // hdlr: version(1)+flags(3)+predefined(4)+handler_type(4)...
+      const handlerType = buffer.toString("ascii", hdlr.start + hdlr.headerSize + 8, hdlr.start + hdlr.headerSize + 12);
+      if (handlerType !== "vide") continue;
+
+      const tkhd = trakChildren.find((b) => b.type === "tkhd");
+      if (!tkhd) continue;
+      const width = buffer.readUInt32BE(tkhd.end - 8) / 65536;
+      const height = buffer.readUInt32BE(tkhd.end - 4) / 65536;
+      if (width > 0 && height > 0) return { width: Math.round(width), height: Math.round(height) };
+    }
+  } catch (err) {
+    logger.warn(`Impossibile leggere le dimensioni del video: ${err.message}`);
+  }
+  return null;
+}
+
 function truncateInstagramCaption(text) {
   if (!text || text.length <= INSTAGRAM_CAPTION_LIMIT) return text;
   logger.warn(`Caption Instagram troppo lunga (${text.length} caratteri), troncata a ${INSTAGRAM_CAPTION_LIMIT}`);

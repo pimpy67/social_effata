@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { generateSocialContent } from "./generateContent.js";
 import { logger } from "./logger.js";
 import { validation } from "./validation.js";
-import { initMetaAPI } from "./metaAPI.js";
+import { initMetaAPI, getMp4VideoDimensions, MIN_INSTAGRAM_REEL_WIDTH } from "./metaAPI.js";
 import { initWordPressAPI } from "./wordpressAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial } from "./photoOptimizer.js";
@@ -902,15 +902,25 @@ export async function startBot() {
       // scripts/upload-image.js), invece di costruire un hosting dedicato.
       // Pubblica subito, come i post/carosello Instagram: nessun concetto di bozza.
       if (metaAPI && wordpressAPI && reelVideo && result.reelScript) {
-        try {
-          const uploadedVideo = await wordpressAPI.uploadMedia(reelVideo.buffer, `reel-${timestamp}.mp4`, reelVideo.mediaType);
-          const reelResult = await metaAPI.publishInstagramReel(result.reelScript, uploadedVideo.url);
-          metaMessage += reelResult.success
-            ? "🎬 Instagram (Reel): pubblicato online (già visibile a tutti)\n"
-            : `⚠️ Reel Instagram: errore (${reelResult.error})\n`;
-        } catch (err) {
-          logger.error(`Errore nella pubblicazione del Reel Instagram: ${err.message}`);
-          metaMessage += `⚠️ Reel Instagram: errore (${err.message})\n`;
+        // Controllo preventivo di risoluzione: Instagram rifiuta l'elaborazione
+        // (status ERROR, senza dettaglio via API) sotto una certa larghezza — un
+        // video inoltrato via WhatsApp spesso viene compresso sotto quella soglia.
+        // Meglio avvisare chiaramente ora che scoprirlo con l'errore generico di
+        // Meta dopo aver già caricato il video su WordPress.
+        const dimensions = getMp4VideoDimensions(reelVideo.buffer);
+        if (dimensions && Math.min(dimensions.width, dimensions.height) < MIN_INSTAGRAM_REEL_WIDTH) {
+          metaMessage += `⚠️ Reel Instagram non pubblicato: video troppo piccolo (${dimensions.width}x${dimensions.height}px, minimo ${MIN_INSTAGRAM_REEL_WIDTH}px sul lato corto). Se arriva da un inoltro WhatsApp, prova a mandare il video originale o ripreso direttamente.\n`;
+        } else {
+          try {
+            const uploadedVideo = await wordpressAPI.uploadMedia(reelVideo.buffer, `reel-${timestamp}.mp4`, reelVideo.mediaType);
+            const reelResult = await metaAPI.publishInstagramReel(result.reelScript, uploadedVideo.url);
+            metaMessage += reelResult.success
+              ? "🎬 Instagram (Reel): pubblicato online (già visibile a tutti)\n"
+              : `⚠️ Reel Instagram: errore (${reelResult.error})\n`;
+          } catch (err) {
+            logger.error(`Errore nella pubblicazione del Reel Instagram: ${err.message}`);
+            metaMessage += `⚠️ Reel Instagram: errore (${err.message})\n`;
+          }
         }
       }
 
