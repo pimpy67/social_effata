@@ -1065,7 +1065,14 @@ export async function startBot() {
 
   // Log dei messaggi ricevuti
   bot.on("message", (msg) => {
-    logger.debug(`Messaggio da chat ${msg.chat.id} (${msg.chat.title || msg.chat.first_name})`);
+    const mediaKeys = ["photo", "document", "video", "sticker", "animation", "voice", "media_group_id"].filter(
+      (k) => msg[k] !== undefined
+    );
+    logger.debug(
+      `Messaggio da chat ${msg.chat.id} (${msg.chat.title || msg.chat.first_name})${
+        mediaKeys.length ? ` [${mediaKeys.join(", ")}]` : ""
+      }`
+    );
   });
 
   bot.on("photo", async (msg) => {
@@ -1089,8 +1096,15 @@ export async function startBot() {
         await addImageToPending(msg, msg.document.file_id, mediaType, msg.caption || "", msg.document.file_size);
       } else if (mediaType.startsWith("video/")) {
         await addVideoToPending(msg, msg.document.file_id, mediaType, msg.caption || "", msg.document.file_size);
+      } else {
+        logger.warn(
+          `Documento ignorato (tipo non riconosciuto): ${msg.document.file_name || "senza nome"}, mime_type="${mediaType}"`
+        );
+        await bot.sendMessage(
+          msg.chat.id,
+          `⚠️ Il file "${msg.document.file_name || "inviato"}" non è stato riconosciuto come immagine o video (tipo rilevato: ${mediaType || "sconosciuto"}) e non è stato salvato. Prova a rimandarlo come foto/video normale invece che come file.`
+        );
       }
-      // ignora documenti di altro tipo
     } catch (err) {
       logger.error(`Errore nel salvare il documento: ${err.message}`);
       await bot.sendMessage(msg.chat.id, "⚠️ Si è verificato un errore nel salvare il file, riprova.");
