@@ -1,9 +1,6 @@
 import { logger } from "./logger.js";
 import { getMetaAPI, getEmailAPI, CATEGORY_COMMENT_KEYWORD } from "./telegramBot.js";
-import { SHARE_KEYWORD } from "./shareKeyword.js";
-
-const THANK_YOU_SHARE_MESSAGE =
-  "Grazie di cuore per aver condiviso questo post! ❤️ Farci conoscere è un aiuto prezioso quanto una donazione.";
+import { matchesShareConfirmation, getWeeklyShareThankYouMessage } from "./shareKeyword.js";
 
 function matchesKeyword(text, keyword) {
   return !!text && text.toUpperCase().includes(keyword.toUpperCase());
@@ -90,12 +87,13 @@ async function processComment(comment) {
     });
   }
 
-  if (matchesKeyword(comment.text, SHARE_KEYWORD) && metaAPI) {
+  if (matchesShareConfirmation(comment.text) && metaAPI) {
     try {
+      const thankYouMessage = getWeeklyShareThankYouMessage();
       if (comment.platform === "facebook") {
-        await metaAPI.replyToFacebookComment(comment.commentId, THANK_YOU_SHARE_MESSAGE);
+        await metaAPI.replyToFacebookComment(comment.commentId, thankYouMessage);
       } else {
-        await metaAPI.replyToInstagramComment(comment.commentId, THANK_YOU_SHARE_MESSAGE);
+        await metaAPI.replyToInstagramComment(comment.commentId, thankYouMessage);
       }
       logger.info(`Risposta di ringraziamento inviata al commento ${comment.commentId} (${comment.platform})`);
     } catch (err) {
