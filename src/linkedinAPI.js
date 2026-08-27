@@ -1,8 +1,12 @@
 import axios from "axios";
 import { logger } from "./logger.js";
 
-// Scope necessari per pubblicare a nome della pagina aziendale (Community Management API).
-const LINKEDIN_SCOPE = "w_organization_social r_organization_social rw_organization_admin";
+// Scope per pubblicare a nome della pagina aziendale (Community Management API).
+// Solo `w_organization_social` è indispensabile per POST /rest/posts; gli altri
+// (letture, admin) davano "invalid_scope_error" se non abilitati per l'app al
+// Development Tier. Override possibile via env LINKEDIN_SCOPE se in futuro servono
+// più permessi (es. leggere le statistiche dei post).
+const LINKEDIN_SCOPE = process.env.LINKEDIN_SCOPE || "w_organization_social";
 
 // Versione dell'header LinkedIn-Version (formato AAAAMM), mostrata nella scheda
 // "Products > Community Management API endpoints" del portale sviluppatori.
