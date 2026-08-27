@@ -8,6 +8,7 @@ import { logger } from "./logger.js";
 import { validation } from "./validation.js";
 import { initMetaAPI, getMp4VideoDimensions, MIN_INSTAGRAM_REEL_WIDTH } from "./metaAPI.js";
 import { initWordPressAPI } from "./wordpressAPI.js";
+import { initLinkedInAPI } from "./linkedinAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial } from "./photoOptimizer.js";
 import { addUtmParams, todayStamp } from "./utm.js";
@@ -468,6 +469,9 @@ let wordpressAPI = null;
 // Client Email API (per la mail di ringraziamento automatica alle adozioni)
 let emailAPI = null;
 
+// Client LinkedIn API (per pubblicare sulla pagina aziendale, se configurato)
+let linkedinAPI = null;
+
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
@@ -527,6 +531,9 @@ export async function startBot() {
 
   // Inizializza Email API (se configurato)
   emailAPI = await initEmailAPI();
+
+  // Inizializza LinkedIn API (se configurato)
+  linkedinAPI = await initLinkedInAPI();
 
   const bot = new TelegramBot(token, { polling: true });
   logger.info("Bot Telegram avviato, in ascolto...");
@@ -959,6 +966,25 @@ export async function startBot() {
         } catch (err) {
           logger.error(`Errore nella pubblicazione WordPress: ${err.message}`);
           metaMessage += `⚠️ Blog: errore WordPress (${err.message})\n`;
+        }
+      }
+
+      // Pubblica subito sulla pagina aziendale LinkedIn, se configurato
+      // (LINKEDIN_ACCESS_TOKEN + LINKEDIN_ORG_ID). result.linkedinPost include già
+      // il link CTA verso le partnership aziendali (con UTM, aggiunto sopra).
+      // Come Instagram: nessun concetto di bozza, va online subito.
+      if (linkedinAPI && result.linkedinPost) {
+        try {
+          const linkedinImage = optimizedPhotos.linkedin || images[0]?.buffer || null;
+          const liResult = await linkedinAPI.publishPost(result.linkedinPost, linkedinImage);
+          if (liResult.success) {
+            metaMessage += `💼 LinkedIn: pubblicato sulla pagina${liResult.withImage ? " (con immagine)" : " (solo testo)"}\n`;
+          } else {
+            metaMessage += `⚠️ LinkedIn: errore (${liResult.error})\n`;
+          }
+        } catch (err) {
+          logger.error(`Errore nella pubblicazione LinkedIn: ${err.message}`);
+          metaMessage += `⚠️ LinkedIn: errore (${err.message})\n`;
         }
       }
 
