@@ -10,6 +10,7 @@ import { initMetaAPI, getMp4VideoDimensions, MIN_INSTAGRAM_REEL_WIDTH } from "./
 import { initWordPressAPI } from "./wordpressAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial } from "./photoOptimizer.js";
+import { addUtmParams, todayStamp } from "./utm.js";
 import {
   saveDraft,
   getMonthlyReport,
@@ -734,16 +735,33 @@ export async function startBot() {
       // Aggiunge il link CTA (se fornito) in fondo ai testi di Facebook e Instagram:
       // Facebook lo rende cliccabile in automatico nel testo, Instagram no (non
       // linkifica mai gli URL in didascalia) ma lo mostriamo comunque.
+      // Su Facebook il link porta i parametri UTM per il tracciamento in GA; su
+      // Instagram resta pulito, perché lì l'URL non è cliccabile e va al massimo
+      // digitato a mano — una lunga query string lo renderebbe inutilizzabile.
+      // I link UTM funzionano solo sui domini effataitalia.it (vedi utm.js).
+      const utmCampaign = selected?.name;
+      const utmStamp = todayStamp();
       if (categoryData.referenceLink) {
-        const ctaLine = `\n\n🔗 ${categoryData.referenceLink}`;
-        if (result.facebookPost) result.facebookPost += ctaLine;
-        if (result.instagramStory) result.instagramStory += ctaLine;
+        if (result.facebookPost) {
+          const fbLink = addUtmParams(categoryData.referenceLink, {
+            source: "facebook",
+            campaign: utmCampaign,
+            content: utmStamp,
+          });
+          result.facebookPost += `\n\n🔗 ${fbLink}`;
+        }
+        if (result.instagramStory) result.instagramStory += `\n\n🔗 ${categoryData.referenceLink}`;
       }
 
       // LinkedIn usa sempre il link fisso verso partnership aziendali, non quello
       // della categoria della storia (vedi LINKEDIN_CTA_LINK sopra).
       if (result.linkedinPost) {
-        result.linkedinPost += `\n\n🔗 ${LINKEDIN_CTA_LINK}`;
+        const linkedinLink = addUtmParams(LINKEDIN_CTA_LINK, {
+          source: "linkedin",
+          campaign: utmCampaign,
+          content: utmStamp,
+        });
+        result.linkedinPost += `\n\n🔗 ${linkedinLink}`;
       }
 
       const timestamp = Date.now();
