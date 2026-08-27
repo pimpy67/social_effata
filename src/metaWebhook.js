@@ -1,6 +1,6 @@
 import { logger } from "./logger.js";
 import { getMetaAPI, getEmailAPI, CATEGORY_COMMENT_KEYWORD } from "./telegramBot.js";
-import { matchesShareConfirmation, getWeeklyShareThankYouMessage } from "./shareKeyword.js";
+import { matchesShareConfirmation, getWeeklyShareThankYouMessage, SHARE_CTA_COMMENT } from "./shareKeyword.js";
 
 function matchesKeyword(text, keyword) {
   return !!text && text.toUpperCase().includes(keyword.toUpperCase());
@@ -40,7 +40,8 @@ function extractComments(body) {
           platform: "facebook",
           commentId: change.value.comment_id,
           text: change.value.message || "",
-          authorName: change.value.sender_name || null,
+          authorName: change.value.from?.name || change.value.sender_name || null,
+          authorId: change.value.from?.id || change.value.sender_id || null,
           postId: change.value.post_id || null,
         });
       }
@@ -51,6 +52,7 @@ function extractComments(body) {
           commentId: change.value.id,
           text: change.value.text || "",
           authorName: change.value.from?.username || null,
+          authorId: change.value.from?.id || null,
           postId: change.value.media?.id || null,
         });
       }
@@ -58,6 +60,20 @@ function extractComments(body) {
   }
 
   return comments;
+}
+
+// Il bot pubblica lui stesso, come Pagina, un commento CTA dopo ogni post
+// ("Condividi questo post e scrivici CONDIVISO...") e le risposte di
+// ringraziamento: anche questi arrivano dal webhook come nuovi commenti. Senza
+// questo filtro il riconoscimento della parola chiave scatterebbe sul nostro
+// stesso commento CTA (che contiene "CONDIVISO") e Silvia finirebbe per
+// "ringraziare se stessa" prima ancora che qualcuno condivida davvero.
+function isOwnComment(comment, metaAPI) {
+  if (comment.text && comment.text.trim() === SHARE_CTA_COMMENT.trim()) return true;
+  const ownIds = [process.env.META_PAGE_ID, metaAPI?.instagramAccountId]
+    .filter(Boolean)
+    .map(String);
+  return !!comment.authorId && ownIds.includes(String(comment.authorId));
 }
 
 async function processComment(comment) {
@@ -91,13 +107,17 @@ async function processComment(comment) {
     try {
       const thankYouMessage = getWeeklyShareThankYouMessage();
       if (comment.platform === "facebook") {
-        await metaAPI.replyToFacebookComment(comment.commentId, thankYouMessage);
+        await metaAPI.sendFacebookPrivateReply(comment.commentId, thankYouMessage);
       } else {
-        await metaAPI.replyToInstagramComment(comment.commentId, thankYouMessage);
+        await metaAPI.sendInstagramPrivateReply(comment.commentId, thankYouMessage);
       }
-      logger.info(`Risposta di ringraziamento inviata al commento ${comment.commentId} (${comment.platform})`);
+      logger.info(`Messaggio privato di ringraziamento inviato all'autore del commento ${comment.commentId} (${comment.platform})`);
     } catch (err) {
-      logger.error(`Errore nella risposta di ringraziamento al commento ${comment.commentId}: ${err.message}`);
+      // Cause tipiche: manca il permesso pages_messaging/instagram_manage_messages
+      // sul token, commento più vecchio di 7 giorni, o l'utente non accetta
+      // messaggi dalla Pagina. Non si ripiega su una risposta pubblica: il senso
+      // di questo ringraziamento è che resti privato.
+      logger.error(`Impossibile inviare il messaggio privato di ringraziamento al commento ${comment.commentId} (${comment.platform}): ${err.response?.data?.error?.message || err.message}`);
     }
   }
 }
@@ -109,8 +129,13 @@ async function processComment(comment) {
 export function handleMetaWebhookEvent(req, res) {
   res.sendStatus(200);
 
+  const metaAPI = getMetaAPI();
   const comments = extractComments(req.body || {});
   for (const comment of comments) {
+    if (isOwnComment(comment, metaAPI)) {
+      logger.debug(`Commento del bot stesso ignorato dal webhook (${comment.platform}, ${comment.commentId})`);
+      continue;
+    }
     processComment(comment).catch((err) => {
       logger.error(`Errore nell'elaborazione del commento webhook: ${err.message}`);
     });

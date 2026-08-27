@@ -607,24 +607,27 @@ export class MetaAPI {
     return { success: true, storyIds, platform: "instagram-story" };
   }
 
-  // Risponde pubblicamente a un commento di un post Facebook (non un DM privato):
-  // usata dal webhook per il ringraziamento automatico a chi scrive la parola
-  // chiave di condivisione nei commenti.
-  async replyToFacebookComment(commentId, message) {
-    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/comments`, null, {
+  // Manda un MESSAGGIO PRIVATO (DM) all'autore di un commento su un post Facebook,
+  // non una risposta pubblica: usata dal webhook per il ringraziamento a chi
+  // scrive la parola chiave di condivisione. Endpoint /private_replies.
+  // Vincoli di piattaforma: Meta consente un solo private reply per commento e
+  // solo entro 7 giorni dal commento; richiede il permesso `pages_messaging` sul
+  // Page Access Token (in aggiunta a quelli già usati per pubblicare).
+  async sendFacebookPrivateReply(commentId, message) {
+    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/private_replies`, null, {
       params: { message, access_token: this.pageAccessToken },
     });
-    return response.data.id;
+    return response.data.message_id || response.data.id;
   }
 
-  // Equivalente per un commento su un post/media Instagram: endpoint diverso
-  // (/replies invece di /comments), stesso Page Access Token perché l'account
-  // IG è collegato alla stessa Pagina.
-  async replyToInstagramComment(commentId, message) {
-    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/replies`, null, {
+  // Equivalente Instagram: stesso endpoint /private_replies sull'id del commento IG,
+  // stesso Page Access Token (l'account IG è collegato alla Pagina). Richiede il
+  // permesso `instagram_manage_messages`. Stessa finestra di 7 giorni.
+  async sendInstagramPrivateReply(commentId, message) {
+    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/private_replies`, null, {
       params: { message, access_token: this.pageAccessToken },
     });
-    return response.data.id;
+    return response.data.message_id || response.data.id;
   }
 
   // Pubblica un commento di primo livello sul post/media stesso (non una risposta

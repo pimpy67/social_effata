@@ -12,7 +12,7 @@ export const SHARE_KEYWORD = "CONDIVISO";
 // (quest'ultima decisa da Claude "quando risulta naturale", quindi non su ogni
 // post — il commento invece parte sempre, per garantire che l'invito ci sia
 // comunque). Aggiunto il 25/08/2026 su richiesta di Andrea.
-export const SHARE_CTA_COMMENT = `Condividi questo post e scrivici "${SHARE_KEYWORD}" nei commenti: ti ringrazieremo di persona! 💙`;
+export const SHARE_CTA_COMMENT = `Condividi questo post e scrivici "${SHARE_KEYWORD}" nei commenti: ti risponderemo in privato con un pensiero di Silvia 💙`;
 
 // In pratica molti non scrivono la parola esatta richiesta nella CTA, ma varianti
 // brevi già osservate ("Fatto", "Condivisa", ecc.). Per evitare falsi positivi
