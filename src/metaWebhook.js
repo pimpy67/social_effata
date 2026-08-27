@@ -104,20 +104,31 @@ async function processComment(comment) {
   }
 
   if (matchesShareConfirmation(comment.text) && metaAPI) {
+    // Il DM privato (private_replies) è l'obiettivo, ma richiede pages_messaging /
+    // instagram_manage_messages in accesso avanzato → revisione dell'app Meta.
+    // Finché non è approvata, SHARE_THANKYOU_PRIVATE resta spento e si risponde
+    // pubblicamente (funziona per tutti col token attuale). Basta accendere la
+    // variabile quando la revisione passa, senza toccare il codice.
+    const usePrivate = process.env.SHARE_THANKYOU_PRIVATE === "true";
     try {
       const thankYouMessage = getWeeklyShareThankYouMessage();
-      if (comment.platform === "facebook") {
-        await metaAPI.sendFacebookPrivateReply(comment.commentId, thankYouMessage);
+      if (usePrivate) {
+        if (comment.platform === "facebook") {
+          await metaAPI.sendFacebookPrivateReply(comment.commentId, thankYouMessage);
+        } else {
+          await metaAPI.sendInstagramPrivateReply(comment.commentId, thankYouMessage);
+        }
+        logger.info(`Messaggio privato di ringraziamento inviato all'autore del commento ${comment.commentId} (${comment.platform})`);
       } else {
-        await metaAPI.sendInstagramPrivateReply(comment.commentId, thankYouMessage);
+        if (comment.platform === "facebook") {
+          await metaAPI.replyToFacebookComment(comment.commentId, thankYouMessage);
+        } else {
+          await metaAPI.replyToInstagramComment(comment.commentId, thankYouMessage);
+        }
+        logger.info(`Risposta pubblica di ringraziamento inviata al commento ${comment.commentId} (${comment.platform})`);
       }
-      logger.info(`Messaggio privato di ringraziamento inviato all'autore del commento ${comment.commentId} (${comment.platform})`);
     } catch (err) {
-      // Cause tipiche: manca il permesso pages_messaging/instagram_manage_messages
-      // sul token, commento più vecchio di 7 giorni, o l'utente non accetta
-      // messaggi dalla Pagina. Non si ripiega su una risposta pubblica: il senso
-      // di questo ringraziamento è che resti privato.
-      logger.error(`Impossibile inviare il messaggio privato di ringraziamento al commento ${comment.commentId} (${comment.platform}): ${err.response?.data?.error?.message || err.message}`);
+      logger.error(`Errore nel ringraziamento al commento ${comment.commentId} (${comment.platform}, ${usePrivate ? "privato" : "pubblico"}): ${err.response?.data?.error?.message || err.message}`);
     }
   }
 }

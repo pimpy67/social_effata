@@ -607,6 +607,26 @@ export class MetaAPI {
     return { success: true, storyIds, platform: "instagram-story" };
   }
 
+  // Risponde PUBBLICAMENTE a un commento di un post Facebook (visibile sotto il
+  // post). Usata dal webhook per il ringraziamento a chi scrive la parola chiave
+  // di condivisione, finché SHARE_THANKYOU_PRIVATE non è attivo (il DM privato
+  // richiede pages_messaging in accesso avanzato, cioè revisione dell'app).
+  async replyToFacebookComment(commentId, message) {
+    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/comments`, null, {
+      params: { message, access_token: this.pageAccessToken },
+    });
+    return response.data.id;
+  }
+
+  // Equivalente Instagram: endpoint /replies (non /comments, che crea un commento
+  // di primo livello sul media).
+  async replyToInstagramComment(commentId, message) {
+    const response = await axios.post(`${GRAPH_API_URL}/${commentId}/replies`, null, {
+      params: { message, access_token: this.pageAccessToken },
+    });
+    return response.data.id;
+  }
+
   // Manda un MESSAGGIO PRIVATO (DM) all'autore di un commento su un post Facebook,
   // non una risposta pubblica: usata dal webhook per il ringraziamento a chi
   // scrive la parola chiave di condivisione. Endpoint /private_replies.
