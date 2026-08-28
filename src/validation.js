@@ -6,7 +6,10 @@ const VALIDATION_CONFIG = {
   // Limite reale dei bot Telegram per scaricare un file (non aggirabile): oltre
   // i 20MB l'API di download semplicemente non funziona.
   MAX_VIDEO_SIZE_MB: 20,
-  MAX_TOTAL_VIDEOS: 3,            // Max 3 video per storia
+  // Alzato da 3 a 8 il 28/08/2026: la Storia video mette ogni clip come frame in
+  // sequenza (storytelling), quindi servono più spezzoni brevi. Ogni clip resta
+  // comunque sotto i 20MB (limite Telegram) e 3-60s (limiti Instagram Stories).
+  MAX_TOTAL_VIDEOS: 8,
   MAX_TEXT_LENGTH: 50000,         // Max 50k caratteri totali
   MAX_MESSAGE_LENGTH: 5000,       // Max 5k per messaggio
   GENERATE_COOLDOWN_SECONDS: 30,  // Min 30 secondi tra /genera
