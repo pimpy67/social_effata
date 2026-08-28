@@ -11,6 +11,7 @@ import { initWordPressAPI } from "./wordpressAPI.js";
 import { initLinkedInAPI } from "./linkedinAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial, buildCategoryInfoSlide } from "./photoOptimizer.js";
+import { runMonthlySummaryIfDue } from "./monthlySummary.js";
 import { addUtmParams, todayStamp } from "./utm.js";
 import {
   saveDraft,
@@ -1730,6 +1731,16 @@ Altri comandi utili:
   // Controlla (al via e poi ogni ora) se è il 1° del mese e va inviato il report automatico
   await sendAutomaticMonthlyReportIfDue(bot);
   setInterval(() => sendAutomaticMonthlyReportIfDue(bot), 60 * 60 * 1000);
+
+  // Controlla (al via e poi ogni ora) se è l'ultimo giorno del mese dalle 21 (ora
+  // italiana) e va preparato il post social di riepilogo del mese: bozza Facebook
+  // in /bozze + notifica Telegram con immagine e testo pronti anche per Instagram.
+  const checkMonthlySummary = () =>
+    runMonthlySummaryIfDue(bot, metaAPI).catch((err) =>
+      logger.error(`Errore nel riepilogo mensile automatico: ${err.message}`)
+    );
+  await checkMonthlySummary();
+  setInterval(checkMonthlySummary, 60 * 60 * 1000);
 
   return bot;
 }
