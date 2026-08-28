@@ -10,7 +10,7 @@ import { initMetaAPI, getMp4VideoDimensions, MIN_INSTAGRAM_REEL_WIDTH } from "./
 import { initWordPressAPI } from "./wordpressAPI.js";
 import { initLinkedInAPI } from "./linkedinAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
-import { optimizePhotosForSocial } from "./photoOptimizer.js";
+import { optimizePhotosForSocial, buildCategoryInfoSlide } from "./photoOptimizer.js";
 import { addUtmParams, todayStamp } from "./utm.js";
 import {
   saveDraft,
@@ -705,7 +705,7 @@ export async function startBot() {
     try {
       await bot.sendMessage(
         chatId,
-        `📥 Genero le bozze da ${pending.photos.length} foto e ${pending.notes.length} testi extra...`
+        `📥 Genero le bozze da ${pending.photos.length} foto, ${pending.videos.length} video e ${pending.notes.length} testi extra...`
       );
 
       const selected = selectedCategory.get(chatId);
@@ -721,11 +721,18 @@ export async function startBot() {
         buffer: fs.readFileSync(p.imgPath),
         mediaType: p.mediaType || "image/jpeg",
       }));
-      // Solo il primo video (se presente) diventa un Reel: letto qui, prima che il
-      // cleanup più sotto cancelli il file temporaneo da intake/.
-      const reelVideo = pending.videos[0]
-        ? { buffer: fs.readFileSync(pending.videos[0].videoPath), mediaType: pending.videos[0].mediaType || "video/mp4" }
-        : null;
+      // Legge i buffer dei video ORA, prima che il cleanup più sotto cancelli i
+      // file temporanei da intake/. Servono sia per il Reel sia per la Storia video.
+      const videoBuffers = pending.videos.map((v) => ({
+        buffer: fs.readFileSync(v.videoPath),
+        mediaType: v.mediaType || "video/mp4",
+      }));
+      // Il Reel automatico si crea SOLO con un unico video caricato: con 2+ clip
+      // sarebbe solo uno spezzone: in quel caso le clip vanno solo nella Storia
+      // video e il montaggio del Reel lo fa l'utente a mano (avviso più sotto).
+      const reelVideo = videoBuffers.length === 1 ? videoBuffers[0] : null;
+      const hasVideos = videoBuffers.length > 0;
+      const categoryInfoTexts = selected ? getCategoryInfoSlideTexts(selected.id) : [];
 
       const result = await generateSocialContent(
         rawText,
@@ -800,33 +807,38 @@ export async function startBot() {
         fs.copyFileSync(v.videoPath, `${outBase}_video${i + 1}${ext}`);
       });
 
-      // Ottimizza le foto per ogni social
+      // Ottimizza le foto per ogni social. Se ci sono anche video, la slide finale
+      // logo/CTA NON va in coda alla Storia foto: viene pubblicata dopo le clip
+      // video (vedi il blocco "Storia video" più sotto), così resta l'ultimo frame
+      // di tutta la sequenza foto+video invece di finire in mezzo.
       let optimizedPhotos = {};
-      try {
-        optimizedPhotos = await optimizePhotosForSocial(images, {
-          storySlideTexts: result.storySlides,
-          categoryInfoTexts: selected ? getCategoryInfoSlideTexts(selected.id) : [],
-        });
-        // Salva le foto ottimizzate con suffissi social
-        for (const [social, buffer] of Object.entries(optimizedPhotos)) {
-          if (Array.isArray(buffer)) {
-            buffer.forEach((b, idx) => fs.writeFileSync(`${outBase}_optimized_${social}_${idx + 1}.jpg`, b));
-          } else {
-            fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
+      if (images.length > 0) {
+        try {
+          optimizedPhotos = await optimizePhotosForSocial(images, {
+            storySlideTexts: result.storySlides,
+            categoryInfoTexts: hasVideos ? [] : categoryInfoTexts,
+          });
+          // Salva le foto ottimizzate con suffissi social
+          for (const [social, buffer] of Object.entries(optimizedPhotos)) {
+            if (Array.isArray(buffer)) {
+              buffer.forEach((b, idx) => fs.writeFileSync(`${outBase}_optimized_${social}_${idx + 1}.jpg`, b));
+            } else {
+              fs.writeFileSync(`${outBase}_optimized_${social}.jpg`, buffer);
+            }
           }
+          logger.info(`Foto ottimizzate salvate per ${Object.keys(optimizedPhotos).length} social`);
+        } catch (err) {
+          logger.warn(`Errore nell'ottimizzazione foto: ${err.message}`);
+          // Se l'ottimizzazione fallisce, usa le foto originali
+          optimizedPhotos = {
+            facebook: images.map((img) => img.buffer),
+            instagram: images.map((img) => img.buffer),
+            story: images.map((img) => img.buffer),
+            linkedin: images[0].buffer,
+            blog: images[0].buffer,
+            reel: images[0].buffer,
+          };
         }
-        logger.info(`Foto ottimizzate salvate per ${Object.keys(optimizedPhotos).length} social`);
-      } catch (err) {
-        logger.warn(`Errore nell'ottimizzazione foto: ${err.message}`);
-        // Se l'ottimizzazione fallisce, usa le foto originali
-        optimizedPhotos = {
-          facebook: images.map((img) => img.buffer),
-          instagram: images.map((img) => img.buffer),
-          story: images.map((img) => img.buffer),
-          linkedin: images[0].buffer,
-          blog: images[0].buffer,
-          reel: images[0].buffer,
-        };
       }
 
       // Cleanup: cancella i file temporanei da intake/
@@ -871,8 +883,13 @@ export async function startBot() {
       let storyShareButton = null;
 
       // Pubblica su Facebook (come bozza non pubblica) e Instagram (subito, online)
-      // se Meta API è configurata.
-      if (metaAPI) {
+      // se Meta API è configurata. Il post feed + la Storia foto richiedono almeno
+      // una foto: se sono stati caricati solo video si salta direttamente alla
+      // Storia video / Reel più sotto, senza tentare post-foto che fallirebbero.
+      if (metaAPI && images.length === 0 && hasVideos) {
+        metaMessage += "ℹ️ Nessuna foto caricata: niente post Facebook/Instagram, solo Storia video (e Reel se un unico video).\n";
+      }
+      if (metaAPI && images.length > 0) {
         try {
           const metaResults = await metaAPI.publishToMetaBusiness(
             result.facebookPost,
@@ -920,10 +937,17 @@ export async function startBot() {
         }
       }
 
-      // Pubblica il Reel su Instagram (solo il primo video, se presente): l'API
-      // Instagram richiede un video_url pubblico, quindi il video va prima caricato
-      // da qualche parte per ottenerne uno — riusa la libreria media di WordPress
-      // (stesso meccanismo già usato per l'immagine fissa email, vedi
+      // Con 2+ clip il Reel automatico non si fa (sarebbe solo uno spezzone): le
+      // clip vanno nella Storia video qui sotto, e per un Reel l'utente monta i
+      // pezzi in un unico video e lo ricarica.
+      if (metaAPI && videoBuffers.length >= 2) {
+        metaMessage += `🎬 Reel non creato: hai caricato ${videoBuffers.length} video. Per un Reel montali in un unico video (es. CapCut) e ricaricalo — le clip sono comunque nella Storia video.\n`;
+      }
+
+      // Pubblica il Reel su Instagram (solo quando è stato caricato UN unico video):
+      // l'API Instagram richiede un video_url pubblico, quindi il video va prima
+      // caricato da qualche parte per ottenerne uno — riusa la libreria media di
+      // WordPress (stesso meccanismo già usato per l'immagine fissa email, vedi
       // scripts/upload-image.js), invece di costruire un hosting dedicato.
       // Pubblica subito, come i post/carosello Instagram: nessun concetto di bozza.
       if (metaAPI && wordpressAPI && reelVideo && result.reelScript) {
@@ -946,6 +970,72 @@ export async function startBot() {
             logger.error(`Errore nella pubblicazione del Reel Instagram: ${err.message}`);
             metaMessage += `⚠️ Reel Instagram: errore (${err.message})\n`;
           }
+        }
+      }
+
+      // Storia video: ogni clip caricata diventa un frame della Storia (Instagram
+      // + Facebook), scorribili in sequenza — effetto "storytelling video". NON
+      // sostituisce la Storia foto: si aggiunge dopo, nella stessa sequenza di
+      // frame attivi dell'account. La slide finale logo/CTA della categoria viene
+      // pubblicata qui in coda (quando ci sono video non è dentro la Storia foto,
+      // vedi optimizePhotosForSocial sopra), così è l'ultimo frame di tutto.
+      // Instagram vuole un video_url pubblico (le clip vanno prima caricate su
+      // WordPress), Facebook invece l'upload dei byte: teniamo entrambi per ogni
+      // clip valida.
+      if (metaAPI && wordpressAPI && hasVideos) {
+        const validClips = []; // { url, buffer }
+        let skippedClips = 0;
+        for (const [i, vid] of videoBuffers.entries()) {
+          const dim = getMp4VideoDimensions(vid.buffer);
+          if (dim && Math.min(dim.width, dim.height) < MIN_INSTAGRAM_REEL_WIDTH) {
+            skippedClips++;
+            logger.warn(`Clip ${i + 1} saltata per la Storia video: ${dim.width}x${dim.height}px sotto ${MIN_INSTAGRAM_REEL_WIDTH}px`);
+            continue;
+          }
+          try {
+            const uploaded = await wordpressAPI.uploadMedia(vid.buffer, `story-${timestamp}-${i + 1}.mp4`, vid.mediaType);
+            validClips.push({ url: uploaded.url, buffer: vid.buffer });
+          } catch (err) {
+            skippedClips++;
+            logger.warn(`Clip ${i + 1}: upload su WordPress fallito (${err.message})`);
+          }
+        }
+
+        if (validClips.length > 0) {
+          let igStory = { success: false };
+          let fbStory = { success: false };
+          try {
+            igStory = await metaAPI.publishInstagramStoryVideos(validClips.map((c) => c.url));
+          } catch (err) {
+            logger.error(`Errore Storia video Instagram: ${err.message}`);
+          }
+          try {
+            fbStory = await metaAPI.publishFacebookStoryVideos(validClips.map((c) => c.buffer));
+          } catch (err) {
+            logger.error(`Errore Storia video Facebook: ${err.message}`);
+          }
+
+          // Slide finale logo/CTA in coda alla sequenza video (una sola volta, su
+          // entrambi i canali). Fallimento non bloccante.
+          const infoTexts = categoryInfoTexts.filter((t) => t && t.trim());
+          if (infoTexts.length && (igStory.success || fbStory.success)) {
+            try {
+              const infoSlides = await Promise.all(infoTexts.map(buildCategoryInfoSlide));
+              if (igStory.success) await metaAPI.publishInstagramStory(infoSlides).catch((e) => logger.warn(`Slide finale IG: ${e.message}`));
+              if (fbStory.success) await metaAPI.publishFacebookStory(infoSlides).catch((e) => logger.warn(`Slide finale FB: ${e.message}`));
+            } catch (err) {
+              logger.warn(`Slide finale Storia video non generata: ${err.message}`);
+            }
+          }
+
+          const parts = [];
+          if (igStory.success) parts.push(`📷 IG ${igStory.storyIds.length}/${validClips.length}`);
+          if (fbStory.success) parts.push(`📘 FB ${fbStory.storyIds.length}/${validClips.length}`);
+          metaMessage += parts.length
+            ? `🎬 Storia video pubblicata (${parts.join(", ")})${skippedClips ? ` — ${skippedClips} clip saltate` : ""}\n`
+            : `⚠️ Storia video: nessun canale pubblicato (${igStory.error || fbStory.error || "errore"})\n`;
+        } else {
+          metaMessage += `⚠️ Storia video non pubblicata: nessuna clip valida${skippedClips ? ` (${skippedClips} saltate — probabile compressione WhatsApp sotto ${MIN_INSTAGRAM_REEL_WIDTH}px, manda l'originale)` : ""}\n`;
         }
       }
 
@@ -1034,11 +1124,10 @@ export async function startBot() {
       // Pulisci la categoria dopo la generazione
       selectedCategory.delete(chatId);
 
-      // Il primo video (se presente) è già coperto dalla riga "Reel" in metaMessage
-      // sopra: qui avvisiamo solo degli eventuali video aggiuntivi, che restano
-      // solo salvati (un post può avere un solo Reel).
-      const videoNote = pending.videos.length > 1
-        ? `\n🎬 Altri ${pending.videos.length - 1} video salvati (in output/), non pubblicati: un post ha un solo Reel.\n`
+      // Esito di Reel e Storia video è già in metaMessage (righe 🎬). Tutti i video
+      // caricati vengono comunque salvati anche in output/.
+      const videoNote = pending.videos.length > 0
+        ? `\n🎬 ${pending.videos.length} video salvati anche in output/.\n`
         : "";
 
       await bot.sendMessage(

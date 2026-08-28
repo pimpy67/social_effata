@@ -201,8 +201,10 @@ function buildInfoSlideLines(text, maxCharsPerLine) {
 // intestazione+logo+testo è centrato verticalmente sull'intera altezza 1920 (prima
 // era ancorato in alto, lasciando vuota tutta la metà inferiore della Storia).
 // Chiamata una volta per slide: alcune categorie ne mettono più di una in sequenza
-// (vedi il ciclo su categoryInfoTexts in optimizePhotosForSocial).
-async function buildCategoryInfoSlide(text) {
+// (vedi il ciclo su categoryInfoTexts in optimizePhotosForSocial). Esportata anche
+// per la Storia video (telegramBot.js): lì la slide finale va pubblicata a mano
+// come ultimo frame, dopo le clip video, invece di essere in coda alla Storia foto.
+export async function buildCategoryInfoSlide(text) {
   const logoBuffer = await sharp(LOGO_PATH)
     .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
     .toBuffer();

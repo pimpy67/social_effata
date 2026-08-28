@@ -679,6 +679,153 @@ export class MetaAPI {
     return { success: true, storyIds, platform: "instagram-story" };
   }
 
+  // Pubblica una sequenza di Storie VIDEO su Instagram (una per clip, scorribili
+  // in ordine — effetto "storytelling video"). Come per i Reel l'API vuole un
+  // video_url pubblico: il chiamante carica prima ogni clip da qualche parte
+  // (libreria media WordPress) e passa qui gli URL nell'ordine desiderato. Va
+  // online subito. Le clip che falliscono l'elaborazione (es. risoluzione sotto
+  // il minimo di Instagram) vengono saltate, le altre pubblicate.
+  async publishInstagramStoryVideos(videoUrls) {
+    if (!this.instagramAccountId || !this.pageAccessToken) {
+      return { success: false, error: "Account Instagram non collegato" };
+    }
+    const urls = (Array.isArray(videoUrls) ? videoUrls : [videoUrls]).filter(Boolean);
+    if (urls.length === 0) return { success: false, error: "Nessun video per la Storia Instagram" };
+
+    const storyIds = [];
+    const errors = [];
+    for (const [index, videoUrl] of urls.entries()) {
+      const label = `Storia video Instagram clip ${index + 1}/${urls.length}`;
+      try {
+        const storyId = await withRetry(async () => {
+          const createResponse = await axios.post(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, null, {
+            params: {
+              media_type: "STORIES",
+              video_url: videoUrl,
+              access_token: this.pageAccessToken,
+            },
+          });
+          const creationId = createResponse.data.id;
+          // Un video richiede più tempo di elaborazione di una foto (fino a ~90s).
+          await this.waitForMediaReady(creationId, 30, 3000);
+          const publishResponse = await axios.post(
+            `${GRAPH_API_URL}/${this.instagramAccountId}/media_publish`,
+            null,
+            { params: { creation_id: creationId, access_token: this.pageAccessToken } }
+          );
+          return publishResponse.data.id;
+        }, { label });
+        storyIds.push(storyId);
+      } catch (err) {
+        const message = metaErrorMessage(err);
+        errors.push(message);
+        logger.warn(`${label} scartata dopo i tentativi: ${message}`);
+      }
+    }
+
+    if (storyIds.length === 0) {
+      return { success: false, error: errors.join("; "), platform: "instagram-story-video" };
+    }
+    logger.info(`Storie video Instagram pubblicate: ${storyIds.length}/${urls.length}`);
+    return { success: true, storyIds, platform: "instagram-story-video" };
+  }
+
+  // Attende che Meta abbia finito di elaborare un video caricato con /video_stories
+  // (fase intermedia tra "upload" e "finish"): senza questa attesa il finish può
+  // rispondere che il video non è pronto.
+  async waitForFacebookVideoReady(videoId, maxAttempts = 20, delayMs = 3000) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const r = await axios.get(`${GRAPH_API_URL}/${videoId}`, {
+          params: { fields: "status", access_token: this.pageAccessToken },
+        });
+        const status = r.data?.status || {};
+        const phase =
+          status?.processing_phase?.status ||
+          status?.video_status ||
+          status?.uploading_phase?.status;
+        if (phase === "complete" || phase === "ready" || phase === "published") return;
+        if (phase === "error") throw new Error("Elaborazione video Facebook fallita (status error)");
+      } catch (err) {
+        // Un 400 transitorio mentre Meta prepara il video non è fatale: si riprova.
+        logger.debug(`waitForFacebookVideoReady: tentativo ${attempt + 1} (${metaErrorMessage(err)})`);
+      }
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+    throw new Error("Timeout nell'elaborazione del video Facebook");
+  }
+
+  // Pubblica una singola Storia video su Facebook. A differenza di Instagram la
+  // Pagina non accetta un video_url: serve il flusso in tre fasi di /video_stories
+  // (start → upload dei byte → finish). L'upload è un unico POST del binario con
+  // header offset/file_size (i nostri video stanno sotto i 20MB, non serve il
+  // chunking).
+  async publishFacebookStoryVideo(videoBuffer) {
+    const start = await axios.post(`${GRAPH_API_URL}/${this.pageId}/video_stories`, null, {
+      params: { upload_phase: "start", access_token: this.pageAccessToken },
+    });
+    const videoId = start.data.video_id;
+    const uploadUrl = start.data.upload_url;
+    if (!videoId || !uploadUrl) {
+      throw new Error("Risposta inattesa da /video_stories (start): manca video_id o upload_url");
+    }
+
+    await axios.post(uploadUrl, videoBuffer, {
+      headers: {
+        Authorization: `OAuth ${this.pageAccessToken}`,
+        offset: "0",
+        file_size: String(videoBuffer.length),
+        "Content-Type": "application/octet-stream",
+      },
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
+
+    await this.waitForFacebookVideoReady(videoId);
+
+    const finish = await axios.post(`${GRAPH_API_URL}/${this.pageId}/video_stories`, null, {
+      params: {
+        upload_phase: "finish",
+        video_id: videoId,
+        video_state: "PUBLISHED",
+        access_token: this.pageAccessToken,
+      },
+    });
+    return finish.data.post_id || videoId;
+  }
+
+  // Sequenza di Storie video Facebook (una per clip). Best-effort: le clip che
+  // falliscono vengono saltate, le altre pubblicate. Riceve i buffer (non URL:
+  // vedi publishFacebookStoryVideo).
+  async publishFacebookStoryVideos(videoBuffers) {
+    if (!this.pageAccessToken || !this.pageId) {
+      return { success: false, error: "Credenziali Meta mancanti" };
+    }
+    const buffers = (Array.isArray(videoBuffers) ? videoBuffers : [videoBuffers]).filter(Boolean);
+    if (buffers.length === 0) return { success: false, error: "Nessun video per la Storia Facebook" };
+
+    const storyIds = [];
+    const errors = [];
+    for (const [index, buffer] of buffers.entries()) {
+      const label = `Storia video Facebook clip ${index + 1}/${buffers.length}`;
+      try {
+        // attempts:1 — un retry rifarebbe da capo start+upload dei byte, troppo costoso.
+        const id = await withRetry(() => this.publishFacebookStoryVideo(buffer), { label, attempts: 1 });
+        storyIds.push(id);
+      } catch (err) {
+        const message = metaErrorMessage(err);
+        errors.push(message);
+        logger.warn(`${label} scartata dopo i tentativi: ${message}`);
+      }
+    }
+
+    if (storyIds.length === 0) {
+      return { success: false, error: errors.join("; "), platform: "facebook-story-video" };
+    }
+    logger.info(`Storie video Facebook pubblicate: ${storyIds.length}/${buffers.length}`);
+    return { success: true, storyIds, platform: "facebook-story-video" };
+  }
+
   // Risponde PUBBLICAMENTE a un commento di un post Facebook (visibile sotto il
   // post). Usata dal webhook per il ringraziamento a chi scrive la parola chiave
   // di condivisione, finché SHARE_THANKYOU_PRIVATE non è attivo (il DM privato
