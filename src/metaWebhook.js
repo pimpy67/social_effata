@@ -106,29 +106,43 @@ async function processComment(comment) {
   if (matchesShareConfirmation(comment.text) && metaAPI) {
     // Il DM privato (private_replies) è l'obiettivo, ma richiede pages_messaging /
     // instagram_manage_messages in accesso avanzato → revisione dell'app Meta.
-    // Finché non è approvata, SHARE_THANKYOU_PRIVATE resta spento e si risponde
-    // pubblicamente (funziona per tutti col token attuale). Basta accendere la
-    // variabile quando la revisione passa, senza toccare il codice.
+    // Con SHARE_THANKYOU_PRIVATE=true si tenta il DM privato; se la chiamata
+    // fallisce (permesso non concesso, finestra di 7 giorni scaduta, ecc.) si
+    // ripiega comunque sulla risposta pubblica, così l'autore riceve sempre un
+    // ringraziamento. Con la variabile spenta si va direttamente in pubblico.
     const usePrivate = process.env.SHARE_THANKYOU_PRIVATE === "true";
-    try {
-      const thankYouMessage = getWeeklyShareThankYouMessage();
-      if (usePrivate) {
-        if (comment.platform === "facebook") {
-          await metaAPI.sendFacebookPrivateReply(comment.commentId, thankYouMessage);
-        } else {
-          await metaAPI.sendInstagramPrivateReply(comment.commentId, thankYouMessage);
-        }
+    const thankYouMessage = getWeeklyShareThankYouMessage();
+
+    const sendPrivate = () =>
+      comment.platform === "facebook"
+        ? metaAPI.sendFacebookPrivateReply(comment.commentId, thankYouMessage)
+        : metaAPI.sendInstagramPrivateReply(comment.commentId, thankYouMessage);
+
+    const sendPublic = () =>
+      comment.platform === "facebook"
+        ? metaAPI.replyToFacebookComment(comment.commentId, thankYouMessage)
+        : metaAPI.replyToInstagramComment(comment.commentId, thankYouMessage);
+
+    const errText = (err) => err.response?.data?.error?.message || err.message;
+
+    let privateFailed = false;
+    if (usePrivate) {
+      try {
+        await sendPrivate();
         logger.info(`Messaggio privato di ringraziamento inviato all'autore del commento ${comment.commentId} (${comment.platform})`);
-      } else {
-        if (comment.platform === "facebook") {
-          await metaAPI.replyToFacebookComment(comment.commentId, thankYouMessage);
-        } else {
-          await metaAPI.replyToInstagramComment(comment.commentId, thankYouMessage);
-        }
-        logger.info(`Risposta pubblica di ringraziamento inviata al commento ${comment.commentId} (${comment.platform})`);
+      } catch (err) {
+        privateFailed = true;
+        logger.warn(`DM privato di ringraziamento fallito per il commento ${comment.commentId} (${comment.platform}), ripiego sulla risposta pubblica: ${errText(err)}`);
       }
-    } catch (err) {
-      logger.error(`Errore nel ringraziamento al commento ${comment.commentId} (${comment.platform}, ${usePrivate ? "privato" : "pubblico"}): ${err.response?.data?.error?.message || err.message}`);
+    }
+
+    if (!usePrivate || privateFailed) {
+      try {
+        await sendPublic();
+        logger.info(`Risposta pubblica di ringraziamento inviata al commento ${comment.commentId} (${comment.platform})`);
+      } catch (err) {
+        logger.error(`Errore nel ringraziamento pubblico al commento ${comment.commentId} (${comment.platform}): ${errText(err)}`);
+      }
     }
   }
 }

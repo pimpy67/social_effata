@@ -828,8 +828,9 @@ export class MetaAPI {
 
   // Risponde PUBBLICAMENTE a un commento di un post Facebook (visibile sotto il
   // post). Usata dal webhook per il ringraziamento a chi scrive la parola chiave
-  // di condivisione, finché SHARE_THANKYOU_PRIVATE non è attivo (il DM privato
-  // richiede pages_messaging in accesso avanzato, cioè revisione dell'app).
+  // di condivisione: è la strada di default con SHARE_THANKYOU_PRIVATE spento e
+  // il ripiego automatico quando il DM privato fallisce (permesso non concesso,
+  // finestra di 7 giorni scaduta, ecc.).
   async replyToFacebookComment(commentId, message) {
     const response = await axios.post(`${GRAPH_API_URL}/${commentId}/comments`, null, {
       params: { message, access_token: this.pageAccessToken },
