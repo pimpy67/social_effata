@@ -6,6 +6,7 @@ import { ZipArchive } from "archiver";
 import { logger } from "./logger.js";
 import { getLinkedInAuthUrl, exchangeLinkedInCode } from "./linkedinAPI.js";
 import { verifyMetaWebhook, handleMetaWebhookEvent } from "./metaWebhook.js";
+import { getMetaAPI } from "./telegramBot.js";
 import {
   getAllDrafts,
   queryDrafts,
@@ -234,6 +235,41 @@ app.get("/api/statistics", (req, res) => {
     res.json(stats);
   } catch (err) {
     logger.error(`Errore nel recuperare statistiche: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Andamento degli ultimi post pubblicati su Facebook/Instagram.
+// Dati live dalla Graph API (non dal database locale): reazioni/like, commenti,
+// condivisioni. Serve ai volontari per capire quali contenuti funzionano meglio.
+app.get("/api/analytics", async (req, res) => {
+  try {
+    const metaAPI = getMetaAPI();
+    if (!metaAPI) {
+      return res.status(503).json({ error: "Meta API non configurata sul server" });
+    }
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
+    const [fb, ig] = await Promise.all([
+      metaAPI.getFacebookPostStats(limit),
+      metaAPI.getInstagramMediaStats(limit),
+    ]);
+
+    const posts = [
+      ...(fb.success ? fb.posts : []),
+      ...(ig.success ? ig.posts : []),
+    ].sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+
+    const errors = [];
+    if (!fb.success) errors.push(`Facebook: ${fb.error}`);
+    if (!ig.success) errors.push(`Instagram: ${ig.error}`);
+
+    logger.info(
+      `API /analytics: ${posts.length} post (${fb.success ? fb.posts.length : 0} FB, ${ig.success ? ig.posts.length : 0} IG)`
+    );
+    res.json({ posts, errors });
+  } catch (err) {
+    logger.error(`Errore in /api/analytics: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

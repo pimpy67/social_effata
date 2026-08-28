@@ -430,6 +430,103 @@
       color: #999;
     }
 
+    .analytics-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .analytics-summary .card {
+      flex: 1;
+      min-width: 150px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+
+    .analytics-summary .card .label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .analytics-summary .card .value {
+      font-size: 14px;
+      color: #333;
+    }
+
+    .analytics-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .analytics-table th,
+    .analytics-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    .analytics-table th {
+      color: #666;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .analytics-table th.sorted::after {
+      content: " ▼";
+      font-size: 10px;
+    }
+
+    .analytics-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .analytics-table .excerpt {
+      max-width: 340px;
+      color: #333;
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .analytics-table .excerpt:hover {
+      color: #667eea;
+    }
+
+    .chan-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .chan-badge.facebook { background: #e7f3ff; color: #1877f2; }
+    .chan-badge.instagram { background: #fff0e7; color: #c13584; }
+
+    .analytics-note {
+      font-size: 12px;
+      color: #999;
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+
+    .analytics-table-wrap {
+      overflow-x: auto;
+    }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -486,6 +583,7 @@
       <p class="subtitle">Visualizza, approva e scarica le bozze di contenuti generati</p>
       <button class="btn-guide" onclick="openGuide()">❓ Come funziona (guida passo per passo)</button>
       <button class="btn-guide" onclick="openDiffusionGuide()">📣 Come diffondere di più (guida per volontari)</button>
+      <button class="btn-guide" onclick="openAnalytics()">📊 Andamento dei post</button>
     </header>
 
     <div class="volunteer-name">
@@ -664,9 +762,26 @@
     </div>
   </div>
 
+  <!-- Modal andamento post (engagement live da Facebook/Instagram) -->
+  <div id="analytics-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="font-size: 18px;">📊 Andamento degli ultimi post</div>
+        <button class="modal-close" onclick="closeAnalytics()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="analytics-body">
+          <div class="loading">⏳ Caricamento dati da Facebook e Instagram...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentDraftId = null;
     let allDrafts = [];
+    let analyticsPosts = [];
+    let analyticsSort = { key: "createdTime", dir: -1 };
 
     const STATUS_LABELS = {
       da_pubblicare: "🕓 Da pubblicare",
@@ -939,6 +1054,141 @@
       document.getElementById("diffusion-modal").classList.remove("active");
     }
 
+    function openAnalytics() {
+      document.getElementById("analytics-modal").classList.add("active");
+      loadAnalytics();
+    }
+
+    function closeAnalytics() {
+      document.getElementById("analytics-modal").classList.remove("active");
+    }
+
+    async function loadAnalytics() {
+      const body = document.getElementById("analytics-body");
+      body.innerHTML = `<div class="loading">⏳ Caricamento dati da Facebook e Instagram...</div>`;
+      try {
+        const response = await fetch("/api/analytics");
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Errore nel caricamento");
+        }
+        analyticsPosts = data.posts || [];
+        analyticsSort = { key: "createdTime", dir: -1 };
+        renderAnalytics(data.errors || []);
+      } catch (err) {
+        body.innerHTML = `<div class="error">Impossibile caricare l'andamento dei post: ${err.message}</div>`;
+      }
+    }
+
+    function analyticsAverages(platform) {
+      const rows = analyticsPosts.filter((p) => p.platform === platform);
+      if (rows.length === 0) return null;
+      const sum = (k) => rows.reduce((t, p) => t + (p[k] || 0), 0);
+      return {
+        count: rows.length,
+        reactions: Math.round(sum("reactions") / rows.length),
+        comments: Math.round(sum("comments") / rows.length),
+        shares: platform === "facebook" ? Math.round(sum("shares") / rows.length) : null,
+      };
+    }
+
+    function sortAnalytics(key) {
+      analyticsSort = {
+        key,
+        dir: analyticsSort.key === key ? -analyticsSort.dir : -1,
+      };
+      renderAnalytics();
+    }
+
+    function renderAnalytics(errors) {
+      const body = document.getElementById("analytics-body");
+      if (errors === undefined) errors = window._analyticsErrors || [];
+      window._analyticsErrors = errors;
+
+      if (analyticsPosts.length === 0) {
+        body.innerHTML = `
+          ${errors.length ? `<div class="error">${errors.join("<br>")}</div>` : ""}
+          <div class="empty-state"><h2>Nessun post trovato</h2><p>Non risultano post recenti su Facebook o Instagram.</p></div>`;
+        return;
+      }
+
+      const { key, dir } = analyticsSort;
+      const sorted = [...analyticsPosts].sort((a, b) => {
+        let va = a[key], vb = b[key];
+        if (key === "createdTime") { va = new Date(va); vb = new Date(vb); }
+        va = va ?? -1; vb = vb ?? -1;
+        return va > vb ? dir : va < vb ? -dir : 0;
+      });
+
+      const fbAvg = analyticsAverages("facebook");
+      const igAvg = analyticsAverages("instagram");
+
+      const summary = `
+        <div class="analytics-summary">
+          ${fbAvg ? `<div class="card">
+            <div class="label">📘 Facebook — media su ${fbAvg.count} post</div>
+            <div class="value">👍 ${fbAvg.reactions} &nbsp; 💬 ${fbAvg.comments} &nbsp; 🔁 ${fbAvg.shares}</div>
+          </div>` : ""}
+          ${igAvg ? `<div class="card">
+            <div class="label">📷 Instagram — media su ${igAvg.count} post</div>
+            <div class="value">❤️ ${igAvg.reactions} &nbsp; 💬 ${igAvg.comments}</div>
+          </div>` : ""}
+        </div>`;
+
+      const th = (label, k) =>
+        `<th onclick="sortAnalytics('${k}')" class="${key === k ? "sorted" : ""}">${label}</th>`;
+
+      const rows = sorted.map((p) => {
+        const date = new Date(p.createdTime).toLocaleDateString("it-IT", {
+          day: "2-digit", month: "2-digit", year: "2-digit",
+        });
+        const text = (p.message || "").replace(/\s+/g, " ").trim() || "(senza testo)";
+        const excerpt = p.permalink
+          ? `<a class="excerpt" href="${p.permalink}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`
+          : `<span class="excerpt">${escapeHtml(text)}</span>`;
+        return `
+          <tr>
+            <td>${date}</td>
+            <td><span class="chan-badge ${p.platform}">${p.platform === "facebook" ? "Facebook" : "Instagram"}</span></td>
+            <td>${excerpt}</td>
+            <td class="num">${p.reactions}</td>
+            <td class="num">${p.comments}</td>
+            <td class="num">${p.shares === null ? "—" : p.shares}</td>
+          </tr>`;
+      }).join("");
+
+      body.innerHTML = `
+        ${errors.length ? `<div class="error">${errors.join("<br>")}</div>` : ""}
+        ${summary}
+        <div class="analytics-table-wrap">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                ${th("Data", "createdTime")}
+                ${th("Canale", "platform")}
+                <th>Testo</th>
+                ${th("👍 / ❤️", "reactions")}
+                ${th("💬", "comments")}
+                ${th("🔁", "shares")}
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="analytics-note">
+          Dati presi in tempo reale da Facebook e Instagram. Non include copertura/visualizzazioni
+          (richiede un permesso aggiuntivo non ancora concesso). Il conteggio 💬 di Facebook include
+          il commento automatico "CONDIVISO" pubblicato dalla Pagina sotto ogni post. Instagram non
+          rende disponibile il numero di condivisioni (🔁 = "—").
+        </div>`;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[c]));
+    }
+
     // Chiudi modal quando clicchi fuori dal contenuto
     document.getElementById("modal").addEventListener("click", (e) => {
       if (e.target.id === "modal") {
@@ -955,6 +1205,12 @@
     document.getElementById("diffusion-modal").addEventListener("click", (e) => {
       if (e.target.id === "diffusion-modal") {
         closeDiffusionGuide();
+      }
+    });
+
+    document.getElementById("analytics-modal").addEventListener("click", (e) => {
+      if (e.target.id === "analytics-modal") {
+        closeAnalytics();
       }
     });
   </script>

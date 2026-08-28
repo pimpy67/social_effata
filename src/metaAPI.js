@@ -320,6 +320,78 @@ export class MetaAPI {
     return response.data.permalink_url || null;
   }
 
+  // Recupera gli ultimi N post della Pagina Facebook con i contatori di engagement
+  // (reazioni, commenti, condivisioni), presi live dalla Graph API. Usa solo campi
+  // disponibili col token attuale (`pages_read_engagement`): reach/impression
+  // richiederebbero `read_insights`, permesso non concesso all'app. Nota: il
+  // conteggio `comments` include il commento CTA "CONDIVISO" che il bot pubblica
+  // come Pagina dopo ogni post (vedi postFacebookShareCta) — l'interfaccia lo
+  // segnala, qui il numero resta grezzo per non falsare i casi in cui quel
+  // commento non è stato pubblicato.
+  async getFacebookPostStats(limit = 20) {
+    if (!this.pageAccessToken || !this.pageId) {
+      return { success: false, error: "Credenziali Meta mancanti" };
+    }
+    try {
+      const response = await axios.get(`${GRAPH_API_URL}/${this.pageId}/feed`, {
+        params: {
+          fields:
+            "id,message,created_time,permalink_url,shares,comments.summary(true).limit(0),reactions.summary(true).limit(0)",
+          limit,
+          access_token: this.pageAccessToken,
+        },
+      });
+      const posts = (response.data.data || []).map((p) => ({
+        id: p.id,
+        platform: "facebook",
+        message: p.message || "",
+        createdTime: p.created_time,
+        permalink: p.permalink_url || null,
+        reactions: p.reactions?.summary?.total_count || 0,
+        comments: p.comments?.summary?.total_count || 0,
+        shares: p.shares?.count || 0,
+      }));
+      return { success: true, posts };
+    } catch (err) {
+      const message = metaErrorMessage(err);
+      logger.error(`Errore nel recupero statistiche Facebook: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  // Equivalente Instagram: ultimi N media del profilo Business con like e commenti.
+  // Instagram non espone il numero di condivisioni via API (shares = null).
+  async getInstagramMediaStats(limit = 20) {
+    if (!this.instagramAccountId || !this.pageAccessToken) {
+      return { success: false, error: "Account Instagram non collegato" };
+    }
+    try {
+      const response = await axios.get(`${GRAPH_API_URL}/${this.instagramAccountId}/media`, {
+        params: {
+          fields: "id,caption,media_type,timestamp,permalink,like_count,comments_count",
+          limit,
+          access_token: this.pageAccessToken,
+        },
+      });
+      const posts = (response.data.data || []).map((m) => ({
+        id: m.id,
+        platform: "instagram",
+        message: m.caption || "",
+        createdTime: m.timestamp,
+        permalink: m.permalink || null,
+        mediaType: m.media_type || null,
+        reactions: m.like_count || 0,
+        comments: m.comments_count || 0,
+        shares: null,
+      }));
+      return { success: true, posts };
+    } catch (err) {
+      const message = metaErrorMessage(err);
+      logger.error(`Errore nel recupero statistiche Instagram: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
   // Pubblica una o più Storie Facebook (contenuto effimero, sparisce dopo 24h), in
   // aggiunta al post normale. Una Storia mostra sempre una sola foto: con più foto
   // ne pubblica una in sequenza per ciascuna (chi guarda le scorre una dopo l'altra).
