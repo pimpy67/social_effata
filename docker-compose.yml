@@ -49,6 +49,10 @@ services:
       # rebuild del container (es. deploy di una modifica al codice) le perde,
       # perché intake viveva solo nel filesystem effimero del container.
       - ./intake:/app/intake
+      # Coda del materiale in attesa (pendingByChat / categoria selezionata):
+      # i file video/foto stanno in ./intake, ma senza persistere anche questo
+      # indice un rebuild lasciava i file orfani e /status tornava vuoto.
+      - ./state.json:/app/state.json
     networks:
       - effata-network
     labels:

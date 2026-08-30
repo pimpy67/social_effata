@@ -113,14 +113,19 @@ describe("validation.validateMaterialForGenerate", () => {
     expect(validation.validateMaterialForGenerate(5, 3).valid).toBe(true);
   });
 
-  test("rifiuta senza foto", () => {
+  test("accetta con solo video (senza foto)", () => {
+    expect(validation.validateMaterialForGenerate(0, 0, 1).valid).toBe(true);
+    expect(validation.validateMaterialForGenerate(0, 2, 1).valid).toBe(true);
+  });
+
+  test("rifiuta senza foto né video", () => {
     const result = validation.validateMaterialForGenerate(0, 5);
     expect(result.valid).toBe(false);
     expect(result.error).toContain("Nessuna foto");
   });
 
   test("rifiuta senza materiale", () => {
-    const result = validation.validateMaterialForGenerate(0, 0);
+    const result = validation.validateMaterialForGenerate(0, 0, 0);
     expect(result.valid).toBe(false);
   });
 });

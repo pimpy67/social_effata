@@ -478,7 +478,7 @@ function loadState() {
     if (fs.existsSync(STATE_FILE)) {
       const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
       for (const [chatId, chatData] of Object.entries(data)) {
-        pendingByChat.set(chatId, chatData);
+        pendingByChat.set(String(chatId), chatData);
       }
       logger.info(`Stato caricato (${Object.keys(data).length} chat)`);
     }
@@ -497,11 +497,20 @@ function saveState() {
   }
 }
 
+// Le chat sono sempre indicizzate per stringa. Fondamentale: loadState() ripopola
+// pendingByChat da state.json con chiavi stringa (Object.entries), mentre gli
+// handler Telegram ricevono msg.chat.id come NUMERO. Senza normalizzare, dopo ogni
+// riavvio/deploy /status e /genera cercavano la chiave numerica, non trovavano il
+// materiale ripristinato ("nessun materiale in attesa" anche se le foto c'erano) e
+// il salvataggio successivo creava una seconda voce parallela.
+const chatKey = (chatId) => String(chatId);
+
 function getPending(chatId) {
-  if (!pendingByChat.has(chatId)) {
-    pendingByChat.set(chatId, { photos: [], notes: [], videos: [] });
+  const key = chatKey(chatId);
+  if (!pendingByChat.has(key)) {
+    pendingByChat.set(key, { photos: [], notes: [], videos: [] });
   }
-  const pending = pendingByChat.get(chatId);
+  const pending = pendingByChat.get(key);
   if (!pending.videos) pending.videos = []; // retrocompatibilità con stato salvato prima dei video
   return pending;
 }
@@ -693,8 +702,15 @@ export async function startBot() {
   // Genera le bozze social dal materiale in attesa. categoryData contiene gli eventuali
   // campi opzionali specifici della categoria selezionata (bambino/sostenitore, animali, ecc.).
   async function runGenerate(chatId, categoryData = {}) {
+    chatId = chatKey(chatId);
     const pending = pendingByChat.get(chatId);
-    if (!pending) return;
+    if (!pending || (pending.photos.length === 0 && pending.notes.length === 0 && (pending.videos || []).length === 0)) {
+      await bot.sendMessage(
+        chatId,
+        "⚠️ Non trovo più il materiale per questa storia (forse è già stato generato). Ricomincia con /categoria, poi manda foto e testo e scrivi /genera."
+      );
+      return;
+    }
     if (!pending.videos) pending.videos = []; // retrocompatibilità con stato salvato prima dei video
 
     if (generationInProgress.has(chatId)) {
@@ -1261,7 +1277,7 @@ export async function startBot() {
     if (!isAllowed(msg.chat.id)) return;
     if (msg.text.startsWith("/")) return; // i comandi si gestiscono a parte
 
-    const chatId = msg.chat.id;
+    const chatId = chatKey(msg.chat.id);
 
     // Se è in corso la sequenza di domande per la categoria selezionata, questo testo
     // è la risposta alla domanda corrente (campo opzionale: "-" per saltarlo).
@@ -1360,6 +1376,7 @@ Altri comandi utili:
   // Ricorda (una sola volta per storia) di scegliere la categoria se non è stata
   // ancora selezionata quando arrivano foto o testo.
   async function remindCategoryIfNeeded(chatId, pending) {
+    chatId = chatKey(chatId);
     if (selectedCategory.get(chatId) || pending.categoryReminded) return;
     pending.categoryReminded = true;
     saveState();
@@ -1370,7 +1387,7 @@ Altri comandi utili:
   }
 
   bot.onText(/^\/status$/i, async (msg) => {
-    const chatId = msg.chat.id;
+    const chatId = chatKey(msg.chat.id);
     if (!isAllowed(chatId)) return;
 
     const pending = pendingByChat.get(chatId);
@@ -1384,7 +1401,7 @@ Altri comandi utili:
   });
 
   bot.onText(/^\/reset$/i, async (msg) => {
-    const chatId = msg.chat.id;
+    const chatId = chatKey(msg.chat.id);
     if (!isAllowed(chatId)) return;
 
     const pending = pendingByChat.get(chatId);
@@ -1419,7 +1436,7 @@ Altri comandi utili:
 
   // Comando /categoria - Seleziona categoria per la storia
   bot.onText(/^\/categoria$/i, async (msg) => {
-    const chatId = msg.chat.id;
+    const chatId = chatKey(msg.chat.id);
     if (!isAllowed(chatId)) return;
 
     const buttons = CATEGORY_ORDER.map((id) => [
@@ -1433,7 +1450,7 @@ Altri comandi utili:
 
   // Callback per selezione categoria
   bot.on("callback_query", async (query) => {
-    const chatId = query.message.chat.id;
+    const chatId = chatKey(query.message.chat.id);
     if (!isAllowed(chatId)) return;
 
     if (query.data.startsWith("category_")) {
@@ -1686,8 +1703,27 @@ Altri comandi utili:
   });
 
   bot.onText(/^\/genera$/i, async (msg) => {
-    const chatId = msg.chat.id;
+    const chatId = chatKey(msg.chat.id);
     if (!isAllowed(chatId)) return;
+
+    // Una generazione (soprattutto con video) può durare minuti: un secondo /genera
+    // nel frattempo faceva ripartire le domande da capo e, quando la prima
+    // generazione finiva cancellando foto+categoria, la seconda non trovava più il
+    // materiale — poi /status risultava vuoto. Blocca il secondo /genera finché la
+    // prima non ha finito.
+    if (generationInProgress.has(chatId)) {
+      await bot.sendMessage(chatId, "⏳ Sto ancora generando le bozze. Aspetta il messaggio di conferma ✅ prima di rilanciare /genera.");
+      return;
+    }
+
+    // Se le domande della categoria sono già in corso, non ricominciare da zero:
+    // ripeti solo la domanda corrente così l'utente prosegue da dove era.
+    const openSession = categorySessions.get(chatId);
+    if (openSession) {
+      await bot.sendMessage(chatId, '📋 Stai già rispondendo alle domande di questa storia. Rispondi qui sotto (scrivi "-" per saltare):');
+      await askCurrentStep(bot, chatId, openSession);
+      return;
+    }
 
     // Valida il rate limiting (cooldown tra /genera)
     const cooldownCheck = validation.validateGenerateCooldown(chatId);
@@ -1708,7 +1744,8 @@ Altri comandi utili:
     // Valida il materiale disponibile
     const materialCheck = validation.validateMaterialForGenerate(
       pending?.photos.length || 0,
-      pending?.notes.length || 0
+      pending?.notes.length || 0,
+      pending?.videos?.length || 0
     );
     if (!materialCheck.valid) {
       await bot.sendMessage(chatId, `⚠️ ${materialCheck.error}`);

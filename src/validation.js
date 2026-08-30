@@ -135,19 +135,21 @@ export const validation = {
     return { valid: true };
   },
 
-  // Valida che ci sia materiale sufficiente per /genera
-  validateMaterialForGenerate(photoCount, textCount) {
-    if (photoCount === 0) {
+  // Valida che ci sia materiale sufficiente per /genera. Serve almeno una foto
+  // OPPURE un video: il percorso "solo video" (Reel + Storia video, senza post
+  // foto) è gestito da runGenerate, quindi non va bloccato qui.
+  validateMaterialForGenerate(photoCount, textCount, videoCount = 0) {
+    if (photoCount === 0 && videoCount === 0) {
       return {
         valid: false,
-        error: "Nessuna foto. Mandane almeno una prima di scrivere /genera.",
+        error: "Nessuna foto né video. Manda almeno una foto o un video prima di scrivere /genera.",
       };
     }
 
-    if (photoCount + textCount === 0) {
+    if (photoCount + textCount + videoCount === 0) {
       return {
         valid: false,
-        error: "Nessun materiale accumulato. Manda foto e/o testi.",
+        error: "Nessun materiale accumulato. Manda foto, video e/o testi.",
       };
     }
 
