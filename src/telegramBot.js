@@ -1519,6 +1519,39 @@ Altri comandi utili:
         categorySessions.delete(chatId);
         await runGenerate(chatId, categoryData);
       }
+    } else if (query.data.startsWith("pub_ig_sum_")) {
+      // Pubblica SUBITO su Instagram il post di riepilogo mensile (IG non ha bozze
+      // via API). Foto + didascalia dai file salvati in output/ dal riepilogo.
+      const timestamp = query.data.replace("pub_ig_sum_", "");
+      if (!metaAPI) {
+        await bot.answerCallbackQuery(query.id, { text: "Meta API non configurata." });
+        return;
+      }
+
+      let igText;
+      let image;
+      try {
+        igText = fs.readFileSync(path.join(OUTPUT_DIR, `${timestamp}_instagram.txt`), "utf-8");
+        image = fs.readFileSync(path.join(OUTPUT_DIR, `${timestamp}_summary.jpg`));
+      } catch (err) {
+        await bot.answerCallbackQuery(query.id, { text: "File del riepilogo non trovati." });
+        logger.warn(`Pubblicazione IG riepilogo ${timestamp}: file mancanti (${err.message})`);
+        return;
+      }
+
+      await bot.answerCallbackQuery(query.id, { text: "Pubblico su Instagram…" });
+      const igResult = await metaAPI.publishToInstagram(igText, [image]);
+
+      if (igResult.success) {
+        await bot
+          .editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: query.message.chat.id, message_id: query.message.message_id })
+          .catch(() => {});
+        await bot.sendMessage(chatId, "✅ Riepilogo pubblicato su Instagram.");
+        logger.info(`Riepilogo ${timestamp} pubblicato su Instagram: ${igResult.mediaId}`);
+      } else {
+        await bot.sendMessage(chatId, `⚠️ Instagram non pubblicato: ${igResult.error}`);
+        logger.error(`Pubblicazione IG riepilogo ${timestamp} fallita: ${igResult.error}`);
+      }
     } else if (query.data.startsWith("publish_fb_")) {
       const timestamp = query.data.replace("publish_fb_", "");
       const draft = getUnpublishedFacebookDrafts(50).find((d) => String(d.timestamp) === timestamp);

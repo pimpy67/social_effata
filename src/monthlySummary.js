@@ -394,9 +394,17 @@ export async function runMonthlySummaryIfDue(bot, metaAPI) {
 
   try {
     await bot.sendPhoto(chatId, image, {
-      caption: `📊 Riepilogo di ${report.monthName} pronto (${activityCount} attività realizzate).\n\n${fbNote}\n\n📷 Per Instagram: usa questa immagine + la didascalia nel messaggio qui sotto.`,
+      caption: `📊 Riepilogo di ${report.monthName} pronto (${activityCount} attività realizzate).\n\n${fbNote}`,
     });
-    await bot.sendMessage(chatId, `📷 Didascalia Instagram (tieni premuto per copiare):\n\n${captions.instagram}`);
+    // Instagram non ha bozze via API: il pulsante pubblica il post SUBITO e in
+    // pubblico (foto + questa didascalia). È il via libera manuale, come il tap
+    // sulla bozza Facebook. I file letti dal gestore sono ${timestamp}_instagram.txt
+    // e ${timestamp}_summary.jpg, già salvati sopra in output/.
+    await bot.sendMessage(chatId, `📷 Didascalia Instagram (tieni premuto per copiare):\n\n${captions.instagram}`, {
+      reply_markup: {
+        inline_keyboard: [[{ text: "📷 Pubblica ora su Instagram", callback_data: `pub_ig_sum_${timestamp}` }]],
+      },
+    });
     await bot.sendMessage(chatId, `📘 Testo Facebook (già nella bozza, qui per riferimento):\n\n${captions.facebook}`);
   } catch (err) {
     logger.error(`Riepilogo mensile ${monthKey}: errore nell'invio della notifica Telegram: ${err.message}`);
