@@ -265,12 +265,11 @@ export class MetaAPI {
       formData.append("message", text);
       formData.append("published", "false"); // Pubblica come bozza
 
-      if (photos.length === 1) {
-        const blob = new Blob([photos[0]], { type: "image/jpeg" });
-        formData.append("source", blob, "image.jpg");
-      } else if (photos.length > 1) {
-        // Facebook richiede di caricare ogni foto come "non pubblicata" e poi
-        // allegarle tutte a un unico post tramite attached_media.
+      if (photos.length >= 1) {
+        // L'endpoint /feed non accetta l'upload di un file come "source" (si aspetta
+        // un URL: da qui l'errore "source should represent a valid URL"). Ogni foto va
+        // caricata come "non pubblicata" su /photos e poi agganciata al post tramite
+        // attached_media — vale anche per una foto sola.
         const photoIds = await Promise.all(photos.map((buf) => this.uploadUnpublishedPhoto(buf)));
         formData.append("attached_media", JSON.stringify(photoIds.map((id) => ({ media_fbid: id }))));
       }
