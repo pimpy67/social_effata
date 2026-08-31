@@ -53,6 +53,12 @@ services:
       # i file video/foto stanno in ./intake, ma senza persistere anche questo
       # indice un rebuild lasciava i file orfani e /status tornava vuoto.
       - ./state.json:/app/state.json
+      # Ultimo mese per cui il post di riepilogo è già stato preparato: senza
+      # questo volume un rebuild lo azzerava e, se fatto nella finestra "ultimo
+      # giorno del mese dalle 21" o il 1°, il riepilogo veniva rigenerato (bozze
+      # doppie). Il file sull'host DEVE esistere prima di `up` (altrimenti Docker
+      # ci monta una cartella): crearlo con {"lastRunMonth":"<YYYY-MM già fatto>"}.
+      - ./monthly-summary-state.json:/app/monthly-summary-state.json
     networks:
       - effata-network
     labels:
