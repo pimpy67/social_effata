@@ -4,6 +4,7 @@ import {
   dueSummaryMonth,
   buildSummaryImageText,
   buildReportDigest,
+  summaryActivityCount,
 } from "../src/monthlySummary.js";
 
 describe("getRomeParts", () => {
@@ -61,42 +62,85 @@ describe("dueSummaryMonth", () => {
 });
 
 describe("buildSummaryImageText", () => {
-  test("include mese in maiuscolo e totale", () => {
-    const text = buildSummaryImageText({ monthName: "agosto 2026", total: 12 });
+  test("include il mese in maiuscolo e una frase di gratitudine, nessun numero", () => {
+    const text = buildSummaryImageText({ monthName: "agosto 2026", details: [] });
     expect(text).toContain("AGOSTO 2026");
-    expect(text).toContain("12 storie di aiuto raccontate");
+    expect(text).toMatch(/grazie/i);
+    expect(text).not.toMatch(/aiut|storia|storie/i);
+  });
+});
+
+describe("summaryActivityCount", () => {
+  test("somma i numeri principali per categoria (bambini, carrozzine, opere)", () => {
+    const n = summaryActivityCount({
+      details: [
+        { categoryNumber: "1", category: "Adozioni scolastiche", data: { sponsors: [{ childName: "Amina" }, { childName: "Rose" }] } },
+        { categoryNumber: "1", category: "Adozioni scolastiche", data: { childName: "Divine" } },
+        { categoryNumber: "3", category: "Aiuti sanitari (Carozzine)", data: { wheelchairCount: "3" } },
+        { categoryNumber: "4", category: "Costruzione casette", data: {} },
+      ],
+    });
+    expect(n).toBe(3 + 3 + 1);
   });
 
-  test("singolare con una sola storia", () => {
-    const text = buildSummaryImageText({ monthName: "agosto 2026", total: 1 });
-    expect(text).toContain("1 storia di aiuto raccontata");
+  test("non conta Vari né Volontariato Digitale", () => {
+    const n = summaryActivityCount({
+      details: [
+        { categoryNumber: "1", category: "Adozioni scolastiche", data: { childName: "Amina" } },
+        { categoryNumber: "10", category: "Vari", data: {} },
+        { categoryNumber: "11", category: "Volontariato Digitale", data: {} },
+        { categoryNumber: "12", category: "Grazie Volontari Digitali", data: {} },
+      ],
+    });
+    expect(n).toBe(1);
   });
 });
 
 describe("buildReportDigest", () => {
-  test("elenca i conteggi per categoria e i nomi dei beneficiari", () => {
+  test("elenca le attività per categoria con nomi e conteggi, senza parlare di storie/post", () => {
     const digest = buildReportDigest({
       monthName: "agosto 2026",
-      total: 3,
-      report: { "Adozioni scolastiche": 2, "Aiuti sanitari (Operazioni)": 1 },
       details: [
-        { data: { sponsors: [{ childName: "Amina" }, { childName: "Rose Marie" }] } },
-        { data: { childName: "Divine" } },
+        {
+          categoryNumber: "1",
+          category: "Adozioni scolastiche",
+          data: { sponsors: [{ childName: "Amina" }, { childName: "Rose Marie" }] },
+        },
+        { categoryNumber: "1", category: "Adozioni scolastiche", data: { childName: "Divine" } },
+        {
+          categoryNumber: "3",
+          category: "Aiuti sanitari (Carozzine)",
+          data: { wheelchairCount: "3", childrenNames: "Patrick e Lydia" },
+        },
       ],
     });
-    expect(digest).toContain("Totale storie pubblicate: 3");
-    expect(digest).toContain("- Adozioni scolastiche: 2");
-    expect(digest).toContain("- Aiuti sanitari (Operazioni): 1");
+    expect(digest).not.toMatch(/stori[ae]|\bpost\b/i);
+    expect(digest).toContain("Adozioni scolastiche: 3");
     expect(digest).toContain("Amina, Rose, Divine");
+    expect(digest).toContain("Aiuti sanitari (Carozzine): 3");
+    expect(digest).toContain("Patrick e Lydia");
   });
 
-  test("niente riga nomi se non ci sono childName", () => {
+  test("esclude Vari e Volontariato Digitale dal digest", () => {
+    const digest = buildReportDigest({
+      monthName: "agosto 2026",
+      details: [
+        { categoryNumber: "4", category: "Costruzione casette", data: { familyName: "Famiglia Okello" } },
+        { categoryNumber: "11", category: "Volontariato Digitale", data: {} },
+        { categoryNumber: "10", category: "Vari", data: {} },
+      ],
+    });
+    expect(digest).toContain("Costruzione casette: 1");
+    expect(digest).toContain("Famiglia Okello");
+    expect(digest).not.toContain("Volontariato Digitale");
+    expect(digest).not.toContain("Vari");
+  });
+
+  test("categoria senza campi extra: solo il conteggio", () => {
     const digest = buildReportDigest({
       monthName: "luglio 2026",
-      total: 1,
-      report: { "Costruzione casette": 1 },
-      details: [{ data: {} }],
+      details: [{ categoryNumber: "4", category: "Costruzione casette", data: {} }],
     });
-    expect(digest).not.toContain("Nomi di battesimo");
+    expect(digest).toContain("Costruzione casette: 1");
   });
 });
