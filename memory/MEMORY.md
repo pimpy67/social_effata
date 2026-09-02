@@ -1,1 +1,0 @@
-- [Automazione Multi-Canale](project_automation_multicanale.md) — Estendere bot a Meta, Blog, YouTube, LinkedIn (prossima fase)
