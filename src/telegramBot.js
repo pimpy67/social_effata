@@ -473,15 +473,40 @@ let emailAPI = null;
 // Client LinkedIn API (per pubblicare sulla pagina aziendale, se configurato)
 let linkedinAPI = null;
 
+// state.json contiene: il materiale in coda (pendingByChat) MA ANCHE la categoria
+// selezionata e la sessione di domande in corso. Servono persistenti perché il
+// container qui riavvia spesso (deploy, crash di rete): se sopravvivessero solo le
+// foto — come prima — dopo ogni riavvio /genera chiedeva di nuovo la categoria e la
+// bozza in lavorazione andava persa. Vecchio formato = mappa piatta
+// { "<chatId>": { photos, notes, videos } }; nuovo formato = { pending, selectedCategory,
+// categorySessions }. loadState riconosce entrambi.
 function loadState() {
   try {
-    if (fs.existsSync(STATE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
-      for (const [chatId, chatData] of Object.entries(data)) {
-        pendingByChat.set(String(chatId), chatData);
-      }
-      logger.info(`Stato caricato (${Object.keys(data).length} chat)`);
+    if (!fs.existsSync(STATE_FILE)) return;
+    const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    const isNewFormat =
+      data && typeof data === "object" && data.pending && typeof data.pending === "object";
+    const pendingData = isNewFormat ? data.pending : data;
+    const catData = isNewFormat ? data.selectedCategory || {} : {};
+    const sessData = isNewFormat ? data.categorySessions || {} : {};
+
+    for (const [chatId, chatData] of Object.entries(pendingData)) {
+      pendingByChat.set(String(chatId), chatData);
     }
+    for (const [chatId, cat] of Object.entries(catData)) {
+      selectedCategory.set(String(chatId), cat);
+    }
+    for (const [chatId, sess] of Object.entries(sessData)) {
+      // Dopo la serializzazione i passi non sono più lo stesso oggetto di LINK_STEP:
+      // rimetti la costante così askCurrentStep riconosce il passo del link CTA.
+      if (Array.isArray(sess.steps)) {
+        sess.steps = sess.steps.map((s) => (s && s.key === LINK_STEP.key ? LINK_STEP : s));
+      }
+      categorySessions.set(String(chatId), sess);
+    }
+    logger.info(
+      `Stato caricato (${pendingByChat.size} chat, ${selectedCategory.size} categorie, ${categorySessions.size} sessioni)`
+    );
   } catch (err) {
     logger.warn(`Errore nel caricare lo stato: ${err.message}`);
   }
@@ -489,7 +514,11 @@ function loadState() {
 
 function saveState() {
   try {
-    const data = Object.fromEntries(pendingByChat);
+    const data = {
+      pending: Object.fromEntries(pendingByChat),
+      selectedCategory: Object.fromEntries(selectedCategory),
+      categorySessions: Object.fromEntries(categorySessions),
+    };
     fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2), "utf-8");
     logger.debug(`Stato salvato (${pendingByChat.size} chat)`);
   } catch (err) {
@@ -1140,6 +1169,7 @@ export async function startBot() {
 
       // Pulisci la categoria dopo la generazione
       selectedCategory.delete(chatId);
+      saveState();
 
       // Esito di Reel e Storia video è già in metaMessage (righe 🎬). Tutti i video
       // caricati vengono comunque salvati anche in output/.
@@ -1306,6 +1336,7 @@ export async function startBot() {
         categorySession.data.sponsors = categorySession.data.sponsors || [];
         categorySession.data.sponsors.push(categorySession.currentGroup || {});
         categorySession.currentGroup = {};
+        saveState();
         await askAddAnotherSponsor(bot, chatId, categorySession);
         return;
       }
@@ -1313,10 +1344,12 @@ export async function startBot() {
       const nextIndex = categorySession.step + 1;
       if (nextIndex < categorySession.steps.length) {
         categorySession.step = nextIndex;
+        saveState();
         await askCurrentStep(bot, chatId, categorySession);
       } else {
         const categoryData = categorySession.data;
         categorySessions.delete(chatId);
+        saveState();
         await runGenerate(chatId, categoryData);
       }
       return;
@@ -1429,6 +1462,8 @@ Altri comandi utili:
     });
 
     pendingByChat.delete(chatId);
+    selectedCategory.delete(chatId);
+    categorySessions.delete(chatId);
     saveState();
 
     await bot.sendMessage(chatId, "✅ Materiale cancellato. Puoi iniziare una nuova storia.");
@@ -1459,6 +1494,7 @@ Altri comandi utili:
 
       if (categoryName) {
         selectedCategory.set(chatId, { id: categoryId, name: categoryName });
+        saveState();
         await bot.answerCallbackQuery(query.id);
 
         const pending = pendingByChat.get(chatId);
@@ -1487,10 +1523,12 @@ Altri comandi utili:
       const nextIndex = session.step + 1;
       if (nextIndex < session.steps.length) {
         session.step = nextIndex;
+        saveState();
         await askCurrentStep(bot, chatId, session);
       } else {
         const categoryData = session.data;
         categorySessions.delete(chatId);
+        saveState();
         await runGenerate(chatId, categoryData);
       }
     } else if (query.data === "more_sponsors_yes" || query.data === "more_sponsors_no") {
@@ -1504,6 +1542,7 @@ Altri comandi utili:
       if (query.data === "more_sponsors_yes") {
         // Ricomincia il gruppo di domande di categoria (indice 0) per il prossimo padrino/bambino.
         session.step = 0;
+        saveState();
         await askCurrentStep(bot, chatId, session);
         return;
       }
@@ -1513,10 +1552,12 @@ Altri comandi utili:
       const categoryStepsLength = (CATEGORY_STEPS[session.categoryId] || []).length;
       if (categoryStepsLength < session.steps.length) {
         session.step = categoryStepsLength;
+        saveState();
         await askCurrentStep(bot, chatId, session);
       } else {
         const categoryData = session.data;
         categorySessions.delete(chatId);
+        saveState();
         await runGenerate(chatId, categoryData);
       }
     } else if (query.data.startsWith("pub_ig_sum_")) {
@@ -1791,6 +1832,7 @@ Altri comandi utili:
     const steps = [...(CATEGORY_STEPS[selected.id] || []), LINK_STEP];
     const session = { steps, step: 0, data: {}, categoryId: selected.id };
     categorySessions.set(chatId, session);
+    saveState();
     await bot.sendMessage(
       chatId,
       `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.`
