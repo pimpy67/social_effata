@@ -237,7 +237,7 @@ const CATEGORY_STORY_INFO = {
   ],
   "4": "COSTRUISCI UNA CASA\nPER UNA FAMIGLIA\ncon 1.500€\nsolo 975€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   "5": "AIUTA UNA FAMIGLIA\nA COLTIVARE LA TERRA\ncon 80€\nsolo 52€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
-  "6": "DONA UN ANIMALE\nda 5€ a 600€\nda 3€ a 390€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
+  "6": "DONA UN ANIMALE\ngallina 5€ · maiale 50€\ncapra 50€ · mucca 600€\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   "7": "DONA UN MATERASSO\n20€, 13€ netti\no una coperta\n10€, 7€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   "8": "DONA UN PAIO\nDI SCARPE CON 10€\nsolo 7€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   // Nessun prezzo fisso (a differenza delle altre categorie): donazione libera, detraibile al 35%.
