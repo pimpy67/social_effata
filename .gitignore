@@ -6,6 +6,7 @@ node_modules/
 /memory/
 state.json
 monthly-summary-state.json
+calendar-promo-state.json
 coverage/
 effata.db
 .DS_Store

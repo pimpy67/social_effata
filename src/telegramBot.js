@@ -12,6 +12,7 @@ import { initLinkedInAPI } from "./linkedinAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial, buildCategoryInfoSlide } from "./photoOptimizer.js";
 import { runMonthlySummaryIfDue } from "./monthlySummary.js";
+import { runCalendarPromoIfDue, runCalendarPromoNow } from "./calendarPromo.js";
 import { addUtmParams, todayStamp } from "./utm.js";
 import {
   saveDraft,
@@ -1398,6 +1399,7 @@ Altri comandi utili:
 /status - vedi quante foto/testi hai in attesa
 /reset - cancella il materiale in attesa e ricomincia
 /bozze - pubblica su Facebook le bozze in attesa
+/calendario - pubblica ora una promo del calendario solidale (post + Storia FB/IG). Di suo esce da sola ogni martedì e venerdì alle 18
 /report-mese - riepilogo storie del mese
 /report-anno - riepilogo storie dell'anno`;
 
@@ -1712,6 +1714,36 @@ Altri comandi utili:
     }
   });
 
+  // Comando /calendario - Pubblica SUBITO, a mano, una promo del calendario
+  // solidale (post + Storia su Facebook e Instagram), senza aspettare la finestra
+  // automatica di martedì/venerdì. Non tocca lo stato della pubblicazione
+  // programmata. Utile per un test o per un'uscita extra.
+  let calendarPromoRunning = false;
+  bot.onText(/^\/calendario$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    if (calendarPromoRunning) {
+      await bot.sendMessage(chatId, "⏳ Promo calendario già in corso, aspetta che finisca.");
+      return;
+    }
+    if (!metaAPI) {
+      await bot.sendMessage(chatId, "⚠️ Meta API non configurata: impossibile pubblicare.");
+      return;
+    }
+
+    calendarPromoRunning = true;
+    await bot.sendMessage(chatId, "🎁 Genero e pubblico ora la promo del calendario solidale (post + Storia su Facebook e Instagram). Ci vuole un minuto…");
+    try {
+      await runCalendarPromoNow(bot, metaAPI);
+    } catch (err) {
+      logger.error(`/calendario: errore nella pubblicazione manuale: ${err.message}`);
+      await bot.sendMessage(chatId, `⚠️ Errore nella pubblicazione: ${err.message}`);
+    } finally {
+      calendarPromoRunning = false;
+    }
+  });
+
   // Comando /report-mese - Report mensile
   bot.onText(/^\/report-mese(?:\s+(\d{4})\s+(\d{1,2}))?$/i, async (msg, match) => {
     const chatId = msg.chat.id;
@@ -1853,6 +1885,16 @@ Altri comandi utili:
     );
   await checkMonthlySummary();
   setInterval(checkMonthlySummary, 60 * 60 * 1000);
+
+  // Controlla (al via e poi ogni ora) se è martedì o venerdì dalle 18 (ora
+  // italiana): in quel caso pubblica SUBITO la promo del calendario solidale —
+  // post + Storia su Facebook e Instagram — e manda un riepilogo su Telegram.
+  const checkCalendarPromo = () =>
+    runCalendarPromoIfDue(bot, metaAPI).catch((err) =>
+      logger.error(`Errore nella promo calendario solidale automatica: ${err.message}`)
+    );
+  await checkCalendarPromo();
+  setInterval(checkCalendarPromo, 60 * 60 * 1000);
 
   return bot;
 }

@@ -204,7 +204,14 @@ function buildInfoSlideLines(text, maxCharsPerLine) {
 // (vedi il ciclo su categoryInfoTexts in optimizePhotosForSocial). Esportata anche
 // per la Storia video (telegramBot.js): lì la slide finale va pubblicata a mano
 // come ultimo frame, dopo le clip video, invece di essere in coda alla Storia foto.
-export async function buildCategoryInfoSlide(text) {
+//
+// `dimensions` opzionale (default: formato Storia 1080x1920): la promo del
+// calendario solidale (src/calendarPromo.js) riusa questa stessa slide anche per
+// il post nel feed, che vuole il 4:5 (1080x1350). Il blocco intestazione+logo+testo
+// resta centrato verticalmente sull'altezza scelta, quindi per il 1350 il testo va
+// tenuto corto (poche righe) o sbordarebbe sopra/sotto.
+export async function buildCategoryInfoSlide(text, dimensions = STORY_DIMENSIONS) {
+  const { width, height } = dimensions;
   const logoBuffer = await sharp(LOGO_PATH)
     .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
     .toBuffer();
@@ -234,7 +241,7 @@ export async function buildCategoryInfoSlide(text) {
     INFO_SLIDE_LOGO_TEXT_GAP +
     textBlockHeight;
 
-  const headerTop = Math.round((STORY_DIMENSIONS.height - totalBlockHeight) / 2 + INFO_SLIDE_HEADER_FONT_SIZE * 0.75);
+  const headerTop = Math.round((height - totalBlockHeight) / 2 + INFO_SLIDE_HEADER_FONT_SIZE * 0.75);
 
   const headerSvg = headerLines
     .map(
@@ -254,16 +261,16 @@ export async function buildCategoryInfoSlide(text) {
     )
     .join("");
 
-  const background = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">
+  const background = `<svg width="${width}" height="${height}">
       <rect width="100%" height="100%" fill="${BRAND_RED}" />
     </svg>`;
-  const textOverlay = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">${headerSvg}${textSvg}</svg>`;
+  const textOverlay = `<svg width="${width}" height="${height}">${headerSvg}${textSvg}</svg>`;
 
   return sharp(Buffer.from(background))
     .composite([
       {
         input: logoBuffer,
-        left: Math.round((STORY_DIMENSIONS.width - INFO_SLIDE_LOGO_SIZE) / 2),
+        left: Math.round((width - INFO_SLIDE_LOGO_SIZE) / 2),
         top: logoTop,
       },
       { input: Buffer.from(textOverlay), top: 0, left: 0 },

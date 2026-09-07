@@ -59,6 +59,11 @@ services:
       # doppie). Il file sull'host DEVE esistere prima di `up` (altrimenti Docker
       # ci monta una cartella): crearlo con {"lastRunMonth":"<YYYY-MM già fatto>"}.
       - ./monthly-summary-state.json:/app/monthly-summary-state.json
+      # Ultima data (YYYY-MM-DD) in cui la promo del calendario solidale è già
+      # uscita: senza questo volume un rebuild fatto di martedì/venerdì dopo le 18
+      # ripubblicherebbe post + Storia. Il file sull'host DEVE esistere prima di
+      # `up` (altrimenti Docker ci monta una cartella): crearlo con `{}`.
+      - ./calendar-promo-state.json:/app/calendar-promo-state.json
     networks:
       - effata-network
     labels:

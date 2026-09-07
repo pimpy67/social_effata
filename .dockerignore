@@ -12,6 +12,7 @@ output/
 .env.*.local
 state.json
 monthly-summary-state.json
+calendar-promo-state.json
 effata.db
 .dockerignore
 Dockerfile
