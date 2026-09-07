@@ -272,6 +272,29 @@ export async function buildCategoryInfoSlide(text) {
     .toBuffer();
 }
 
+// Mette la foto su una tela esatta width x height con lo sfondo sfocato (una copia
+// ingrandita della foto stessa) a riempire lo spazio che avanza, invece di lasciare
+// bande vuote. Serve per Instagram: l'API del feed, se riceve una foto orizzontale
+// (rapporto fuori dal range 4:5–1.91:1 accettato), la incornicia con bande NERE —
+// non aggiunge lo sfondo sfocato come fa l'app quando carichi a mano. Così i post
+// Instagram con foto orizzontali hanno lo stesso effetto "sfumato" di Facebook, e
+// in più tutte le foto di un carosello restano dello stesso formato.
+async function padWithBlur(buffer, width, height) {
+  const background = await sharp(buffer)
+    .resize(width, height, { fit: "cover" })
+    .blur(30)
+    .toBuffer();
+
+  const foreground = await sharp(buffer)
+    .resize(width, height, { fit: "inside" })
+    .toBuffer();
+
+  return sharp(background)
+    .composite([{ input: foreground, gravity: "center" }])
+    .jpeg({ quality: 90, progressive: true })
+    .toBuffer();
+}
+
 export async function optimizePhotosForSocial(imageBuffers, { storySlideTexts = [], categoryInfoTexts = [] } = {}) {
   try {
     const optimized = {};
@@ -304,18 +327,25 @@ export async function optimizePhotosForSocial(imageBuffers, { storySlideTexts = 
         if (social === "facebook" || social === "instagram") {
           // Facebook e Instagram supportano più foto per post (album/carosello):
           // ottimizza tutte quelle caricate.
+          // Facebook: solo ridimensionamento (fit: inside), niente ritaglio né
+          // bande — l'app di Facebook estende da sola le foto orizzontali con uno
+          // sfondo sfocato. Instagram: tela fissa 4:5 con sfondo sfocato (vedi
+          // padWithBlur), perché il feed Instagram incornicerebbe le orizzontali
+          // con bande nere.
           optimized[social] = await Promise.all(
             imageBuffers.map((img) =>
-              sharp(img.buffer)
-                .resize(dimensions.width, dimensions.height, {
-                  fit: "inside",
-                  withoutEnlargement: true,
-                })
-                .jpeg({ quality: 90, progressive: true })
-                .toBuffer()
+              social === "instagram"
+                ? padWithBlur(img.buffer, dimensions.width, dimensions.height)
+                : sharp(img.buffer)
+                    .resize(dimensions.width, dimensions.height, {
+                      fit: "inside",
+                      withoutEnlargement: true,
+                    })
+                    .jpeg({ quality: 90, progressive: true })
+                    .toBuffer()
             )
           );
-          logger.debug(`${imageBuffers.length} foto ottimizzate per ${social} (max ${dimensions.width}x${dimensions.height}, senza ritaglio)`);
+          logger.debug(`${imageBuffers.length} foto ottimizzate per ${social} (max ${dimensions.width}x${dimensions.height}, ${social === "instagram" ? "tela 4:5 con sfondo sfocato" : "senza ritaglio"})`);
           continue;
         }
 
