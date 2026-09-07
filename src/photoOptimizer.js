@@ -38,7 +38,7 @@ const STORY_CROP_MIN_KEPT_FRACTION = 0.75;
 // del centro geometrico. Se la foto è troppo lontana dal 9:16 e il crop taglierebbe
 // troppo, ripiega su uno sfondo sfocato con la foto intera sovrapposta al centro
 // (nessun taglio, nessuna banda vuota).
-async function buildStoryImage(buffer) {
+export async function buildStoryImage(buffer) {
   const targetRatio = STORY_DIMENSIONS.width / STORY_DIMENSIONS.height;
   const metadata = await sharp(buffer).metadata();
   const sourceRatio = metadata.width / metadata.height;
@@ -286,7 +286,7 @@ export async function buildCategoryInfoSlide(text, dimensions = STORY_DIMENSIONS
 // non aggiunge lo sfondo sfocato come fa l'app quando carichi a mano. Così i post
 // Instagram con foto orizzontali hanno lo stesso effetto "sfumato" di Facebook, e
 // in più tutte le foto di un carosello restano dello stesso formato.
-async function padWithBlur(buffer, width, height) {
+export async function padWithBlur(buffer, width, height) {
   const background = await sharp(buffer)
     .resize(width, height, { fit: "cover" })
     .blur(30)

@@ -4,10 +4,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 import { getRomeParts } from "./monthlySummary.js";
-import { buildCategoryInfoSlide } from "./photoOptimizer.js";
+import { buildCategoryInfoSlide, buildStoryImage, padWithBlur } from "./photoOptimizer.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
+// Foto del mese del calendario solidale: assets/calendario-mesi/YYYY-MM.jpg
+// (le stesse foto usate come sfondo su calendario.effataitalia.it, copiate qui con
+// nomi puliti — vanno ricopiate a mano se sul sito cambiano). Se il file del mese
+// corrente non c'è, la promo ripiega sulla sola slide rossa.
+const MONTH_IMAGES_DIR = path.join(__dirname, "..", "assets", "calendario-mesi");
 // Ricorda l'ultima data (YYYY-MM-DD, ora italiana) per cui la promo è già uscita,
 // così un riavvio serale nello stesso giorno non ripubblica. Senza il volume in
 // docker-compose.yml un rebuild lo azzera: vedi commento nel compose.
@@ -161,6 +166,17 @@ function withCalendarLink(text) {
   return `${text.trim()}\n\n👉 ${CALENDAR_LINK}`;
 }
 
+// Foto del mese corrente (assets/calendario-mesi/YYYY-MM.jpg), o null se manca.
+function monthImageBuffer(dateKey) {
+  const file = path.join(MONTH_IMAGES_DIR, `${dateKey.slice(0, 7)}.jpg`);
+  try {
+    if (fs.existsSync(file)) return fs.readFileSync(file);
+  } catch (err) {
+    logger.warn(`Promo calendario: foto del mese non leggibile (${file}): ${err.message}`);
+  }
+  return null;
+}
+
 async function generateCaptions(dateKey) {
   const message = await client.messages.create({
     model: "claude-sonnet-4-6",
@@ -230,11 +246,23 @@ async function publishCalendarPromo(bot, metaAPI, dateKey, { scheduled }) {
   const facebookText = withCalendarLink(captions.facebook);
   const instagramText = withCalendarLink(captions.instagram);
 
+  // Immagine principale = foto del mese corrente del calendario (come lo sfondo di
+  // calendario.effataitalia.it). La slide rossa brand con logo/prezzo fa da
+  // chiusura: sulla Storia è il 2° frame, nel post resta il fallback se manca la
+  // foto del mese.
   let postImage;
-  let storyImage;
+  let storySlides;
   try {
-    postImage = await buildCategoryInfoSlide(pickPostText(dateKey), { width: 1080, height: 1350 });
-    storyImage = await buildCategoryInfoSlide(pickStoryText(dateKey));
+    const redSlide = await buildCategoryInfoSlide(pickStoryText(dateKey));
+    const monthBuf = monthImageBuffer(dateKey);
+    if (monthBuf) {
+      postImage = await padWithBlur(monthBuf, 1080, 1350);
+      storySlides = [await buildStoryImage(monthBuf), redSlide];
+    } else {
+      logger.warn(`Promo calendario ${dateKey}: nessuna foto per il mese ${dateKey.slice(0, 7)}, uso solo la slide rossa`);
+      postImage = await buildCategoryInfoSlide(pickPostText(dateKey), { width: 1080, height: 1350 });
+      storySlides = [redSlide];
+    }
   } catch (err) {
     logger.error(`Promo calendario ${dateKey}: errore nella creazione delle immagini: ${err.message}`);
     if (chatId) await bot.sendMessage(chatId, `⚠️ Promo calendario solidale: errore nella creazione delle immagini (${err.message}). ${retryHint}`).catch(() => {});
@@ -246,7 +274,7 @@ async function publishCalendarPromo(bot, metaAPI, dateKey, { scheduled }) {
     fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_calendar_facebook.txt`), facebookText);
     fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_calendar_instagram.txt`), instagramText);
     fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_calendar_post.jpg`), postImage);
-    fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_calendar_story.jpg`), storyImage);
+    storySlides.forEach((buf, i) => fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_calendar_story_${i + 1}.jpg`), buf));
   } catch (err) {
     logger.warn(`Promo calendario ${dateKey}: impossibile salvare i file in output/: ${err.message}`);
   }
@@ -283,7 +311,7 @@ async function publishCalendarPromo(bot, metaAPI, dateKey, { scheduled }) {
   }
 
   try {
-    const fbStory = await metaAPI.publishFacebookStory([storyImage]);
+    const fbStory = await metaAPI.publishFacebookStory(storySlides);
     results.push(fbStory.success ? "📘 Storia Facebook pubblicata" : `⚠️ Storia Facebook non pubblicata (${fbStory.error})`);
   } catch (err) {
     logger.error(`Promo calendario ${dateKey}: errore Storia Facebook: ${err.message}`);
@@ -291,7 +319,7 @@ async function publishCalendarPromo(bot, metaAPI, dateKey, { scheduled }) {
   }
 
   try {
-    const igStory = await metaAPI.publishInstagramStory([storyImage]);
+    const igStory = await metaAPI.publishInstagramStory(storySlides);
     results.push(igStory.success ? "📷 Storia Instagram pubblicata" : `⚠️ Storia Instagram non pubblicata (${igStory.error})`);
   } catch (err) {
     logger.error(`Promo calendario ${dateKey}: errore Storia Instagram: ${err.message}`);
