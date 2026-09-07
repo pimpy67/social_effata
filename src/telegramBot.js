@@ -13,6 +13,7 @@ import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial, buildCategoryInfoSlide } from "./photoOptimizer.js";
 import { runMonthlySummaryIfDue } from "./monthlySummary.js";
 import { runCalendarPromoIfDue, runCalendarPromoNow } from "./calendarPromo.js";
+import { runGofundmePromoIfDue, runGofundmePromoNow } from "./gofundmePromo.js";
 import { addUtmParams, todayStamp } from "./utm.js";
 import {
   saveDraft,
@@ -1400,6 +1401,7 @@ Altri comandi utili:
 /reset - cancella il materiale in attesa e ricomincia
 /bozze - pubblica su Facebook le bozze in attesa
 /calendario - pubblica ora una promo del calendario solidale (post + Storia FB/IG). Di suo esce da sola ogni martedì e venerdì alle 18
+/ruote - pubblica ora una promo della raccolta "Ruote di Speranza" (post + Storia FB/IG). Di suo esce da sola ogni mercoledì e sabato alle 18
 /report-mese - riepilogo storie del mese
 /report-anno - riepilogo storie dell'anno`;
 
@@ -1744,6 +1746,35 @@ Altri comandi utili:
     }
   });
 
+  // Comando /ruote - Pubblica SUBITO, a mano, una promo della raccolta GoFundMe
+  // "Ruote di Speranza" (post + Storia su Facebook e Instagram), senza aspettare
+  // la finestra automatica di mercoledì/sabato. Non tocca lo scheduling.
+  let gofundmePromoRunning = false;
+  bot.onText(/^\/ruote$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    if (gofundmePromoRunning) {
+      await bot.sendMessage(chatId, "⏳ Promo Ruote di Speranza già in corso, aspetta che finisca.");
+      return;
+    }
+    if (!metaAPI) {
+      await bot.sendMessage(chatId, "⚠️ Meta API non configurata: impossibile pubblicare.");
+      return;
+    }
+
+    gofundmePromoRunning = true;
+    await bot.sendMessage(chatId, "🚐 Genero e pubblico ora la promo di Ruote di Speranza (post + Storia su Facebook e Instagram). Ci vuole un minuto…");
+    try {
+      await runGofundmePromoNow(bot, metaAPI);
+    } catch (err) {
+      logger.error(`/ruote: errore nella pubblicazione manuale: ${err.message}`);
+      await bot.sendMessage(chatId, `⚠️ Errore nella pubblicazione: ${err.message}`);
+    } finally {
+      gofundmePromoRunning = false;
+    }
+  });
+
   // Comando /report-mese - Report mensile
   bot.onText(/^\/report-mese(?:\s+(\d{4})\s+(\d{1,2}))?$/i, async (msg, match) => {
     const chatId = msg.chat.id;
@@ -1895,6 +1926,15 @@ Altri comandi utili:
     );
   await checkCalendarPromo();
   setInterval(checkCalendarPromo, 60 * 60 * 1000);
+
+  // Come sopra ma per la raccolta GoFundMe "Ruote di Speranza": mercoledì e sabato
+  // dalle 18 (ora italiana), sfasata di un giorno rispetto al calendario.
+  const checkGofundmePromo = () =>
+    runGofundmePromoIfDue(bot, metaAPI).catch((err) =>
+      logger.error(`Errore nella promo Ruote di Speranza automatica: ${err.message}`)
+    );
+  await checkGofundmePromo();
+  setInterval(checkGofundmePromo, 60 * 60 * 1000);
 
   return bot;
 }

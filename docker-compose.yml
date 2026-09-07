@@ -64,6 +64,9 @@ services:
       # ripubblicherebbe post + Storia. Il file sull'host DEVE esistere prima di
       # `up` (altrimenti Docker ci monta una cartella): crearlo con `{}`.
       - ./calendar-promo-state.json:/app/calendar-promo-state.json
+      # Come sopra per la promo GoFundMe "Ruote di Speranza" (mer/sab). Il file
+      # sull'host DEVE esistere prima di `up` (crearlo con `{}`).
+      - ./gofundme-promo-state.json:/app/gofundme-promo-state.json
     networks:
       - effata-network
     labels:

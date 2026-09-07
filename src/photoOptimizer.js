@@ -205,13 +205,17 @@ function buildInfoSlideLines(text, maxCharsPerLine) {
 // per la Storia video (telegramBot.js): lì la slide finale va pubblicata a mano
 // come ultimo frame, dopo le clip video, invece di essere in coda alla Storia foto.
 //
-// `dimensions` opzionale (default: formato Storia 1080x1920): la promo del
-// calendario solidale (src/calendarPromo.js) riusa questa stessa slide anche per
-// il post nel feed, che vuole il 4:5 (1080x1350). Il blocco intestazione+logo+testo
-// resta centrato verticalmente sull'altezza scelta, quindi per il 1350 il testo va
-// tenuto corto (poche righe) o sbordarebbe sopra/sotto.
-export async function buildCategoryInfoSlide(text, dimensions = STORY_DIMENSIONS) {
-  const { width, height } = dimensions;
+// `options` opzionale: `width`/`height` (default: formato Storia 1080x1920 — la
+// promo del calendario riusa questa slide anche a 1080x1350 per il post nel feed;
+// col 1350 il testo va tenuto corto o sborda sopra/sotto) e `background` (default:
+// rosso brand — la promo GoFundMe "Ruote di Speranza" usa un altro colore per
+// distinguersi a colpo d'occhio).
+export async function buildCategoryInfoSlide(text, options = {}) {
+  const {
+    width = STORY_DIMENSIONS.width,
+    height = STORY_DIMENSIONS.height,
+    background = BRAND_RED,
+  } = options;
   const logoBuffer = await sharp(LOGO_PATH)
     .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
     .toBuffer();
@@ -261,12 +265,12 @@ export async function buildCategoryInfoSlide(text, dimensions = STORY_DIMENSIONS
     )
     .join("");
 
-  const background = `<svg width="${width}" height="${height}">
-      <rect width="100%" height="100%" fill="${BRAND_RED}" />
+  const backgroundSvg = `<svg width="${width}" height="${height}">
+      <rect width="100%" height="100%" fill="${background}" />
     </svg>`;
   const textOverlay = `<svg width="${width}" height="${height}">${headerSvg}${textSvg}</svg>`;
 
-  return sharp(Buffer.from(background))
+  return sharp(Buffer.from(backgroundSvg))
     .composite([
       {
         input: logoBuffer,

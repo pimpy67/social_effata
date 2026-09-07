@@ -7,6 +7,7 @@ node_modules/
 state.json
 monthly-summary-state.json
 calendar-promo-state.json
+gofundme-promo-state.json
 coverage/
 effata.db
 .DS_Store
