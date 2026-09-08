@@ -8,10 +8,15 @@ import { buildCategoryInfoSlide, buildStoryImage, padWithBlur } from "./photoOpt
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
-// Foto del mese del calendario solidale: assets/calendario-mesi/YYYY-MM.jpg
-// (le stesse foto usate come sfondo su calendario.effataitalia.it, copiate qui con
-// nomi puliti — vanno ricopiate a mano se sul sito cambiano). Se il file del mese
-// corrente non c'è, la promo ripiega sulla sola slide rossa.
+// Immagine per un mese, in ordine di preferenza:
+//  1. assets/calendario-mesi-screenshot/YYYY-MM.jpg — screenshot del calendario
+//     VERO come si vede su calendario.effataitalia.it (griglia giorni + sfondo del
+//     mese + stato adozioni). Generati con scripts/capture-calendar-months.mjs,
+//     da rigenerare ogni tanto per aggiornare lo stato delle adozioni.
+//  2. assets/calendario-mesi/YYYY-MM.jpg — solo la foto di sfondo del mese (senza
+//     griglia). Fallback se manca lo screenshot.
+//  3. nessuna delle due → la promo usa solo la slide rossa.
+const MONTH_SCREENSHOT_DIR = path.join(__dirname, "..", "assets", "calendario-mesi-screenshot");
 const MONTH_IMAGES_DIR = path.join(__dirname, "..", "assets", "calendario-mesi");
 // Ricorda l'ultima data (YYYY-MM-DD, ora italiana) per cui la promo è già uscita,
 // così un riavvio serale nello stesso giorno non ripubblica. Senza il volume in
@@ -166,13 +171,16 @@ function withCalendarLink(text) {
   return `${text.trim()}\n\n👉 ${CALENDAR_LINK}`;
 }
 
-// Foto di un mese (assets/calendario-mesi/YYYY-MM.jpg), o null se manca.
+// Immagine di un mese: prima lo screenshot del calendario vero, poi la sola foto
+// di sfondo, altrimenti null. Vedi il commento in cima al file.
 function monthImageBuffer(monthKey) {
-  const file = path.join(MONTH_IMAGES_DIR, `${monthKey}.jpg`);
-  try {
-    if (fs.existsSync(file)) return fs.readFileSync(file);
-  } catch (err) {
-    logger.warn(`Promo calendario: foto del mese non leggibile (${file}): ${err.message}`);
+  for (const dir of [MONTH_SCREENSHOT_DIR, MONTH_IMAGES_DIR]) {
+    const file = path.join(dir, `${monthKey}.jpg`);
+    try {
+      if (fs.existsSync(file)) return fs.readFileSync(file);
+    } catch (err) {
+      logger.warn(`Promo calendario: immagine del mese non leggibile (${file}): ${err.message}`);
+    }
   }
   return null;
 }
