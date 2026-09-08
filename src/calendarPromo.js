@@ -34,14 +34,18 @@ const TRIGGER_HOUR = 18;
 // (come referenceLink in telegramBot.js), non passa da Claude.
 const CALENDAR_LINK = "https://calendario.effataitalia.it/";
 
-const SYSTEM_PROMPT = `Sei il social media manager di Effatà Italia, una ODV (Organizzazione Di Volontariato) che sostiene la Casa Famiglia Effatà in Uganda (dove vivono bambini accolti) e diversi altri programmi di aiuto.
+const SYSTEM_PROMPT = `Sei il social media manager di Effatà Italia, una ODV (Organizzazione Di Volontariato) che sostiene la Casa Famiglia Effatà in Uganda ("Effatà Children's Home"): una vera casa per bambini dai 0 ai 17 anni orfani, abbandonati, vittime di violenza o con bisogni speciali, a cui offre casa, pasti quotidiani, cure mediche, istruzione e attività creative.
 
-Devi scrivere un post social che promuove il CALENDARIO SOLIDALE di Effatà come idea regalo originale. Meccanica dell'iniziativa (usala, non inventarne altra):
-- Si "regala" / "adotta" un giorno del calendario con una donazione di 50€.
+Devi scrivere un post social che promuove il CALENDARIO SOLIDALE 2026/2027 di Effatà (campagna "Regala un Domani") come idea regalo originale. Meccanica dell'iniziativa (usala, non inventarne altra):
+- Si "regala" / "adotta" UN GIORNO del calendario con una donazione di 50€.
 - Ogni giorno adottato aiuta a garantire cibo, istruzione e cure ai bambini della Casa Famiglia in Uganda.
-- La donazione è detraibile al 35%: 50€ diventano di fatto solo 32,50€.
+- La donazione è detraibile al 35%: a chi dona costa realmente solo 32,50€ ("un piccolo gesto che vale il doppio").
 - Chi dona riceve una gift card personale da regalare (per un compleanno, un anniversario, una laurea, un battesimo, un matrimonio, Natale, o semplicemente per fare un pensiero diverso dal solito).
-- È un modo per collegare un momento di festa personale a un aiuto concreto per la Casa Famiglia.
+
+DISTINZIONE FONDAMENTALE, non sbagliarla mai:
+- Qui si adotta UN GIORNO del calendario, NON un bambino. È un modo per sostenere COLLETTIVAMENTE la Casa Famiglia Effatà.
+- NON è l'adozione a distanza personale di un singolo bambino: non scrivere mai "adotta un bambino", "il tuo bambino", "sostieni un bambino a distanza", "cambi il futuro di un bambino", né lasciar intendere un legame uno-a-uno con un minore. Il beneficiario è la Casa Famiglia nel suo insieme.
+- Frasi corrette: "adotta un giorno", "regala un giorno", "un giorno per la Casa Famiglia", "sostieni la Casa Famiglia adottando un giorno".
 
 Scrivi il post in due versioni:
 1. facebook: caldo e discorsivo, 2-3 paragrafi brevi, taglio "storytelling" sul valore di un regalo che vale il doppio. Chiudi con una call-to-action chiara. Qualche hashtag pertinente alla fine.
@@ -84,7 +88,7 @@ const ANGLES = [
 // (max ~22 caratteri come le altre slide di photoOptimizer), "\n\n" = spazio doppio
 // tra blocchi. Nessuna emoji: il font DejaVu in produzione non le disegna.
 const STORY_TEXTS = [
-  "REGALA UN GIORNO\nDEL CALENDARIO\n\nCon 50€ sostieni\nla Casa Famiglia\nEffatà in Uganda\n\nDetrazione 35%:\na te costa 32,50€\n\nScrivici in DM o\nvai al link in bio",
+  "REGALA UN DOMANI\n\nAdotta un giorno\ndel calendario con 50€\nper la Casa Famiglia\nEffatà in Uganda\n\nDetrazione 35%:\na te costa 32,50€\n\nScrivici in DM o\nvai al link in bio",
   "UN REGALO CHE\nVALE IL DOPPIO\n\nAdotta un giorno\ndel calendario\nsolidale con 50€\n\nCibo, scuola e\ncure ai bambini\ndella Casa Famiglia\n\nCon il 35%: 32,50€",
   "FAI UN REGALO\nDIVERSO\n\nRegala un giorno\ndel calendario:\n50€ per la Casa\nFamiglia in Uganda\n\nRicevi una gift\ncard da donare\n\nDetraibile al 35%",
   "OGNI GIORNO\nADOTTATO CONTA\n\n50€ per un giorno\ndel calendario\nsolidale Effatà\n\nCibo, scuola e\ncure ai bambini\nin Casa Famiglia\n\nA te costa 32,50€",
@@ -93,7 +97,7 @@ const STORY_TEXTS = [
 // Testo della slide-immagine per il POST nel feed (1080x1350): più corto della
 // Storia, poche righe, o sborda sopra/sotto (il blocco è centrato in verticale).
 const POST_TEXTS = [
-  "REGALA UN GIORNO\nDEL CALENDARIO\n\n50€ per la Casa\nFamiglia Effatà\n\nCol 35%: 32,50€",
+  "REGALA UN DOMANI\n\nAdotta un giorno\ncon 50€ per la\nCasa Famiglia Effatà\n\nCol 35%: 32,50€",
   "UN REGALO CHE\nVALE IL DOPPIO\n\nUn giorno del\ncalendario: 50€\nsolo 32,50€ netti",
   "ADOTTA UN GIORNO\nDEL CALENDARIO\n\n50€ per i bambini\nin Casa Famiglia\n\nDetraibile al 35%",
   "FAI UN REGALO\nDIVERSO\n\nUn giorno del\ncalendario solidale\n50€, a te 32,50€",
