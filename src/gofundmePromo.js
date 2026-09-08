@@ -8,10 +8,15 @@ import { buildCategoryInfoSlide, buildStoryImage, padWithBlur } from "./photoOpt
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
-// Foto della raccolta "Ruote di Speranza": assets/ruote-di-speranza/1.jpg..N.jpg
-// (scaricate dalla pagina GoFundMe l'08/09/2026 — vanno riscaricate a mano se
-// cambiano). Se la cartella è vuota, la promo ripiega sulla sola slide.
+// Il post è un CAROSELLO: [1 foto a rotazione dal pool] + [le foto fisse in ordine]
+// + [slide di chiusura petrolio].
+//  - pool a rotazione: assets/ruote-di-speranza/ (scaricate da GoFundMe l'08/09) —
+//    ne compare una diversa a ogni uscita.
+//  - fisse: assets/ruote-di-speranza-fisse/ (1,2,3 fornite da Andrea l'08/09) —
+//    sempre tutte, sempre in ordine, ESCLUSE dalla rotazione.
+// Le foto vanno aggiornate a mano se cambiano.
 const PHOTOS_DIR = path.join(__dirname, "..", "assets", "ruote-di-speranza");
+const FIXED_PHOTOS_DIR = path.join(__dirname, "..", "assets", "ruote-di-speranza-fisse");
 const STATE_FILE = path.join(__dirname, "..", "gofundme-promo-state.json");
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -154,30 +159,38 @@ function withGofundmeLink(text) {
   return `${text.trim()}\n\n👉 ${GOFUNDME_LINK}`;
 }
 
-// Elenco ordinato delle foto disponibili (assets/ruote-di-speranza/*.jpg).
-function listPhotos() {
+// Elenco ordinato dei file immagine in una cartella.
+function listImages(dir) {
   try {
     return fs
-      .readdirSync(PHOTOS_DIR)
-      .filter((f) => /\.(jpe?g|png)$/i.test(f))
+      .readdirSync(dir)
+      .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
       .sort()
-      .map((f) => path.join(PHOTOS_DIR, f));
+      .map((f) => path.join(dir, f));
   } catch {
     return [];
   }
 }
 
-// Foto da usare per questa uscita: ne ruota una diversa a ogni pubblicazione.
-function photoBufferFor(dateKey) {
-  const photos = listPhotos();
-  if (photos.length === 0) return null;
-  const file = photos[rotation(dateKey) % photos.length];
+function readBufferSafe(file) {
   try {
     return fs.readFileSync(file);
   } catch (err) {
-    logger.warn(`Promo Ruote di Speranza: foto non leggibile (${file}): ${err.message}`);
+    logger.warn(`Promo Ruote di Speranza: immagine non leggibile (${file}): ${err.message}`);
     return null;
   }
+}
+
+// Foto a rotazione dal pool: una diversa a ogni pubblicazione. null se il pool è vuoto.
+function rotatingPhotoBuffer(dateKey) {
+  const photos = listImages(PHOTOS_DIR);
+  if (photos.length === 0) return null;
+  return readBufferSafe(photos[rotation(dateKey) % photos.length]);
+}
+
+// Le foto fisse (assets/ruote-di-speranza-fisse/), sempre tutte, in ordine.
+function fixedPhotoBuffers() {
+  return listImages(FIXED_PHOTOS_DIR).map(readBufferSafe).filter(Boolean);
 }
 
 async function generateCaptions(dateKey) {
@@ -244,17 +257,22 @@ async function publishGofundmePromo(bot, metaAPI, dateKey, { scheduled }) {
   const facebookText = withGofundmeLink(captions.facebook);
   const instagramText = withGofundmeLink(captions.instagram);
 
-  let postImage;
+  // Post = CAROSELLO: [1 foto a rotazione] + [le foto fisse] + [slide petrolio].
+  // La Storia resta più asciutta: la foto a rotazione (croppata 9:16) + la slide —
+  // le foto fisse sono banner/collage orizzontali, in verticale renderebbero male.
+  let postImages;
   let storySlides;
   try {
     const slide = await buildCategoryInfoSlide(pickStoryText(dateKey), { background: SLIDE_BG });
-    const photoBuf = photoBufferFor(dateKey);
-    if (photoBuf) {
-      postImage = await padWithBlur(photoBuf, 1080, 1350);
-      storySlides = [await buildStoryImage(photoBuf), slide];
+    const rotating = rotatingPhotoBuffer(dateKey);
+    const carouselPhotos = [...(rotating ? [rotating] : []), ...fixedPhotoBuffers()];
+    if (carouselPhotos.length) {
+      const closingPost = await buildCategoryInfoSlide(pickPostText(dateKey), { width: 1080, height: 1350, background: SLIDE_BG });
+      postImages = [...(await Promise.all(carouselPhotos.map((b) => padWithBlur(b, 1080, 1350)))), closingPost];
+      storySlides = [...(rotating ? [await buildStoryImage(rotating)] : []), slide];
     } else {
-      logger.warn(`Promo Ruote di Speranza ${dateKey}: nessuna foto in ${PHOTOS_DIR}, uso solo la slide`);
-      postImage = await buildCategoryInfoSlide(pickPostText(dateKey), { width: 1080, height: 1350, background: SLIDE_BG });
+      logger.warn(`Promo Ruote di Speranza ${dateKey}: nessuna foto, uso solo la slide`);
+      postImages = [await buildCategoryInfoSlide(pickPostText(dateKey), { width: 1080, height: 1350, background: SLIDE_BG })];
       storySlides = [slide];
     }
   } catch (err) {
@@ -267,7 +285,7 @@ async function publishGofundmePromo(bot, metaAPI, dateKey, { scheduled }) {
   try {
     fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_ruote_facebook.txt`), facebookText);
     fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_ruote_instagram.txt`), instagramText);
-    fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_ruote_post.jpg`), postImage);
+    postImages.forEach((buf, i) => fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_ruote_post_${i + 1}.jpg`), buf));
     storySlides.forEach((buf, i) => fs.writeFileSync(path.join(OUTPUT_DIR, `${timestamp}_ruote_story_${i + 1}.jpg`), buf));
   } catch (err) {
     logger.warn(`Promo Ruote di Speranza ${dateKey}: impossibile salvare i file in output/: ${err.message}`);
@@ -277,7 +295,7 @@ async function publishGofundmePromo(bot, metaAPI, dateKey, { scheduled }) {
 
   let fbPermalink = null;
   try {
-    const fb = await metaAPI.publishToFacebook(facebookText, [postImage]);
+    const fb = await metaAPI.publishToFacebook(facebookText, postImages);
     if (fb.success) {
       await metaAPI.publishFacebookDraft(fb.postId);
       results.push("📘 Post Facebook pubblicato");
@@ -295,7 +313,7 @@ async function publishGofundmePromo(bot, metaAPI, dateKey, { scheduled }) {
   }
 
   try {
-    const ig = await metaAPI.publishToInstagram(instagramText, [postImage]);
+    const ig = await metaAPI.publishToInstagram(instagramText, postImages);
     results.push(ig.success ? "📷 Post Instagram pubblicato" : `⚠️ Post Instagram non pubblicato (${ig.error})`);
   } catch (err) {
     logger.error(`Promo Ruote di Speranza ${dateKey}: errore post Instagram: ${err.message}`);
@@ -322,8 +340,8 @@ async function publishGofundmePromo(bot, metaAPI, dateKey, { scheduled }) {
     try {
       const linkLine = fbPermalink ? `\n\n🔗 ${fbPermalink}` : "";
       const head = scheduled ? "🚐 Promo Ruote di Speranza pubblicata" : "🚐 Promo Ruote di Speranza pubblicata a mano";
-      await bot.sendPhoto(chatId, postImage, {
-        caption: `${head} (${dateKey}).\n\n${results.join("\n")}${linkLine}`,
+      await bot.sendPhoto(chatId, postImages[0], {
+        caption: `${head} (${dateKey}) — carosello di ${postImages.length} immagini.\n\n${results.join("\n")}${linkLine}`,
       });
       await bot.sendMessage(chatId, `📘 Testo Facebook:\n\n${facebookText}`);
       await bot.sendMessage(chatId, `📷 Testo Instagram:\n\n${instagramText}`);
