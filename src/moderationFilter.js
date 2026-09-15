@@ -2,9 +2,14 @@ import { logger } from "./logger.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import * as italianBadwords from "italian-badwords-list";
+import axios from "axios";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.join(__dirname, "../config/moderation-keywords.json");
+
+// Carica la lista open-source di parole chiave italiane
+const ITALIAN_BADWORDS = italianBadwords.getWords ? italianBadwords.getWords() : [];
 
 // Carica le parole chiave dal file di configurazione JSON
 function loadKeywordsFromConfig() {
@@ -64,6 +69,39 @@ function buildRegexFromKeywords(keywords) {
 const CONFIG_KEYWORDS = loadKeywordsFromConfig();
 const DYNAMIC_REGEXES = buildRegexFromKeywords(CONFIG_KEYWORDS);
 
+// Normalizza il testo per evitare evasioni (leetspeak, spazi, accenti)
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    // Rimuovi accenti diacritici (é → e, ò → o, ecc.)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    // Sostituisci variazioni numeriche comuni (leetspeak)
+    .replace(/[0-9]/g, (match) => {
+      const map = {
+        0: "o",
+        1: "i",
+        3: "e",
+        4: "a",
+        5: "s",
+        7: "t",
+        8: "b",
+      };
+      return map[match] || match;
+    })
+    // Rimuovi spazi multipli e punti intermedi (s.t.u.p.r.a.r.e)
+    .replace(/[\s.,-_*']/g, "")
+    .trim();
+}
+
+// Controllo con lista open-source italiana
+function checkItalianBadwords(normalizedText) {
+  return ITALIAN_BADWORDS.some((word) => {
+    const normalized = word.toLowerCase().replace(/[^a-z]/g, "");
+    return normalizedText.includes(normalized);
+  });
+}
+
 // Parole chiave hardcoded (base, non cambiano frequentemente)
 // Include variazioni con leetspeak e caratteri speciali
 const HATE_SPEECH_KEYWORDS = [
@@ -112,8 +150,14 @@ const SUSPICIOUS_KEYWORDS = [
 // Calcolo del severity score del commento
 function calculateSuspicionScore(text) {
   let score = 0;
+  const normalizedText = normalizeText(text);
 
-  // Check hate speech keywords hardcoded (pesanti)
+  // 1. Check lista open-source italiana (priorità alta)
+  if (checkItalianBadwords(normalizedText)) {
+    score += 80; // Moderato - potrebbe essere falso positivo
+  }
+
+  // 2. Check hate speech keywords hardcoded (pesanti)
   for (const regex of HATE_SPEECH_KEYWORDS) {
     const matches = text.match(regex);
     if (matches) {
@@ -121,7 +165,7 @@ function calculateSuspicionScore(text) {
     }
   }
 
-  // Check parole chiave dinamiche da config
+  // 3. Check parole chiave dinamiche da config
   for (const regex of DYNAMIC_REGEXES) {
     const matches = text.match(regex);
     if (matches) {
@@ -208,20 +252,75 @@ export function shouldSendModerationAlert(moderationResult) {
   return moderationResult.status === "FLAG";
 }
 
-// Moderazione avanzata con API OpenAI (opzionale, per maggiore accuratezza)
-// Usa la Moderation API di OpenAI per rilevare contenuto offensivo con AI
-export async function moderateWithOpenAI(text) {
+// Moderazione avanzata con Perspective API (Google/Jigsaw)
+// Supporta italiano e rileva: TOXICITY, SEVERE_TOXICITY, IDENTITY_ATTACK, THREAT
+export async function moderateWithPerspectiveAPI(text) {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.PERSPECTIVE_API_KEY;
     if (!apiKey) {
-      logger.debug("OpenAI API non configurata, salto moderazione avanzata");
+      logger.debug("Perspective API non configurata, salto analisi avanzata");
       return null;
     }
 
-    // Nota: ANTHROPIC_API_KEY è per Claude, non per OpenAI Moderation
-    // Se hai una chiave OpenAI, usarla per chiamare: https://api.openai.com/v1/moderations
-    // Per ora, usiamo solo il filtro locale basato su regex
+    const response = await axios.post(
+      "https://commentanalyzer.googleapis.com/v1/comments:analyzeComment",
+      {
+        comment: { text },
+        languages: ["it"],
+        requestedAttributes: {
+          TOXICITY: {},
+          SEVERE_TOXICITY: {},
+          IDENTITY_ATTACK: {},
+          THREAT: {},
+        },
+      },
+      {
+        params: { key: apiKey },
+        timeout: 5000,
+      }
+    );
+
+    const scores = response.data.attributeScores || {};
+    logger.debug(`Perspective API scores: ${JSON.stringify(scores)}`);
+
+    return {
+      toxicity: scores.TOXICITY?.summaryScore?.value || 0,
+      severe_toxicity: scores.SEVERE_TOXICITY?.summaryScore?.value || 0,
+      identity_attack: scores.IDENTITY_ATTACK?.summaryScore?.value || 0,
+      threat: scores.THREAT?.summaryScore?.value || 0,
+    };
+  } catch (err) {
+    logger.warn(`Errore nella moderazione Perspective API: ${err.message}`);
     return null;
+  }
+}
+
+// Moderazione con OpenAI Moderation API
+export async function moderateWithOpenAI(text) {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      logger.debug("OpenAI Moderation API non configurata");
+      return null;
+    }
+
+    const response = await axios.post(
+      "https://api.openai.com/v1/moderations",
+      { input: text },
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        timeout: 5000,
+      }
+    );
+
+    const result = response.data.results[0] || {};
+    logger.debug(`OpenAI Moderation flags: ${JSON.stringify(result.categories)}`);
+
+    return {
+      flagged: result.flagged,
+      categories: result.categories,
+      scores: result.category_scores,
+    };
   } catch (err) {
     logger.warn(`Errore nella moderazione OpenAI: ${err.message}`);
     return null;

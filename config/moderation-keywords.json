@@ -1,5 +1,10 @@
 {
-  "description": "Lista di parole chiave per la moderazione dei commenti. Aggiungi qui le nuove parole/frasi che vuoi bloccare.",
+  "description": "Sistema di moderazione ibrido: lista locale + API esterne. Vedi README-MODERATION.md",
+  "moderation_sources": {
+    "local_keywords": "Parole chiave in questo file (italiana-badwords-list + custom)",
+    "perspective_api": "Google/Jigsaw - Richiede PERSPECTIVE_API_KEY (gratuito, supporta italiano)",
+    "openai_api": "OpenAI Moderation - Richiede OPENAI_API_KEY (gratuito con account OpenAI)"
+  },
   "last_updated": "2026-09-15",
   "hate_speech": {
     "racism": [
