@@ -967,6 +967,31 @@ export class MetaAPI {
     logger.info(`Pubblicazione Meta completata. Risultati: ${JSON.stringify(results)}`);
     return results;
   }
+  async deleteComment(commentId) {
+    try {
+      await axios.delete(`${GRAPH_API_URL}/${commentId}`, {
+        params: { access_token: this.pageAccessToken },
+      });
+      logger.info(`Commento ${commentId} eliminato con successo`);
+      return true;
+    } catch (err) {
+      logger.error(`Errore nell'eliminazione del commento ${commentId}: ${metaErrorMessage(err)}`);
+      return false;
+    }
+  }
+
+  async hideComment(commentId) {
+    try {
+      await axios.post(`${GRAPH_API_URL}/${commentId}`, null, {
+        params: { is_hidden: true, access_token: this.pageAccessToken },
+      });
+      logger.info(`Commento ${commentId} nascosto con successo`);
+      return true;
+    } catch (err) {
+      logger.error(`Errore nel nascondere il commento ${commentId}: ${metaErrorMessage(err)}`);
+      return false;
+    }
+  }
 }
 
 export async function initMetaAPI() {

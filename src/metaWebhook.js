@@ -1,6 +1,7 @@
 import { logger } from "./logger.js";
 import { getMetaAPI, getEmailAPI, CATEGORY_COMMENT_KEYWORD } from "./telegramBot.js";
 import { matchesShareConfirmation, getWeeklyShareThankYouMessage, SHARE_CTA_COMMENT } from "./shareKeyword.js";
+import { moderateComment, shouldProcessComment, shouldSendModerationAlert, addToModerationQueue } from "./moderationFilter.js";
 
 function matchesKeyword(text, keyword) {
   return !!text && text.toUpperCase().includes(keyword.toUpperCase());
@@ -79,6 +80,47 @@ function isOwnComment(comment, metaAPI) {
 async function processComment(comment) {
   const metaAPI = getMetaAPI();
   const emailAPI = getEmailAPI();
+
+  // Controllo di moderazione: blocca/nasconde commenti offensivi
+  const moderationResult = moderateComment(comment);
+
+  if (!shouldProcessComment(moderationResult)) {
+    logger.warn(
+      `[MODERATION] Commento bloccato (${moderationResult.status}): ${moderationResult.reason} - Score: ${moderationResult.score}`
+    );
+
+    // Tenta di nascondere il commento su Meta
+    if (metaAPI) {
+      try {
+        await metaAPI.hideComment(comment.commentId);
+        logger.info(`Commento offensivo ${comment.commentId} nascosto su ${comment.platform}`);
+      } catch (err) {
+        logger.warn(`Impossibile nascondere il commento ${comment.commentId}: ${err.message}`);
+      }
+    }
+
+    // Aggiunge il commento FLAG alla coda di revisione
+    if (shouldSendModerationAlert(moderationResult)) {
+      await addToModerationQueue(comment, moderationResult);
+
+      // Invia alert email per review manuale
+      if (emailAPI) {
+        try {
+          await emailAPI.sendKeywordAlert({
+            keyword: "⚠️ MODERAZIONE_FLAG",
+            commentText: comment.text,
+            authorName: comment.authorName,
+            platform: comment.platform,
+            details: `${moderationResult.reason} (Score: ${moderationResult.score})`,
+          });
+        } catch (err) {
+          logger.warn(`Impossibile inviare alert moderazione: ${err.message}`);
+        }
+      }
+    }
+
+    return; // Non elaborare ulteriormente il commento
+  }
 
   const matchedKeyword = Object.values(CATEGORY_COMMENT_KEYWORD).find((keyword) =>
     matchesKeyword(comment.text, keyword)

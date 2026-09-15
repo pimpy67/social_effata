@@ -1,0 +1,76 @@
+{
+  "description": "Lista di parole chiave per la moderazione dei commenti. Aggiungi qui le nuove parole/frasi che vuoi bloccare.",
+  "last_updated": "2026-09-15",
+  "hate_speech": {
+    "racism": [
+      "razza inferiore",
+      "sporchi migranti",
+      "sporchi negri",
+      "invaditori stranieri",
+      "invaditori africani",
+      "razza superiore",
+      "italiani superiori"
+    ],
+    "sexual_violence": [
+      "stuprare",
+      "stupri",
+      "violenza sessuale",
+      "vengono a stuprare",
+      "vengono per stuprare",
+      "donne violentate",
+      "stupri collettivi"
+    ],
+    "criminality": [
+      "negri rubano",
+      "rom rubano",
+      "stranieri crimini",
+      "africani ladri",
+      "migranti rubano",
+      "arabi delinquenti"
+    ],
+    "racial_slurs": [
+      "negro",
+      "negri",
+      "moro",
+      "zingaro",
+      "gringo",
+      "terroni",
+      "marocchini di merda"
+    ],
+    "xenophobia": [
+      "non appartengono",
+      "non appartengono qui",
+      "tornate al vostro paese",
+      "extracomunitari invasione",
+      "stranieri invasione",
+      "non italiano non umano",
+      "sporco extracomunitario",
+      "sporco straniero"
+    ],
+    "sexism": [
+      "donne tutte puttane",
+      "femmine tutte troie",
+      "donne violentate",
+      "stupri donne",
+      "donne italiane violentate"
+    ]
+  },
+  "suspicious_keywords": {
+    "context_dependent": [
+      "non dovrebbe stare qui",
+      "non appartengono",
+      "invasione",
+      "problema stranieri",
+      "problema immigrati"
+    ]
+  },
+  "custom_additions": {
+    "description": "Aggiungi qui le parole/frasi specifiche che hai raccolto",
+    "added_by": "utente",
+    "items": [
+      "AGGIUNGI QUI LE TUE PAROLE CHIAVE",
+      "ES: parolaccia che vuoi bloccare",
+      "ES: frase razzista ricorrente"
+    ]
+  }
+}

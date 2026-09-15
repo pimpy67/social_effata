@@ -7,6 +7,7 @@ import { logger } from "./logger.js";
 import { getLinkedInAuthUrl, exchangeLinkedInCode } from "./linkedinAPI.js";
 import { verifyMetaWebhook, handleMetaWebhookEvent } from "./metaWebhook.js";
 import { getMetaAPI } from "./telegramBot.js";
+import { moderationQueue, getModerationDashboard } from "./moderationQueue.js";
 import {
   getAllDrafts,
   queryDrafts,
@@ -363,6 +364,42 @@ app.get("/auth/linkedin/callback", async (req, res) => {
     logger.error(`Errore nello scambio del codice LinkedIn: ${err.message}`);
     res.status(500).send(`<h2>Errore nel completare il collegamento LinkedIn</h2><p>${err.message}</p>`);
   }
+});
+
+// 🛡️ Endpoint per gestione moderazione commenti
+app.get("/api/moderation/dashboard", (req, res) => {
+  const dashboard = getModerationDashboard();
+  res.json(dashboard);
+});
+
+app.get("/api/moderation/queue", (req, res) => {
+  const stats = moderationQueue.getAll();
+  res.json(stats);
+});
+
+app.post("/api/moderation/approve/:commentId", (req, res) => {
+  const entry = moderationQueue.approve(req.params.commentId);
+  if (entry) {
+    logger.info(`Commento ${req.params.commentId} approvato dall'admin`);
+    res.json({ success: true, entry });
+  } else {
+    res.status(404).json({ error: "Commento non trovato nella coda" });
+  }
+});
+
+app.post("/api/moderation/reject/:commentId", (req, res) => {
+  const entry = moderationQueue.reject(req.params.commentId);
+  if (entry) {
+    logger.info(`Commento ${req.params.commentId} rifiutato dall'admin`);
+    res.json({ success: true, entry });
+  } else {
+    res.status(404).json({ error: "Commento non trovato nella coda" });
+  }
+});
+
+app.get("/api/moderation/export", (req, res) => {
+  const exported = moderationQueue.export();
+  res.json(exported);
 });
 
 export function startServer() {
