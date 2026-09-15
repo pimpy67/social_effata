@@ -12,6 +12,8 @@ import { initLinkedInAPI } from "./linkedinAPI.js";
 import { initEmailAPI } from "./emailAPI.js";
 import { optimizePhotosForSocial, buildCategoryInfoSlide } from "./photoOptimizer.js";
 import { runMonthlySummaryIfDue } from "./monthlySummary.js";
+import { runCalendarPromoIfDue, runCalendarPromoNow } from "./calendarPromo.js";
+import { runGofundmePromoIfDue, runGofundmePromoNow } from "./gofundmePromo.js";
 import { addUtmParams, todayStamp } from "./utm.js";
 import {
   saveDraft,
@@ -237,7 +239,7 @@ const CATEGORY_STORY_INFO = {
   ],
   "4": "COSTRUISCI UNA CASA\nPER UNA FAMIGLIA\ncon 1.500€\nsolo 975€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   "5": "AIUTA UNA FAMIGLIA\nA COLTIVARE LA TERRA\ncon 80€\nsolo 52€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
-  "6": "DONA UN ANIMALE\nda 5€ a 600€\nda 3€ a 390€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
+  "6": "DONA UN ANIMALE\ngallina 5€ · maiale 50€\ncapra 50€ · mucca 600€\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   "7": "DONA UN MATERASSO\n20€, 13€ netti\no una coperta\n10€, 7€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   "8": "DONA UN PAIO\nDI SCARPE CON 10€\nsolo 7€ netti\n(detraibili al 35%)\n\nScrivici in DM o vai\nal link in bio",
   // Nessun prezzo fisso (a differenza delle altre categorie): donazione libera, detraibile al 35%.
@@ -473,15 +475,40 @@ let emailAPI = null;
 // Client LinkedIn API (per pubblicare sulla pagina aziendale, se configurato)
 let linkedinAPI = null;
 
+// state.json contiene: il materiale in coda (pendingByChat) MA ANCHE la categoria
+// selezionata e la sessione di domande in corso. Servono persistenti perché il
+// container qui riavvia spesso (deploy, crash di rete): se sopravvivessero solo le
+// foto — come prima — dopo ogni riavvio /genera chiedeva di nuovo la categoria e la
+// bozza in lavorazione andava persa. Vecchio formato = mappa piatta
+// { "<chatId>": { photos, notes, videos } }; nuovo formato = { pending, selectedCategory,
+// categorySessions }. loadState riconosce entrambi.
 function loadState() {
   try {
-    if (fs.existsSync(STATE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
-      for (const [chatId, chatData] of Object.entries(data)) {
-        pendingByChat.set(String(chatId), chatData);
-      }
-      logger.info(`Stato caricato (${Object.keys(data).length} chat)`);
+    if (!fs.existsSync(STATE_FILE)) return;
+    const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    const isNewFormat =
+      data && typeof data === "object" && data.pending && typeof data.pending === "object";
+    const pendingData = isNewFormat ? data.pending : data;
+    const catData = isNewFormat ? data.selectedCategory || {} : {};
+    const sessData = isNewFormat ? data.categorySessions || {} : {};
+
+    for (const [chatId, chatData] of Object.entries(pendingData)) {
+      pendingByChat.set(String(chatId), chatData);
     }
+    for (const [chatId, cat] of Object.entries(catData)) {
+      selectedCategory.set(String(chatId), cat);
+    }
+    for (const [chatId, sess] of Object.entries(sessData)) {
+      // Dopo la serializzazione i passi non sono più lo stesso oggetto di LINK_STEP:
+      // rimetti la costante così askCurrentStep riconosce il passo del link CTA.
+      if (Array.isArray(sess.steps)) {
+        sess.steps = sess.steps.map((s) => (s && s.key === LINK_STEP.key ? LINK_STEP : s));
+      }
+      categorySessions.set(String(chatId), sess);
+    }
+    logger.info(
+      `Stato caricato (${pendingByChat.size} chat, ${selectedCategory.size} categorie, ${categorySessions.size} sessioni)`
+    );
   } catch (err) {
     logger.warn(`Errore nel caricare lo stato: ${err.message}`);
   }
@@ -489,7 +516,11 @@ function loadState() {
 
 function saveState() {
   try {
-    const data = Object.fromEntries(pendingByChat);
+    const data = {
+      pending: Object.fromEntries(pendingByChat),
+      selectedCategory: Object.fromEntries(selectedCategory),
+      categorySessions: Object.fromEntries(categorySessions),
+    };
     fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2), "utf-8");
     logger.debug(`Stato salvato (${pendingByChat.size} chat)`);
   } catch (err) {
@@ -1140,6 +1171,7 @@ export async function startBot() {
 
       // Pulisci la categoria dopo la generazione
       selectedCategory.delete(chatId);
+      saveState();
 
       // Esito di Reel e Storia video è già in metaMessage (righe 🎬). Tutti i video
       // caricati vengono comunque salvati anche in output/.
@@ -1306,6 +1338,7 @@ export async function startBot() {
         categorySession.data.sponsors = categorySession.data.sponsors || [];
         categorySession.data.sponsors.push(categorySession.currentGroup || {});
         categorySession.currentGroup = {};
+        saveState();
         await askAddAnotherSponsor(bot, chatId, categorySession);
         return;
       }
@@ -1313,10 +1346,12 @@ export async function startBot() {
       const nextIndex = categorySession.step + 1;
       if (nextIndex < categorySession.steps.length) {
         categorySession.step = nextIndex;
+        saveState();
         await askCurrentStep(bot, chatId, categorySession);
       } else {
         const categoryData = categorySession.data;
         categorySessions.delete(chatId);
+        saveState();
         await runGenerate(chatId, categoryData);
       }
       return;
@@ -1365,6 +1400,8 @@ Altri comandi utili:
 /status - vedi quante foto/testi hai in attesa
 /reset - cancella il materiale in attesa e ricomincia
 /bozze - pubblica su Facebook le bozze in attesa
+/calendario - pubblica ora una promo del calendario solidale (post + Storia FB/IG). Di suo esce da sola ogni martedì e venerdì alle 18
+/ruote - pubblica ora una promo della raccolta "Ruote di Speranza" (post + Storia FB/IG). Di suo esce da sola ogni mercoledì e sabato alle 18
 /report-mese - riepilogo storie del mese
 /report-anno - riepilogo storie dell'anno`;
 
@@ -1429,6 +1466,8 @@ Altri comandi utili:
     });
 
     pendingByChat.delete(chatId);
+    selectedCategory.delete(chatId);
+    categorySessions.delete(chatId);
     saveState();
 
     await bot.sendMessage(chatId, "✅ Materiale cancellato. Puoi iniziare una nuova storia.");
@@ -1459,6 +1498,7 @@ Altri comandi utili:
 
       if (categoryName) {
         selectedCategory.set(chatId, { id: categoryId, name: categoryName });
+        saveState();
         await bot.answerCallbackQuery(query.id);
 
         const pending = pendingByChat.get(chatId);
@@ -1487,10 +1527,12 @@ Altri comandi utili:
       const nextIndex = session.step + 1;
       if (nextIndex < session.steps.length) {
         session.step = nextIndex;
+        saveState();
         await askCurrentStep(bot, chatId, session);
       } else {
         const categoryData = session.data;
         categorySessions.delete(chatId);
+        saveState();
         await runGenerate(chatId, categoryData);
       }
     } else if (query.data === "more_sponsors_yes" || query.data === "more_sponsors_no") {
@@ -1504,6 +1546,7 @@ Altri comandi utili:
       if (query.data === "more_sponsors_yes") {
         // Ricomincia il gruppo di domande di categoria (indice 0) per il prossimo padrino/bambino.
         session.step = 0;
+        saveState();
         await askCurrentStep(bot, chatId, session);
         return;
       }
@@ -1513,10 +1556,12 @@ Altri comandi utili:
       const categoryStepsLength = (CATEGORY_STEPS[session.categoryId] || []).length;
       if (categoryStepsLength < session.steps.length) {
         session.step = categoryStepsLength;
+        saveState();
         await askCurrentStep(bot, chatId, session);
       } else {
         const categoryData = session.data;
         categorySessions.delete(chatId);
+        saveState();
         await runGenerate(chatId, categoryData);
       }
     } else if (query.data.startsWith("pub_ig_sum_")) {
@@ -1671,6 +1716,65 @@ Altri comandi utili:
     }
   });
 
+  // Comando /calendario - Pubblica SUBITO, a mano, una promo del calendario
+  // solidale (post + Storia su Facebook e Instagram), senza aspettare la finestra
+  // automatica di martedì/venerdì. Non tocca lo stato della pubblicazione
+  // programmata. Utile per un test o per un'uscita extra.
+  let calendarPromoRunning = false;
+  bot.onText(/^\/calendario$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    if (calendarPromoRunning) {
+      await bot.sendMessage(chatId, "⏳ Promo calendario già in corso, aspetta che finisca.");
+      return;
+    }
+    if (!metaAPI) {
+      await bot.sendMessage(chatId, "⚠️ Meta API non configurata: impossibile pubblicare.");
+      return;
+    }
+
+    calendarPromoRunning = true;
+    await bot.sendMessage(chatId, "🎁 Genero e pubblico ora la promo del calendario solidale (post + Storia su Facebook e Instagram). Ci vuole un minuto…");
+    try {
+      await runCalendarPromoNow(bot, metaAPI);
+    } catch (err) {
+      logger.error(`/calendario: errore nella pubblicazione manuale: ${err.message}`);
+      await bot.sendMessage(chatId, `⚠️ Errore nella pubblicazione: ${err.message}`);
+    } finally {
+      calendarPromoRunning = false;
+    }
+  });
+
+  // Comando /ruote - Pubblica SUBITO, a mano, una promo della raccolta GoFundMe
+  // "Ruote di Speranza" (post + Storia su Facebook e Instagram), senza aspettare
+  // la finestra automatica di mercoledì/sabato. Non tocca lo scheduling.
+  let gofundmePromoRunning = false;
+  bot.onText(/^\/ruote$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!isAllowed(chatId)) return;
+
+    if (gofundmePromoRunning) {
+      await bot.sendMessage(chatId, "⏳ Promo Ruote di Speranza già in corso, aspetta che finisca.");
+      return;
+    }
+    if (!metaAPI) {
+      await bot.sendMessage(chatId, "⚠️ Meta API non configurata: impossibile pubblicare.");
+      return;
+    }
+
+    gofundmePromoRunning = true;
+    await bot.sendMessage(chatId, "🚐 Genero e pubblico ora la promo di Ruote di Speranza (post + Storia su Facebook e Instagram). Ci vuole un minuto…");
+    try {
+      await runGofundmePromoNow(bot, metaAPI);
+    } catch (err) {
+      logger.error(`/ruote: errore nella pubblicazione manuale: ${err.message}`);
+      await bot.sendMessage(chatId, `⚠️ Errore nella pubblicazione: ${err.message}`);
+    } finally {
+      gofundmePromoRunning = false;
+    }
+  });
+
   // Comando /report-mese - Report mensile
   bot.onText(/^\/report-mese(?:\s+(\d{4})\s+(\d{1,2}))?$/i, async (msg, match) => {
     const chatId = msg.chat.id;
@@ -1791,6 +1895,7 @@ Altri comandi utili:
     const steps = [...(CATEGORY_STEPS[selected.id] || []), LINK_STEP];
     const session = { steps, step: 0, data: {}, categoryId: selected.id };
     categorySessions.set(chatId, session);
+    saveState();
     await bot.sendMessage(
       chatId,
       `Ti faccio ${steps.length} ${steps.length === 1 ? "domanda" : "domande"}, una alla volta: rispondi e invia, poi aspetta la prossima. Se non hai il dato, scrivi solo "-" e premi invio per saltarla.`
@@ -1811,6 +1916,25 @@ Altri comandi utili:
     );
   await checkMonthlySummary();
   setInterval(checkMonthlySummary, 60 * 60 * 1000);
+
+  // Controlla (al via e poi ogni ora) se è martedì o venerdì dalle 18 (ora
+  // italiana): in quel caso pubblica SUBITO la promo del calendario solidale —
+  // post + Storia su Facebook e Instagram — e manda un riepilogo su Telegram.
+  const checkCalendarPromo = () =>
+    runCalendarPromoIfDue(bot, metaAPI).catch((err) =>
+      logger.error(`Errore nella promo calendario solidale automatica: ${err.message}`)
+    );
+  await checkCalendarPromo();
+  setInterval(checkCalendarPromo, 60 * 60 * 1000);
+
+  // Come sopra ma per la raccolta GoFundMe "Ruote di Speranza": mercoledì e sabato
+  // dalle 18 (ora italiana), sfasata di un giorno rispetto al calendario.
+  const checkGofundmePromo = () =>
+    runGofundmePromoIfDue(bot, metaAPI).catch((err) =>
+      logger.error(`Errore nella promo Ruote di Speranza automatica: ${err.message}`)
+    );
+  await checkGofundmePromo();
+  setInterval(checkGofundmePromo, 60 * 60 * 1000);
 
   return bot;
 }

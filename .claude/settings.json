@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "timeout": 30,
+            "statusMessage": "Sincronizzo la memoria da GitHub...",
+            "command": "for M in \"$HOME\"/.claude/projects/*/memory; do [ -d \"$M/.git\" ] || continue; git -C \"$M\" remote get-url origin 2>/dev/null | grep -q effata-social-memory || continue; git -C \"$M\" pull --ff-only -q 2>/dev/null; done; true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "async": true,
+            "command": "for M in \"$HOME\"/.claude/projects/*/memory; do [ -d \"$M/.git\" ] || continue; git -C \"$M\" remote get-url origin 2>/dev/null | grep -q effata-social-memory || continue; git -C \"$M\" add -A 2>/dev/null; git -C \"$M\" commit -q -m \"auto-sync memoria $(date +'%F %H:%M')\" 2>/dev/null; git -C \"$M\" push -q 2>/dev/null; done; true"
+          }
+        ]
+      }
+    ]
+  }
+}

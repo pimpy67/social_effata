@@ -38,7 +38,7 @@ const STORY_CROP_MIN_KEPT_FRACTION = 0.75;
 // del centro geometrico. Se la foto è troppo lontana dal 9:16 e il crop taglierebbe
 // troppo, ripiega su uno sfondo sfocato con la foto intera sovrapposta al centro
 // (nessun taglio, nessuna banda vuota).
-async function buildStoryImage(buffer) {
+export async function buildStoryImage(buffer) {
   const targetRatio = STORY_DIMENSIONS.width / STORY_DIMENSIONS.height;
   const metadata = await sharp(buffer).metadata();
   const sourceRatio = metadata.width / metadata.height;
@@ -204,7 +204,18 @@ function buildInfoSlideLines(text, maxCharsPerLine) {
 // (vedi il ciclo su categoryInfoTexts in optimizePhotosForSocial). Esportata anche
 // per la Storia video (telegramBot.js): lì la slide finale va pubblicata a mano
 // come ultimo frame, dopo le clip video, invece di essere in coda alla Storia foto.
-export async function buildCategoryInfoSlide(text) {
+//
+// `options` opzionale: `width`/`height` (default: formato Storia 1080x1920 — la
+// promo del calendario riusa questa slide anche a 1080x1350 per il post nel feed;
+// col 1350 il testo va tenuto corto o sborda sopra/sotto) e `background` (default:
+// rosso brand — la promo GoFundMe "Ruote di Speranza" usa un altro colore per
+// distinguersi a colpo d'occhio).
+export async function buildCategoryInfoSlide(text, options = {}) {
+  const {
+    width = STORY_DIMENSIONS.width,
+    height = STORY_DIMENSIONS.height,
+    background = BRAND_RED,
+  } = options;
   const logoBuffer = await sharp(LOGO_PATH)
     .resize(INFO_SLIDE_LOGO_SIZE, INFO_SLIDE_LOGO_SIZE, { fit: "contain" })
     .toBuffer();
@@ -234,7 +245,7 @@ export async function buildCategoryInfoSlide(text) {
     INFO_SLIDE_LOGO_TEXT_GAP +
     textBlockHeight;
 
-  const headerTop = Math.round((STORY_DIMENSIONS.height - totalBlockHeight) / 2 + INFO_SLIDE_HEADER_FONT_SIZE * 0.75);
+  const headerTop = Math.round((height - totalBlockHeight) / 2 + INFO_SLIDE_HEADER_FONT_SIZE * 0.75);
 
   const headerSvg = headerLines
     .map(
@@ -254,20 +265,43 @@ export async function buildCategoryInfoSlide(text) {
     )
     .join("");
 
-  const background = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">
-      <rect width="100%" height="100%" fill="${BRAND_RED}" />
+  const backgroundSvg = `<svg width="${width}" height="${height}">
+      <rect width="100%" height="100%" fill="${background}" />
     </svg>`;
-  const textOverlay = `<svg width="${STORY_DIMENSIONS.width}" height="${STORY_DIMENSIONS.height}">${headerSvg}${textSvg}</svg>`;
+  const textOverlay = `<svg width="${width}" height="${height}">${headerSvg}${textSvg}</svg>`;
 
-  return sharp(Buffer.from(background))
+  return sharp(Buffer.from(backgroundSvg))
     .composite([
       {
         input: logoBuffer,
-        left: Math.round((STORY_DIMENSIONS.width - INFO_SLIDE_LOGO_SIZE) / 2),
+        left: Math.round((width - INFO_SLIDE_LOGO_SIZE) / 2),
         top: logoTop,
       },
       { input: Buffer.from(textOverlay), top: 0, left: 0 },
     ])
+    .jpeg({ quality: 90, progressive: true })
+    .toBuffer();
+}
+
+// Mette la foto su una tela esatta width x height con lo sfondo sfocato (una copia
+// ingrandita della foto stessa) a riempire lo spazio che avanza, invece di lasciare
+// bande vuote. Serve per Instagram: l'API del feed, se riceve una foto orizzontale
+// (rapporto fuori dal range 4:5–1.91:1 accettato), la incornicia con bande NERE —
+// non aggiunge lo sfondo sfocato come fa l'app quando carichi a mano. Così i post
+// Instagram con foto orizzontali hanno lo stesso effetto "sfumato" di Facebook, e
+// in più tutte le foto di un carosello restano dello stesso formato.
+export async function padWithBlur(buffer, width, height) {
+  const background = await sharp(buffer)
+    .resize(width, height, { fit: "cover" })
+    .blur(30)
+    .toBuffer();
+
+  const foreground = await sharp(buffer)
+    .resize(width, height, { fit: "inside" })
+    .toBuffer();
+
+  return sharp(background)
+    .composite([{ input: foreground, gravity: "center" }])
     .jpeg({ quality: 90, progressive: true })
     .toBuffer();
 }
@@ -304,18 +338,25 @@ export async function optimizePhotosForSocial(imageBuffers, { storySlideTexts = 
         if (social === "facebook" || social === "instagram") {
           // Facebook e Instagram supportano più foto per post (album/carosello):
           // ottimizza tutte quelle caricate.
+          // Facebook: solo ridimensionamento (fit: inside), niente ritaglio né
+          // bande — l'app di Facebook estende da sola le foto orizzontali con uno
+          // sfondo sfocato. Instagram: tela fissa 4:5 con sfondo sfocato (vedi
+          // padWithBlur), perché il feed Instagram incornicerebbe le orizzontali
+          // con bande nere.
           optimized[social] = await Promise.all(
             imageBuffers.map((img) =>
-              sharp(img.buffer)
-                .resize(dimensions.width, dimensions.height, {
-                  fit: "inside",
-                  withoutEnlargement: true,
-                })
-                .jpeg({ quality: 90, progressive: true })
-                .toBuffer()
+              social === "instagram"
+                ? padWithBlur(img.buffer, dimensions.width, dimensions.height)
+                : sharp(img.buffer)
+                    .resize(dimensions.width, dimensions.height, {
+                      fit: "inside",
+                      withoutEnlargement: true,
+                    })
+                    .jpeg({ quality: 90, progressive: true })
+                    .toBuffer()
             )
           );
-          logger.debug(`${imageBuffers.length} foto ottimizzate per ${social} (max ${dimensions.width}x${dimensions.height}, senza ritaglio)`);
+          logger.debug(`${imageBuffers.length} foto ottimizzate per ${social} (max ${dimensions.width}x${dimensions.height}, ${social === "instagram" ? "tela 4:5 con sfondo sfocato" : "senza ritaglio"})`);
           continue;
         }
 
