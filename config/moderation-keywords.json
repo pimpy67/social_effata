@@ -70,12 +70,37 @@
     ]
   },
   "custom_additions": {
-    "description": "Aggiungi qui le parole/frasi specifiche che hai raccolto",
+    "description": "Parole chiave personali raccolte durante la moderazione",
     "added_by": "utente",
     "items": [
-      "AGGIUNGI QUI LE TUE PAROLE CHIAVE",
-      "ES: parolaccia che vuoi bloccare",
-      "ES: frase razzista ricorrente"
+      "poo vengono in italia",
+      "poo vengono a rubare",
+      "poo vengono a stuprare",
+      "vengono qui per rubare",
+      "vengono qui per stuprare",
+      "donne violate",
+      "donne stuprate",
+      "stupri di massa",
+      "invasione migranti",
+      "invasione stranieri",
+      "non appartengono qui",
+      "tornate a casa vostra",
+      "tornate al vostro paese",
+      "non siete benvenuti",
+      "pulite la pagina",
+      "non vogliamo voi",
+      "sporchi invasori",
+      "maledetti stranieri",
+      "maledetti migranti",
+      "Italia per gli italiani",
+      "fuori gli stranieri",
+      "sporchi negri",
+      "sporchi rom",
+      "sporchi zingari",
+      "donne italiane violate",
+      "stupri per strada",
+      "pericoli per le donne",
+      "violenza straniera"
     ]
   }
 }
