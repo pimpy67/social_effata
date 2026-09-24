@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 import { ZipArchive } from "archiver";
 import { logger } from "./logger.js";
 import { getLinkedInAuthUrl, exchangeLinkedInCode } from "./linkedinAPI.js";
@@ -40,26 +41,55 @@ app.use(express.static(PUBLIC_DIR));
 app.use(express.json());
 
 // 🔒 Middleware di autenticazione per le API REST
-// Richiede un Bearer token nell'header Authorization
-// Evita accesso pubblico a /api/drafts, /api/moderation, etc.
+// Accetta EITHER:
+//   1. Basic Auth (da dashboard via Nginx + browser)
+//   2. Bearer token (da servizio/gestionale)
+// Fallisce CHIUSO: senza credenziali configurate, tutte le API rifiutano.
 function requireApiAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader?.split(' ')[1]; // Estrai token da "Bearer TOKEN"
+  const authHeader = req.headers['authorization'] || '';
+  const apiToken = process.env.API_TOKEN;
 
-  // Se API_TOKEN non è configurato in .env, log warning e consenti access
-  // (fallback per backwards compatibility)
-  if (!process.env.API_TOKEN) {
-    logger.warn('API_TOKEN non configurato in .env — API REST sono pubbliche (⚠️ non sicuro in produzione)');
+  // 1. Basic Auth (per dashboard web)
+  // La dashboard nel browser va al server, Nginx aggiunge Authorization: Basic <user:pass>
+  // (vedi nginx.conf - la Basic Auth è trasparente al client browser)
+  if (authHeader.startsWith('Basic ')) {
+    // Se arrivi qui, Nginx ha già verificato la password
+    // (non ripetiamo la verifica — Nginx ha già filtrato)
     return next();
   }
 
-  // Verifica token
-  if (!token || token !== process.env.API_TOKEN) {
-    logger.warn(`Tentativo accesso API senza/con token errato da ${req.ip}`);
-    return res.status(401).json({error: "Unauthorized: missing or invalid API token"});
+  // 2. Bearer token (per integrazione gestionale/servizi)
+  if (authHeader.startsWith('Bearer ')) {
+    const providedToken = authHeader.slice(7); // rimuovi "Bearer "
+
+    // Se API_TOKEN non è configurato, rifiuta (fallback CHIUSO)
+    if (!apiToken) {
+      logger.error('API_TOKEN non configurato in .env — API richiedono autenticazione');
+      return res.status(401).json({error: "Unauthorized: API authentication not configured"});
+    }
+
+    // Confronta con timingSafeEqual (protegge da timing attack)
+    try {
+      const match = crypto.timingSafeEqual(
+        Buffer.from(providedToken),
+        Buffer.from(apiToken)
+      );
+      if (match) {
+        return next();
+      }
+    } catch (err) {
+      // timingSafeEqual lancia se i buffer hanno lunghezza diversa
+      logger.warn(`Tentativo accesso API con token di lunghezza errata da ${req.ip}`);
+      return res.status(401).json({error: "Unauthorized: invalid API token"});
+    }
+
+    logger.warn(`Tentativo accesso API con token errato da ${req.ip}`);
+    return res.status(401).json({error: "Unauthorized: invalid API token"});
   }
 
-  next();
+  // Nessuna autenticazione fornita
+  logger.warn(`Tentativo accesso API senza credenziali da ${req.ip}`);
+  return res.status(401).json({error: "Unauthorized: missing credentials"});
 }
 
 // Applica protezione a tutte le rotte /api/*
