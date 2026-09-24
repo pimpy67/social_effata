@@ -39,6 +39,32 @@ function buildDraftTitle(category, categoryData) {
 app.use(express.static(PUBLIC_DIR));
 app.use(express.json());
 
+// 🔒 Middleware di autenticazione per le API REST
+// Richiede un Bearer token nell'header Authorization
+// Evita accesso pubblico a /api/drafts, /api/moderation, etc.
+function requireApiAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.split(' ')[1]; // Estrai token da "Bearer TOKEN"
+
+  // Se API_TOKEN non è configurato in .env, log warning e consenti access
+  // (fallback per backwards compatibility)
+  if (!process.env.API_TOKEN) {
+    logger.warn('API_TOKEN non configurato in .env — API REST sono pubbliche (⚠️ non sicuro in produzione)');
+    return next();
+  }
+
+  // Verifica token
+  if (!token || token !== process.env.API_TOKEN) {
+    logger.warn(`Tentativo accesso API senza/con token errato da ${req.ip}`);
+    return res.status(401).json({error: "Unauthorized: missing or invalid API token"});
+  }
+
+  next();
+}
+
+// Applica protezione a tutte le rotte /api/*
+app.use('/api/', requireApiAuth);
+
 // API: Listare tutte le bozze generate
 app.get("/api/drafts", (req, res) => {
   try {
