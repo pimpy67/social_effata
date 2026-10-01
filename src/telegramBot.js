@@ -23,6 +23,7 @@ import {
   markFacebookDraftPublished,
 } from "./database.js";
 import { publishToItalyAndUganda } from "./publishToMultiPage.js";
+import { initVoiceTranscriber, isVoiceTranscriberReady, transcribeVoiceMessage } from "./voiceTranscriber.js";
 
 // Categorie disponibili
 const CATEGORIES = {
@@ -576,6 +577,9 @@ export async function startBot() {
 
   // Inizializza LinkedIn API (se configurato)
   linkedinAPI = await initLinkedInAPI();
+
+  // Inizializza Voice Transcriber (se configurato)
+  initVoiceTranscriber();
 
   const bot = new TelegramBot(token, { polling: true });
   logger.info("Bot Telegram avviato, in ascolto...");
@@ -1303,6 +1307,95 @@ export async function startBot() {
     }
   });
 
+  // Messaggi vocali: trascritti con Whisper e aggiunti come testo
+  bot.on("voice", async (msg) => {
+    if (!isAllowed(msg.chat.id)) return;
+
+    if (!isVoiceTranscriberReady()) {
+      await bot.sendMessage(
+        msg.chat.id,
+        "⚠️ Trascrizione vocale non configurata (manca OPENAI_API_KEY nel .env). Manda testo scritto invece di messaggi vocali."
+      );
+      return;
+    }
+
+    try {
+      await bot.sendMessage(msg.chat.id, "🎙️ Sto trascrivendo il tuo messaggio vocale...");
+
+      const transcript = await transcribeVoiceMessage(bot, msg.voice.file_id, INTAKE_DIR);
+
+      if (!transcript.text || transcript.text.trim().length === 0) {
+        await bot.sendMessage(msg.chat.id, "⚠️ Messaggio vocale vuoto o non comprensibile. Riprova.");
+        return;
+      }
+
+      const chatId = chatKey(msg.chat.id);
+      const categorySession = categorySessions.get(chatId);
+      if (categorySession) {
+        const step = categorySession.steps[categorySession.step];
+        const answer = transcript.text.trim();
+        const categoryStepsLength = (CATEGORY_STEPS[categorySession.categoryId] || []).length;
+        const isMultiSponsorRound =
+          MULTI_SPONSOR_CATEGORIES.has(categorySession.categoryId) && categorySession.step < categoryStepsLength;
+
+        if (isMultiSponsorRound) {
+          categorySession.currentGroup = categorySession.currentGroup || {};
+          if (answer !== "-") categorySession.currentGroup[step.key] = answer;
+        } else if (answer !== "-") {
+          categorySession.data[step.key] = answer;
+        }
+
+        if (isMultiSponsorRound && categorySession.step === categoryStepsLength - 1) {
+          categorySession.data.sponsors = categorySession.data.sponsors || [];
+          categorySession.data.sponsors.push(categorySession.currentGroup || {});
+          categorySession.currentGroup = {};
+          saveState();
+          await askAddAnotherSponsor(bot, chatId, categorySession);
+          return;
+        }
+
+        const nextIndex = categorySession.step + 1;
+        if (nextIndex < categorySession.steps.length) {
+          categorySession.step = nextIndex;
+          saveState();
+          await askCurrentStep(bot, chatId, categorySession);
+        } else {
+          const categoryData = categorySession.data;
+          categorySessions.delete(chatId);
+          saveState();
+          await runGenerate(chatId, categoryData);
+        }
+        return;
+      }
+
+      const msgCheck = validation.validateTextMessage(transcript.text);
+      if (!msgCheck.valid) {
+        await bot.sendMessage(msg.chat.id, `⚠️ ${msgCheck.error}`);
+        return;
+      }
+
+      const pending = getPending(msg.chat.id);
+      const captions = pending.photos.map((p) => p.caption).filter(Boolean);
+      const totalLengthCheck = validation.validateTotalTextLength(captions, [
+        ...pending.notes,
+        transcript.text,
+      ]);
+      if (!totalLengthCheck.valid) {
+        await bot.sendMessage(msg.chat.id, `⚠️ ${totalLengthCheck.error}`);
+        return;
+      }
+
+      pending.notes.push(transcript.text);
+      saveState();
+      logger.info(`Messaggio vocale trascritto e aggiunto: ${transcript.text.length} char (${pending.notes.length} totali)`);
+      await bot.sendMessage(msg.chat.id, `✅ Vocale trascritto e aggiunto al materiale:\n\n"${transcript.text}"`);
+      await remindCategoryIfNeeded(msg.chat.id, pending);
+    } catch (err) {
+      logger.error(`Errore nel trascrire il messaggio vocale: ${err.message}`);
+      await bot.sendMessage(msg.chat.id, `⚠️ Errore nella trascrizione del messaggio vocale: ${err.message}`);
+    }
+  });
+
   // Testo mandato come messaggio a sé (non didascalia di una foto): si aggiunge come nota extra
   bot.on("text", async (msg) => {
     if (!isAllowed(msg.chat.id)) return;
@@ -1386,7 +1479,7 @@ export async function startBot() {
   const HELP_TEXT = `👋 Ciao! Ecco come funziona il bot per creare le storie social:
 
 1️⃣ Scegli la categoria della storia con /categoria (es. Adozioni scolastiche, Animali domestici, ...)
-2️⃣ Manda le foto (e, se vuoi, brevi video da telefono, max ${validation.getLimits().MAX_VIDEO_SIZE_MB}MB l'uno) e un testo/descrizione della storia (uno o più messaggi, come preferisci)
+2️⃣ Manda le foto (e, se vuoi, brevi video da telefono, max ${validation.getLimits().MAX_VIDEO_SIZE_MB}MB l'uno) e un testo/descrizione della storia (uno o più messaggi, come preferisci). Puoi mandare anche **messaggi vocali** che verranno automaticamente trascritti a testo.
 3️⃣ Scrivi /genera per creare le bozze
 
 Alcune categorie fanno anche qualche domanda extra (es. nome sostenitore): il bot te le fa una alla volta, rispondi e invia, poi aspetta la domanda successiva. Se non hai un dato, scrivi solo "-" e premi invio per saltare quella domanda.
