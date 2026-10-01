@@ -22,6 +22,7 @@ import {
   getUnpublishedFacebookDrafts,
   markFacebookDraftPublished,
 } from "./database.js";
+import { publishToItalyAndUganda } from "./publishToMultiPage.js";
 
 // Categorie disponibili
 const CATEGORIES = {
@@ -939,12 +940,10 @@ export async function startBot() {
       }
       if (metaAPI && images.length > 0) {
         try {
-          const metaResults = await metaAPI.publishToMetaBusiness(
-            result.facebookPost,
-            result.instagramStory,
-            images,
-            optimizedPhotos
-          );
+          const metaResults = await publishToItalyAndUganda(result, images, {
+            publishStories: true,
+            optimizedPhotos,
+          });
 
           if (metaResults.facebook?.success) {
             facebookPostId = metaResults.facebook.postId;
