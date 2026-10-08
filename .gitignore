@@ -26,3 +26,6 @@ output/*.gif
 !intake/.gitkeep
 !output/.gitkeep
 !logs/.gitkeep
+
+# Stato delle risposte automatiche alle parole chiave (per persona e post)
+keyword-reply-state.json
