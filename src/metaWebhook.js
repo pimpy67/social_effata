@@ -2,6 +2,7 @@ import { logger } from "./logger.js";
 import { getMetaAPI, getEmailAPI, CATEGORY_COMMENT_KEYWORD } from "./telegramBot.js";
 import { matchesShareConfirmation, getWeeklyShareThankYouMessage, SHARE_CTA_COMMENT } from "./shareKeyword.js";
 import { moderateComment, shouldProcessComment, shouldSendModerationAlert, addToModerationQueue } from "./moderationFilter.js";
+import { sendKeywordReply } from "./keywordReply.js";
 
 function matchesKeyword(text, keyword) {
   return !!text && text.toUpperCase().includes(keyword.toUpperCase());
@@ -122,9 +123,11 @@ async function processComment(comment) {
     return; // Non elaborare ulteriormente il commento
   }
 
-  const matchedKeyword = Object.values(CATEGORY_COMMENT_KEYWORD).find((keyword) =>
-    matchesKeyword(comment.text, keyword)
-  );
+  // Se più parole chiave compaiono nel commento vince la più lunga: così
+  // "CASAFAMIGLIA" non viene attribuita a "CASA".
+  const matchedKeyword = Object.values(CATEGORY_COMMENT_KEYWORD)
+    .filter((keyword) => matchesKeyword(comment.text, keyword))
+    .sort((a, b) => b.length - a.length)[0];
 
   if (matchedKeyword && emailAPI) {
     let permalink = null;
@@ -143,6 +146,15 @@ async function processComment(comment) {
       platform: comment.platform,
       permalink,
     });
+  }
+
+  if (metaAPI) {
+    try {
+      const sent = await sendKeywordReply(comment, metaAPI);
+      if (sent) logger.info(`Risposta pubblica alla parola chiave inviata al commento ${comment.commentId} (${comment.platform})`);
+    } catch (err) {
+      logger.error(`Errore nella risposta alla parola chiave (${comment.platform}): ${err.response?.data?.error?.message || err.message}`);
+    }
   }
 
   if (matchesShareConfirmation(comment.text) && metaAPI) {
