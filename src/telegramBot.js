@@ -980,7 +980,11 @@ export async function startBot() {
             !metaResults.facebookStory?.success &&
             !metaResults.instagramStory?.success
           ) {
+            // Mantiene gli errori: senza di loro non si capisce il perché
             metaMessage = "⚠️ Nessun canale Meta pubblicato\n";
+            if (metaResults.errors.length > 0) {
+              metaMessage += `Errori Meta:\n${metaResults.errors.join("\n")}\n`;
+            }
           }
         } catch (err) {
           logger.error(`Errore nella pubblicazione Meta: ${err.message}`);
