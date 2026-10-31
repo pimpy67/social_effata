@@ -1,0 +1,636 @@
+{
+  "orario": "07:30",
+  "giorni": [
+    {
+      "data": "2026-11-29",
+      "giorno": 0,
+      "tipo": "lancio",
+      "titolo": "Lancio · prima domenica d'Avvento",
+      "media": "reel_B_lancio",
+      "disegno": null,
+      "facebook": "🕯️ Oggi è la prima domenica d'Avvento, e da martedì si apre il nostro calendario: 25 finestre, una al giorno fino a Natale, con i disegni e i versi di una filastrocca per l'Uganda.\n\nOgni disegno si può regalare. Diventa una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda: la scegli, scrivi il nome di chi la riceve, e lei arriva per email o su WhatsApp. Si apre il 24 dicembre a mezzanotte.\n\nUn regalo che non si incarta e non si spedisce, ma arriva lontano.\n👉 Scegli il tuo disegno: https://calendario.effataitalia.it/natale?da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "🕯️ Prima domenica d'Avvento: da martedì si apre il nostro calendario, una finestra al giorno fino a Natale.\nOgni disegno si può regalare: gift card da 20 € per la Casa Famiglia Effatà in Uganda, per email o WhatsApp.\n👉 Link in bio\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Da martedì, una finestra al giorno · Scegli il tuo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?da=ig-storia",
+      "email_oggetto": null,
+      "note": "Primo commento con il link all'articolo del blog per iscriversi all'email quotidiana.",
+      "file": {
+        "media": [
+          "2026-11-29/reel.mp4"
+        ],
+        "storia": "2026-11-29/storia.jpg",
+        "facebook": "2026-11-29/facebook.txt",
+        "instagram": "2026-11-29/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?da=fb"
+    },
+    {
+      "data": "2026-12-01",
+      "giorno": 1,
+      "tipo": "disegno",
+      "titolo": "Mani che si incontrano · Giving Tuesday",
+      "media": "post",
+      "disegno": 1,
+      "teaser": 2,
+      "facebook": "🕯️ Si apre la prima finestra del nostro calendario dell'Avvento!\n\nMani d'Italia e mani d'Uganda, unite da un viaggio sopra il mare. È il primo disegno della nostra filastrocca, e domani arriva il primo verso:\n«L'Uganda è un paese assai lontano che ha bisogno di una nostra generosa mano»\n\nOggi è anche il Giving Tuesday, la giornata mondiale del dono: il modo giusto per cominciare.\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=1&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "🕯️ Finestra 1. Mani d'Italia e mani d'Uganda.\nDomani il primo verso della nostra filastrocca.\nOggi è il Giving Tuesday, la giornata del dono 💛\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 1 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=1&da=ig-storia",
+      "email_oggetto": "Finestra 1: mani che si incontrano 🤝",
+      "file": {
+        "media": [
+          "2026-12-01/post.jpg"
+        ],
+        "storia": "2026-12-01/storia.jpg",
+        "facebook": "2026-12-01/facebook.txt",
+        "instagram": "2026-12-01/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=1&da=fb"
+    },
+    {
+      "data": "2026-12-02",
+      "giorno": 2,
+      "tipo": "verso",
+      "titolo": "L'Uganda è lontana",
+      "media": "reel_A",
+      "disegno": 1,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-05 at 23.26.48.jpeg",
+      "didascalia_foto": "Silvia a Jinja, alle sorgenti del Nilo",
+      "facebook": "Finestra 2, il primo verso:\n«L'Uganda è un paese assai lontano che ha bisogno di una nostra generosa mano»\n\nLontana sì, ma non per Silvia: questa è lei a Jinja, alle sorgenti del Nilo, nei suoi primi tempi in Uganda.\n\n🎁 Il disegno di ieri, le mani d'Italia e d'Uganda, si può regalare: 20 € per la Casa Famiglia.\n👉 https://calendario.effataitalia.it/natale?disegno=1&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 2 🎧 Alza il volume.\n«L'Uganda è un paese assai lontano che ha bisogno di una nostra generosa mano»\n\nSilvia a Jinja, alle sorgenti del Nilo, nei suoi primi tempi in Uganda.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 2 · Ascolta il verso",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=1&da=ig-storia",
+      "email_oggetto": "Finestra 2: «L'Uganda è un paese assai lontano…»",
+      "file": {
+        "media": [
+          "2026-12-02/reel.mp4"
+        ],
+        "storia": "2026-12-02/storia.jpg",
+        "facebook": "2026-12-02/facebook.txt",
+        "instagram": "2026-12-02/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=1&da=fb"
+    },
+    {
+      "data": "2026-12-03",
+      "giorno": 3,
+      "tipo": "disegno",
+      "titolo": "Il mondo intorno a una casa",
+      "media": "post",
+      "disegno": 3,
+      "teaser": 4,
+      "facebook": "Finestra 3 🌍\nUn mondo di terra e sentieri, e in mezzo una casa: è il disegno di oggi.\n\nDomani il verso che lo accompagna:\n«Poiché molti bambini che vorrebbero sentirsi lieti non possono farlo per mancanza di spazi sereni e quieti»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=3&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 3 🌍 Un mondo di terra e sentieri, e in mezzo una casa.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 3 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=3&da=ig-storia",
+      "email_oggetto": "Finestra 3: una casa in mezzo al mondo 🏡",
+      "file": {
+        "media": [
+          "2026-12-03/post.jpg"
+        ],
+        "storia": "2026-12-03/storia.jpg",
+        "facebook": "2026-12-03/facebook.txt",
+        "instagram": "2026-12-03/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=3&da=fb"
+    },
+    {
+      "data": "2026-12-04",
+      "giorno": 4,
+      "tipo": "verso",
+      "titolo": "Spazi sereni",
+      "media": "reel_A",
+      "disegno": 3,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-05 at 23.26.47.jpeg",
+      "didascalia_foto": "Silvia con i bambini, Uganda",
+      "facebook": "Finestra 4:\n«Poiché molti bambini che vorrebbero sentirsi lieti non possono farlo per mancanza di spazi sereni e quieti»\n\nUno spazio sereno e quieto è proprio quello che la Casa Famiglia Effatà prova a essere ogni giorno: un posto dove stare insieme, al sicuro.\n\n🎁 Regala il disegno di ieri: 20 € per la Casa Famiglia.\n👉 https://calendario.effataitalia.it/natale?disegno=3&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 4 🎧\n«Poiché molti bambini che vorrebbero sentirsi lieti non possono farlo per mancanza di spazi sereni e quieti»\n\nUno spazio sereno: è questo che vuole essere la Casa Famiglia Effatà.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 4 · Ascolta il verso",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=3&da=ig-storia",
+      "email_oggetto": "Finestra 4: spazi sereni e quieti",
+      "file": {
+        "media": [
+          "2026-12-04/reel.mp4"
+        ],
+        "storia": "2026-12-04/storia.jpg",
+        "facebook": "2026-12-04/facebook.txt",
+        "instagram": "2026-12-04/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=3&da=fb"
+    },
+    {
+      "data": "2026-12-05",
+      "giorno": 5,
+      "tipo": "disegno",
+      "titolo": "Luci e comodità",
+      "media": "post",
+      "disegno": 5,
+      "teaser": 6,
+      "facebook": "Finestra 5 🏙️\nStrade, negozi, case con il tetto rosso, una fontana in mezzo alla rotonda: il disegno di oggi racconta il nostro mondo.\n\nDomani scoprirete perché. Il verso dice:\n«non vivono come noi in mezzo a luci e comodità ma in piccoli villaggi con casette di fango prive di elettricità»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=5&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 5 🏙️ Strade, negozi, una fontana: il nostro mondo, a pastello.\nDomani il verso che lo spiega.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 5 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=5&da=ig-storia",
+      "email_oggetto": "Finestra 5: il nostro mondo, a pastello",
+      "file": {
+        "media": [
+          "2026-12-05/post.jpg"
+        ],
+        "storia": "2026-12-05/storia.jpg",
+        "facebook": "2026-12-05/facebook.txt",
+        "instagram": "2026-12-05/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=5&da=fb"
+    },
+    {
+      "data": "2026-12-06",
+      "giorno": 6,
+      "tipo": "verso",
+      "titolo": "Casette di fango",
+      "media": "reel_A",
+      "disegno": 5,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-20 at 21.14.51.jpeg",
+      "didascalia_foto": "Foto di Silvia, Uganda",
+      "facebook": "Finestra 6:\n«non vivono come noi in mezzo a luci e comodità ma in piccoli villaggi con casette di fango prive di elettricità»\n\nIeri il disegno delle nostre strade illuminate, oggi una casa di fango in un villaggio dell'Uganda, fotografata da Silvia. Due mondi, un solo calendario.\n\n🎁 Regala il disegno di ieri: 20 € per la Casa Famiglia Effatà.\n👉 https://calendario.effataitalia.it/natale?disegno=5&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 6 🎧\n«non vivono come noi in mezzo a luci e comodità ma in piccoli villaggi con casette di fango prive di elettricità»\n\nIeri il nostro mondo, oggi il loro. Foto di Silvia.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 6 · Ascolta il verso",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=5&da=ig-storia",
+      "email_oggetto": "Finestra 6: casette di fango 🏠",
+      "file": {
+        "media": [
+          "2026-12-06/reel.mp4"
+        ],
+        "storia": "2026-12-06/storia.jpg",
+        "facebook": "2026-12-06/facebook.txt",
+        "instagram": "2026-12-06/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=5&da=fb"
+    },
+    {
+      "data": "2026-12-07",
+      "giorno": 7,
+      "tipo": "disegno",
+      "titolo": "Il villaggio",
+      "media": "post",
+      "disegno": 7,
+      "teaser": 8,
+      "facebook": "Finestra 7 🛖\nCapanne con il tetto di paglia, palme, e sotto la terra rossa: il villaggio disegnato.\n\nDomani, festa dell'Immacolata, il verso:\n«Non hanno strade asfaltate o marciapiedi illuminati, camminano a piedi scalzi sopra arida terra e sassi acuminati»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=7&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 7 🛖 Capanne, palme e terra rossa.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 7 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=7&da=ig-storia",
+      "email_oggetto": "Finestra 7: il villaggio 🛖",
+      "file": {
+        "media": [
+          "2026-12-07/post.jpg"
+        ],
+        "storia": "2026-12-07/storia.jpg",
+        "facebook": "2026-12-07/facebook.txt",
+        "instagram": "2026-12-07/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=7&da=fb"
+    },
+    {
+      "data": "2026-12-08",
+      "giorno": 8,
+      "tipo": "verso",
+      "titolo": "A piedi scalzi · Immacolata",
+      "media": "reel_B",
+      "disegno": null,
+      "facebook": "Finestra 8:\n«Non hanno strade asfaltate o marciapiedi illuminati, camminano a piedi scalzi sopra arida terra e sassi acuminati»\n\nOggi è festa, e in tanti cominciano a pensare ai regali di Natale. Ecco un'idea che non si incarta: uno dei disegni della nostra filastrocca, scelto da te, che arriva per email o su WhatsApp a chi vuoi tu.\n\n🎁 20 € per la Casa Famiglia Effatà in Uganda.\n👉 Scegli il tuo disegno: https://calendario.effataitalia.it/natale?da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 8 🎧\n«Non hanno strade asfaltate o marciapiedi illuminati, camminano a piedi scalzi sopra arida terra e sassi acuminati»\n\nOggi si comincia a pensare ai regali: scegline uno che arriva lontano.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 8 · Scegli il disegno da regalare",
+      "link_storia": "https://calendario.effataitalia.it/natale?da=ig-storia",
+      "email_oggetto": "Finestra 8: a piedi scalzi · e un'idea per i regali",
+      "file": {
+        "media": [
+          "2026-12-08/reel.mp4"
+        ],
+        "storia": "2026-12-08/storia.jpg",
+        "facebook": "2026-12-08/facebook.txt",
+        "instagram": "2026-12-08/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?da=fb"
+    },
+    {
+      "data": "2026-12-09",
+      "giorno": 9,
+      "tipo": "disegno",
+      "titolo": "Il sentiero",
+      "media": "post",
+      "disegno": 9,
+      "teaser": 10,
+      "facebook": "Finestra 9 🌴\nUn sentiero di terra nel verde, e chi lo percorre a piedi: il disegno di oggi.\n\nDomani il verso:\n«invece di giocare come ogni fanciullo dovrebbe fare, sono costretti fin da piccoli a mani nude a lavorare»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=9&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 9 🌴 Un sentiero di terra, da fare a piedi.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 9 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=9&da=ig-storia",
+      "email_oggetto": "Finestra 9: il sentiero 🌴",
+      "file": {
+        "media": [
+          "2026-12-09/post.jpg"
+        ],
+        "storia": "2026-12-09/storia.jpg",
+        "facebook": "2026-12-09/facebook.txt",
+        "instagram": "2026-12-09/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=9&da=fb"
+    },
+    {
+      "data": "2026-12-10",
+      "giorno": 10,
+      "tipo": "verso",
+      "titolo": "Mani che lavorano",
+      "media": "reel_A",
+      "disegno": 9,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-20 at 21.05.32.jpeg",
+      "didascalia_foto": "Foto di Silvia, Uganda",
+      "facebook": "Finestra 10:\n«invece di giocare come ogni fanciullo dovrebbe fare, sono costretti fin da piccoli a mani nude a lavorare»\n\nLe taniche gialle da riempire alla pompa e da riportare a casa: in tanti villaggi l'acqua arriva così, e spesso anche i bambini danno una mano.\n\n🎁 Regala il disegno di ieri: 20 € per la Casa Famiglia Effatà.\n👉 https://calendario.effataitalia.it/natale?disegno=9&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 10 🎧\n«invece di giocare come ogni fanciullo dovrebbe fare, sono costretti fin da piccoli a mani nude a lavorare»\n\nLe taniche gialle dell'acqua, da riempire e riportare a casa.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 10 · Ascolta il verso",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=9&da=ig-storia",
+      "email_oggetto": "Finestra 10: mani che lavorano",
+      "file": {
+        "media": [
+          "2026-12-10/reel.mp4"
+        ],
+        "storia": "2026-12-10/storia.jpg",
+        "facebook": "2026-12-10/facebook.txt",
+        "instagram": "2026-12-10/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=9&da=fb"
+    },
+    {
+      "data": "2026-12-11",
+      "giorno": 11,
+      "tipo": "disegno",
+      "titolo": "Al fiume",
+      "media": "post",
+      "disegno": 11,
+      "teaser": 12,
+      "facebook": "Finestra 11 🏞️\nUn fiume, il sole che tramonta, e bambini che portano l'acqua sulla testa.\n\nDomani il verso:\n«Senza brontolare aiutano in casa pulendo e cucinando ed intanto il tempo gli scivola via mai più ritornando»\n\nE domenica è Santa Lucia: questo disegno può essere il suo regalo.\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=11&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 11 🏞️ Il fiume, il tramonto, l'acqua portata sulla testa.\nIn tempo per Santa Lucia 🕯️\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 11 · Un regalo per Santa Lucia",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=11&da=ig-storia",
+      "email_oggetto": "Finestra 11: al fiume 🏞️",
+      "file": {
+        "media": [
+          "2026-12-11/post.jpg"
+        ],
+        "storia": "2026-12-11/storia.jpg",
+        "facebook": "2026-12-11/facebook.txt",
+        "instagram": "2026-12-11/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=11&da=fb"
+    },
+    {
+      "data": "2026-12-12",
+      "giorno": 12,
+      "tipo": "verso",
+      "titolo": "Senza brontolare · vigilia di Santa Lucia",
+      "media": "reel_B",
+      "disegno": null,
+      "facebook": "Finestra 12:\n«Senza brontolare aiutano in casa pulendo e cucinando ed intanto il tempo gli scivola via mai più ritornando»\n\nStanotte passa Santa Lucia. Se vuoi lasciare un dono che vale due volte, scegli uno dei disegni della nostra filastrocca: arriva per email o su WhatsApp, anche all'ultimo momento.\n\n🎁 20 € per la Casa Famiglia Effatà in Uganda.\n👉 https://calendario.effataitalia.it/natale?da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 12 🎧\n«Senza brontolare aiutano in casa pulendo e cucinando ed intanto il tempo gli scivola via mai più ritornando»\n\nStanotte passa Santa Lucia 🕯️ Un dono che vale due volte.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 12 · Un dono per Santa Lucia",
+      "link_storia": "https://calendario.effataitalia.it/natale?da=ig-storia",
+      "email_oggetto": "Finestra 12: stanotte passa Santa Lucia 🕯️",
+      "file": {
+        "media": [
+          "2026-12-12/reel.mp4"
+        ],
+        "storia": "2026-12-12/storia.jpg",
+        "facebook": "2026-12-12/facebook.txt",
+        "instagram": "2026-12-12/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?da=fb"
+    },
+    {
+      "data": "2026-12-13",
+      "giorno": 13,
+      "tipo": "disegno",
+      "titolo": "In cucina · Santa Lucia",
+      "media": "post",
+      "disegno": 13,
+      "teaser": 14,
+      "facebook": "Finestra 13 🍲\nIl fuoco acceso, la pentola, la scopa: dentro la casa, il lavoro di ogni giorno.\n\nBuona Santa Lucia! Domani il verso:\n«non hanno videogiochi, bambole, costruzioni o macchinette solo la natura e l'immaginazione di trastullarsi gli permette»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=13&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 13 🍲 Il fuoco, la pentola, la scopa. Buona Santa Lucia 🕯️\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 13 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=13&da=ig-storia",
+      "email_oggetto": "Finestra 13: buona Santa Lucia 🕯️",
+      "file": {
+        "media": [
+          "2026-12-13/post.jpg"
+        ],
+        "storia": "2026-12-13/storia.jpg",
+        "facebook": "2026-12-13/facebook.txt",
+        "instagram": "2026-12-13/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=13&da=fb"
+    },
+    {
+      "data": "2026-12-14",
+      "giorno": 14,
+      "tipo": "verso",
+      "titolo": "Natura e immaginazione",
+      "media": "reel_A",
+      "disegno": 13,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-20 at 21.01.04.jpeg",
+      "didascalia_foto": "Foto di Silvia, Uganda",
+      "facebook": "Finestra 14:\n«non hanno videogiochi, bambole, costruzioni o macchinette solo la natura e l'immaginazione di trastullarsi gli permette»\n\nPochi giocattoli e tanti sorrisi: basta guardare questa foto di Silvia per capire cosa vuol dire.\n\n🎁 Regala il disegno di ieri: 20 € per la Casa Famiglia Effatà.\n👉 https://calendario.effataitalia.it/natale?disegno=13&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 14 🎧\n«non hanno videogiochi, bambole, costruzioni o macchinette solo la natura e l'immaginazione di trastullarsi gli permette»\n\nPochi giocattoli, tanti sorrisi. Foto di Silvia.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 14 · Ascolta il verso",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=13&da=ig-storia",
+      "email_oggetto": "Finestra 14: natura e immaginazione",
+      "file": {
+        "media": [
+          "2026-12-14/reel.mp4"
+        ],
+        "storia": "2026-12-14/storia.jpg",
+        "facebook": "2026-12-14/facebook.txt",
+        "instagram": "2026-12-14/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=13&da=fb"
+    },
+    {
+      "data": "2026-12-15",
+      "giorno": 15,
+      "tipo": "disegno",
+      "titolo": "Due stanze, fronte e retro",
+      "media": "carosello",
+      "disegno": 15,
+      "disegni": [
+        "porta-15",
+        "retro-15"
+      ],
+      "facebook": "Finestra 15: oggi i disegni sono due, fronte e retro 🔄\nDa una parte un salotto con la televisione, i giochi sul tappeto, il divano rosso. Dall'altra una stanza dai muri di terra, dove si gioca con quello che c'è.\n\nPuoi regalare l'uno o l'altro.\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=15&da=fb (retro: https://calendario.effataitalia.it/natale?disegno=15r&da=fb)\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 15 🔄 Due stanze, fronte e retro. Scorri ➡️\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 15 · Fronte o retro?",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=15&da=ig-storia",
+      "email_oggetto": "Finestra 15: due stanze, due mondi 🔄",
+      "file": {
+        "media": [
+          "2026-12-15/post-1.jpg",
+          "2026-12-15/post-2.jpg"
+        ],
+        "storia": "2026-12-15/storia.jpg",
+        "facebook": "2026-12-15/facebook.txt",
+        "instagram": "2026-12-15/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=15&da=fb"
+    },
+    {
+      "data": "2026-12-16",
+      "giorno": 16,
+      "tipo": "disegno",
+      "titolo": "Colori di bacche e frutta",
+      "media": "post",
+      "disegno": 16,
+      "teaser": 17,
+      "facebook": "Finestra 16 🎨\nBambini sul prato, un foglio, i colori: il disegno di oggi è un disegno che disegna.\n\nDomani il verso:\n«Disegnano con colori donati dalle bacche e dalla frutta e la creatività gioiosa gli sorride arricchendosi tutta»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=16&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 16 🎨 Un disegno che disegna.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 16 · Regala questo disegno",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=16&da=ig-storia",
+      "email_oggetto": "Finestra 16: colori di bacche e frutta 🎨",
+      "file": {
+        "media": [
+          "2026-12-16/post.jpg"
+        ],
+        "storia": "2026-12-16/storia.jpg",
+        "facebook": "2026-12-16/facebook.txt",
+        "instagram": "2026-12-16/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=16&da=fb"
+    },
+    {
+      "data": "2026-12-17",
+      "giorno": 17,
+      "tipo": "verso",
+      "titolo": "Disegnano",
+      "media": "reel_A",
+      "disegno": 16,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-05 at 23.26.43.jpeg",
+      "didascalia_foto": "Silvia e i bambini dipingono la scuola",
+      "facebook": "Finestra 17:\n«Disegnano con colori donati dalle bacche e dalla frutta e la creatività gioiosa gli sorride arricchendosi tutta»\n\nE a volte i colori finiscono sui muri: qui Silvia e i bambini dipingono insieme la scuola.\n\n🎁 Regala il disegno di ieri: 20 € per la Casa Famiglia Effatà.\n👉 https://calendario.effataitalia.it/natale?disegno=16&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 17 🎧\n«Disegnano con colori donati dalle bacche e dalla frutta e la creatività gioiosa gli sorride arricchendosi tutta»\n\nSilvia e i bambini dipingono la scuola 🎨\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 17 · Ascolta il verso",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=16&da=ig-storia",
+      "email_oggetto": "Finestra 17: «Disegnano con colori donati dalle bacche…»",
+      "file": {
+        "media": [
+          "2026-12-17/reel.mp4"
+        ],
+        "storia": "2026-12-17/storia.jpg",
+        "facebook": "2026-12-17/facebook.txt",
+        "instagram": "2026-12-17/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=16&da=fb"
+    },
+    {
+      "data": "2026-12-18",
+      "giorno": 18,
+      "tipo": "disegno",
+      "titolo": "Un giaciglio",
+      "media": "post",
+      "disegno": 18,
+      "teaser": "17b",
+      "facebook": "Finestra 18 🛏️\nMaterassi sul pavimento, un'amaca, i panni stesi: la stanza dove si dorme.\n\nIl verso che la accompagna:\n«Un giaciglio comodo spesso non hanno e una sua esistenza semplice conducono senza affanno.»\n\nManca una settimana a Natale: c'è ancora tempo per regalarlo.\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=18&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 18 🛏️ Materassi sul pavimento e un'amaca.\nManca una settimana a Natale.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 18 · Una settimana a Natale",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=18&da=ig-storia",
+      "email_oggetto": "Finestra 18: una settimana a Natale 🛏️",
+      "file": {
+        "media": [
+          "2026-12-18/post.jpg"
+        ],
+        "storia": "2026-12-18/storia.jpg",
+        "facebook": "2026-12-18/facebook.txt",
+        "instagram": "2026-12-18/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=18&da=fb"
+    },
+    {
+      "data": "2026-12-19",
+      "giorno": 19,
+      "tipo": "disegno",
+      "titolo": "Arriva qualcuno",
+      "media": "post",
+      "disegno": 19,
+      "teaser": 20,
+      "facebook": "Finestra 19 🚙\nUna strada di terra, una jeep, e qualcuno che arriva: il disegno di oggi prepara il verso di domani, che parla di una persona che conosciamo bene.\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=19&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 19 🚙 Qualcuno sta arrivando… domani scoprite chi.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 19 · Domani scoprite chi",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=19&da=ig-storia",
+      "email_oggetto": "Finestra 19: qualcuno sta arrivando 🚙",
+      "file": {
+        "media": [
+          "2026-12-19/post.jpg"
+        ],
+        "storia": "2026-12-19/storia.jpg",
+        "facebook": "2026-12-19/facebook.txt",
+        "instagram": "2026-12-19/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=19&da=fb"
+    },
+    {
+      "data": "2026-12-20",
+      "giorno": 20,
+      "tipo": "verso",
+      "titolo": "Silvia",
+      "media": "reel_A",
+      "disegno": 19,
+      "foto": "IMMAGINI/INIZI DI SILVIA/WhatsApp Image 2025-11-05 at 23.19.30.jpeg",
+      "didascalia_foto": "Silvia, Uganda",
+      "facebook": "Finestra 20 💛\n«Grazie a Dio ci sono anime gentili come i missionari, che portano speranza, amore e regali vari. Una di queste Silvia si chiama e concretamente sostiene chi ama»\n\nLa filastrocca arriva a lei: Silvia, la nostra fondatrice, che ha scelto di vivere in Uganda accanto ai bambini della Casa Famiglia Effatà.\n\n🎁 Mancano 5 giorni a Natale: regala un disegno e aiutala anche tu. 20 €.\n👉 https://calendario.effataitalia.it/natale?disegno=19&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 20 💛\n«Grazie a Dio ci sono anime gentili come i missionari, che portano speranza, amore e regali vari. Una di queste Silvia si chiama e concretamente sostiene chi ama»\n\nQuesta è Silvia.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 20 · Questa è Silvia",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=19&da=ig-storia",
+      "email_oggetto": "Finestra 20: una di queste Silvia si chiama 💛",
+      "file": {
+        "media": [
+          "2026-12-20/reel.mp4"
+        ],
+        "storia": "2026-12-20/storia.jpg",
+        "facebook": "2026-12-20/facebook.txt",
+        "instagram": "2026-12-20/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=19&da=fb"
+    },
+    {
+      "data": "2026-12-21",
+      "giorno": 21,
+      "tipo": "disegno",
+      "titolo": "La scuola e il cortile",
+      "media": "carosello",
+      "disegno": 21,
+      "disegni": [
+        "porta-21",
+        "retro-21"
+      ],
+      "facebook": "Finestra 21: ancora fronte e retro 🔄\nDavanti una scuola di mattoni con i bambini sulla porta, dietro il cortile con il maiale e le galline.\n\nDomani il verso che li spiega:\n«lo fa costruendo scuole, case, biblioteche o portandoli in ospedale, acquistando materassi, animali da cortile come il maiale»\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=21&da=fb (retro: https://calendario.effataitalia.it/natale?disegno=21r&da=fb)\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 21 🔄 La scuola e il cortile. Scorri ➡️\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 21 · Fronte o retro?",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=21&da=ig-storia",
+      "email_oggetto": "Finestra 21: la scuola e il cortile 🏫",
+      "file": {
+        "media": [
+          "2026-12-21/post-1.jpg",
+          "2026-12-21/post-2.jpg"
+        ],
+        "storia": "2026-12-21/storia.jpg",
+        "facebook": "2026-12-21/facebook.txt",
+        "instagram": "2026-12-21/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=21&da=fb"
+    },
+    {
+      "data": "2026-12-22",
+      "giorno": 22,
+      "tipo": "verso",
+      "titolo": "Scuole, case, materassi",
+      "media": "reel_B",
+      "disegno": null,
+      "facebook": "Finestra 22:\n«lo fa costruendo scuole, case, biblioteche o portandoli in ospedale, acquistando materassi, animali da cortile come il maiale»\n\nÈ quello che Silvia fa ogni giorno con la Casa Famiglia Effatà. E con un regalo di Natale puoi esserci anche tu: la gift card arriva per email o su WhatsApp, anche se la compri all'ultimo momento.\n\n🎁 20 € · scegli il tuo disegno 👉 https://calendario.effataitalia.it/natale?da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 22 🎧\n«lo fa costruendo scuole, case, biblioteche o portandoli in ospedale, acquistando materassi, animali da cortile come il maiale»\n\nIl regalo dell'ultimo minuto che arriva lontano.\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 22 · Il regalo dell'ultimo minuto",
+      "link_storia": "https://calendario.effataitalia.it/natale?da=ig-storia",
+      "email_oggetto": "Finestra 22: il regalo dell'ultimo minuto 🎁",
+      "file": {
+        "media": [
+          "2026-12-22/reel.mp4"
+        ],
+        "storia": "2026-12-22/storia.jpg",
+        "facebook": "2026-12-22/facebook.txt",
+        "instagram": "2026-12-22/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?da=fb"
+    },
+    {
+      "data": "2026-12-23",
+      "giorno": 23,
+      "tipo": "disegno",
+      "titolo": "Un cuore solo",
+      "media": "post",
+      "disegno": 23,
+      "teaser": 24,
+      "facebook": "Finestra 23 ❤️\nItalia e Uganda nello stesso cuore, come due pezzi di un puzzle.\n\nDomani l'ultimo verso:\n«Anche noi possiamo dare un nostro piccolo contributo poiché è importante donare a chi poco dalla vita ha avuto»\n\nUltima chiamata: la gift card si apre stanotte a mezzanotte, quella tra il 23 e il 24. Se la regali oggi, chi la riceve la trova pronta per la Vigilia.\n\n🎁 Questo disegno si può regalare: una gift card da 20 € che sostiene la Casa Famiglia Effatà in Uganda. Arriva per email o su WhatsApp e si apre il 24 dicembre a mezzanotte.\n👉 https://calendario.effataitalia.it/natale?disegno=23&da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 23 ❤️ Italia e Uganda, un cuore solo.\nUltima chiamata per la Vigilia 🎁\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 23 · Ultima chiamata",
+      "link_storia": "https://calendario.effataitalia.it/natale?disegno=23&da=ig-storia",
+      "email_oggetto": "Finestra 23: ultima chiamata per la Vigilia ❤️",
+      "note": "DA VERIFICARE: fino a quando si può comprare e cosa riceve chi compra il 24 (la card è già aperta).",
+      "file": {
+        "media": [
+          "2026-12-23/post.jpg"
+        ],
+        "storia": "2026-12-23/storia.jpg",
+        "facebook": "2026-12-23/facebook.txt",
+        "instagram": "2026-12-23/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?disegno=23&da=fb"
+    },
+    {
+      "data": "2026-12-24",
+      "giorno": 24,
+      "tipo": "verso",
+      "titolo": "Anche noi · Vigilia",
+      "media": "reel_B",
+      "disegno": null,
+      "facebook": "Finestra 24, l'ultimo verso:\n«Anche noi possiamo dare un nostro piccolo contributo poiché è importante donare a chi poco dalla vita ha avuto»\n\nÈ la Vigilia. Grazie a chi ha già regalato un disegno: in questo momento sta arrivando a qualcuno, per email o su WhatsApp.\nE se ti manca ancora un regalo, sei in tempo anche oggi.\n\n🎁 20 € per la Casa Famiglia Effatà in Uganda 👉 https://calendario.effataitalia.it/natale?da=fb\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "Finestra 24 🎧 L'ultimo verso.\n«Anche noi possiamo dare un nostro piccolo contributo poiché è importante donare a chi poco dalla vita ha avuto»\n\nBuona Vigilia 🌟\n\n🎁 Regalalo a chi ami: gift card da 20 € per la Casa Famiglia Effatà. Link in bio.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Finestra 24 · Buona Vigilia",
+      "link_storia": "https://calendario.effataitalia.it/natale?da=ig-storia",
+      "email_oggetto": "Finestra 24: l'ultimo verso 🌟",
+      "note": "DA VERIFICARE: acquisti del 24 ancora attivi?",
+      "file": {
+        "media": [
+          "2026-12-24/reel.mp4"
+        ],
+        "storia": "2026-12-24/storia.jpg",
+        "facebook": "2026-12-24/facebook.txt",
+        "instagram": "2026-12-24/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?da=fb"
+    },
+    {
+      "data": "2026-12-25",
+      "giorno": 25,
+      "tipo": "chiusura",
+      "titolo": "Buon Natale",
+      "media": "carosello",
+      "disegno": null,
+      "disegni": [
+        "retro-25",
+        "porta-25"
+      ],
+      "facebook": "🌟 Buon Natale da Effatà!\n\nL'ultima finestra si apre sul presepe. Grazie a tutti quelli che in questi 25 giorni hanno letto, ascoltato, condiviso e regalato i disegni della nostra filastrocca: ogni gift card è arrivata a qualcuno e ha raggiunto la Casa Famiglia Effatà in Uganda.\n\nUn grazie e un augurio di Buon Natale dai bambini di Effatà Children's Home 💛\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale",
+      "instagram": "🌟 Buon Natale da Effatà!\nGrazie a chi ha letto, ascoltato, condiviso e regalato 💛\nUn augurio dai bambini di Effatà Children's Home.\n\n#EffataItalia #CalendarioDellAvvento #RegaloSolidale #Uganda #Natale2026",
+      "storia": "Buon Natale · Grazie! 💛",
+      "link_storia": null,
+      "email_oggetto": "Buon Natale da Effatà 🌟",
+      "note": "Pubblicare dopo le 00:00 del 25 (invio delle email delle gift card). La seconda immagine è la copertina del libro 'I Bambini salveranno il Natale': verificare diritti e citazione.",
+      "file": {
+        "media": [
+          "2026-12-25/post-1.jpg",
+          "2026-12-25/post-2.jpg"
+        ],
+        "storia": "2026-12-25/storia.jpg",
+        "facebook": "2026-12-25/facebook.txt",
+        "instagram": "2026-12-25/instagram.txt"
+      },
+      "link_facebook": "https://calendario.effataitalia.it/natale?da=fb"
+    }
+  ],
+  "versi": {
+    "2": "L'Uganda è un paese assai lontano\nche ha bisogno di una nostra generosa mano",
+    "4": "Poiché molti bambini che vorrebbero sentirsi lieti\nnon possono farlo per mancanza di spazi sereni e quieti",
+    "6": "non vivono come noi in mezzo a luci e comodità\nma in piccoli villaggi con casette di fango prive di elettricità",
+    "8": "Non hanno strade asfaltate o marciapiedi illuminati,\ncamminano a piedi scalzi sopra arida terra e sassi acuminati",
+    "10": "invece di giocare come ogni fanciullo dovrebbe fare,\nsono costretti fin da piccoli a mani nude a lavorare",
+    "12": "Senza brontolare aiutano in casa pulendo e cucinando\ned intanto il tempo gli scivola via mai più ritornando",
+    "14": "non hanno videogiochi, bambole, costruzioni o macchinette\nsolo la natura e l'immaginazione di trastullarsi gli permette",
+    "17": "Disegnano con colori donati dalle bacche e dalla frutta\ne la creatività gioiosa gli sorride arricchendosi tutta",
+    "17b": "Un giaciglio comodo spesso non hanno\ne una sua esistenza semplice conducono senza affanno.",
+    "20": "Grazie a Dio ci sono anime gentili come i missionari,\nche portano speranza, amore e regali vari.\nUna di queste Silvia si chiama\ne concretamente sostiene chi ama",
+    "22": "lo fa costruendo scuole, case, biblioteche o portandoli in ospedale,\nacquistando materassi, animali da cortile come il maiale",
+    "24": "Anche noi possiamo dare un nostro piccolo contributo\npoiché è importante donare a chi poco dalla vita ha avuto"
+  },
+  "nota": "Bozza del 22/10/2026 da approvare. Orario di pubblicazione proposto 07:30 Europe/Rome."
+}
