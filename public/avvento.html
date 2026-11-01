@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avvento 2026 · Effatà Social</title>
+  <style>
+    /* Stessa veste della dashboard (index.html), con un accento natalizio */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: #333; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { background: #fff; padding: 26px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
+    h1 { font-size: 28px; color: #b5172b; margin-bottom: 8px; }
+    .subtitle { color: #666; font-size: 15px; margin-bottom: 14px; }
+    a.indietro { display: inline-block; color: #667eea; font-weight: 600; text-decoration: none; margin-bottom: 12px; }
+    .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .filtro { border: 1px solid #ddd; background: #f6f6fb; color: #444; padding: 8px 14px; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .filtro[aria-pressed="true"] { background: #b5172b; border-color: #b5172b; color: #fff; }
+    .chi { margin-left: auto; color: #fff; font-weight: 600; cursor: pointer; background: rgba(0,0,0,.18); padding: 8px 14px; border-radius: 999px; border: 0; font-size: 14px; }
+    .conta { color: #666; font-size: 14px; }
+    #lista { display: grid; gap: 18px; }
+    .giorno { background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,.1); padding: 20px; display: grid; grid-template-columns: 300px 1fr; gap: 22px; }
+    .giorno.oggi { outline: 4px solid #f5c542; }
+    .giorno.fatto { opacity: .7; }
+    .media { display: grid; gap: 10px; align-content: start; }
+    video, .slide { width: 100%; border-radius: 6px; background: #000; display: block; }
+    .giostra { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; }
+    .giostra img { flex: none; width: 85%; scroll-snap-align: center; border-radius: 6px; }
+    .testa { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; margin-bottom: 4px; }
+    .testa h2 { font-size: 20px; color: #222; }
+    .data { color: #b5172b; font-weight: 700; }
+    .pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #eee; color: #555; }
+    .pill.oggi { background: #f5c542; color: #3a2a00; }
+    .pill.st-da_pubblicare { background: #fde8e8; color: #9b1c1c; }
+    .pill.st-in_lavorazione { background: #fff4d6; color: #8a5a00; }
+    .pill.st-pubblicato { background: #def7ec; color: #03543f; }
+    .blocco { border: 1px solid #eee; border-radius: 6px; padding: 12px 14px; margin-top: 12px; }
+    .blocco .riga { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .blocco h3 { font-size: 14px; color: #667eea; text-transform: uppercase; letter-spacing: .04em; }
+    .blocco pre { white-space: pre-wrap; font: 14px/1.5 inherit; font-family: inherit; color: #333; max-height: 220px; overflow: auto; }
+    button.az, a.az { border: 0; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; padding: 7px 12px; text-decoration: none; display: inline-block; }
+    .copia { background: #667eea; color: #fff; }
+    .scarica { background: #2f855a; color: #fff; }
+    .presa { background: #f5a623; color: #fff; }
+    .pubblicato { background: #2f855a; color: #fff; }
+    .annulla { background: #eee; color: #444; }
+    .azioni { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+    .nota { font-size: 13px; color: #666; }
+    .vuoto { background: #fff; border-radius: 8px; padding: 30px; text-align: center; color: #666; }
+    button:focus-visible, a:focus-visible { outline: 3px solid #f5c542; outline-offset: 2px; }
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      header { padding: 18px; }
+      .giorno { grid-template-columns: 1fr; padding: 14px; }
+      .chi { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="indietro" href="index.html">← Torna alla dashboard</a>
+      <h1>🎄 Avvento 2026 · Natale con Effatà</h1>
+      <p class="subtitle">Un giorno per scheda: guarda il video, scaricalo, copia i testi e pubblica. Poi segna «Pubblicato».</p>
+      <div class="barra" role="group" aria-label="Filtro">
+        <button class="filtro" data-f="oggi" aria-pressed="true">Oggi e prossimi</button>
+        <button class="filtro" data-f="da_fare" aria-pressed="false">Da fare</button>
+        <button class="filtro" data-f="fatti" aria-pressed="false">Fatti</button>
+        <button class="filtro" data-f="tutti" aria-pressed="false">Tutti</button>
+        <span class="conta" id="conta"></span>
+      </div>
+    </header>
+    <div style="display:flex;justify-content:flex-end;margin:-8px 0 14px">
+      <button class="chi" id="chi">🙋 Chi sei?</button>
+    </div>
+    <div id="lista"><div class="vuoto">⏳ Caricamento…</div></div>
+  </div>
+
+<script>
+(() => {
+  const NOMI_MESI = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+  const GIORNI = ["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
+  let giorni = [], filtro = "oggi";
+  const oggi = (() => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); })();
+  const nome = () => { try { return localStorage.getItem("effata_volunteer_name") || ""; } catch (e) { return ""; } };
+  const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const bella = (d) => { const x = new Date(d + "T12:00:00"); return `${GIORNI[x.getDay()]} ${x.getDate()} ${NOMI_MESI[x.getMonth()]}`; };
+  const url = (d, f, scarica) => `/api/avvento/${d}/${f}` + (scarica ? "?scarica=1" : "");
+
+  function chiSei() {
+    const n = prompt("Il tuo nome:", nome());
+    if (n && n.trim()) { try { localStorage.setItem("effata_volunteer_name", n.trim()); } catch (e) {} }
+    etichetta();
+  }
+  function etichetta() { document.getElementById("chi").textContent = nome() ? `🙋 Tu sei: ${nome()}` : "🙋 Chi sei?"; }
+  document.getElementById("chi").addEventListener("click", chiSei);
+
+  async function carica() {
+    try {
+      const r = await fetch("/api/avvento", { credentials: "include" });
+      if (!r.ok) throw new Error(r.status);
+      giorni = await r.json();
+      disegna();
+    } catch (e) {
+      document.getElementById("lista").innerHTML = `<div class="vuoto">❌ Non riesco a caricare i giorni dell'Avvento (${esc(e.message)}).</div>`;
+    }
+  }
+
+  function visibili() {
+    if (filtro === "tutti") return giorni;
+    if (filtro === "fatti") return giorni.filter((g) => g.stato === "pubblicato");
+    if (filtro === "da_fare") return giorni.filter((g) => g.stato !== "pubblicato");
+    return giorni.filter((g) => g.data >= oggi);
+  }
+
+  function testo(titolo, contenuto, id) {
+    if (!contenuto) return "";
+    return `<div class="blocco"><div class="riga"><h3>${titolo}</h3>
+      <button class="az copia" data-copia="${id}">📋 Copia</button></div><pre id="${id}">${esc(contenuto)}</pre></div>`;
+  }
+
+  function scheda(g) {
+    const fatto = g.stato === "pubblicato";
+    let media = "";
+    if (g.slide && g.slide.length) {
+      media += `<div class="giostra">${g.slide.map((s, i) => `<img src="${url(g.data, s)}" alt="Slide ${i + 1}" loading="lazy">`).join("")}</div>
+        <div class="azioni" style="margin-top:0">${g.slide.map((s, i) => `<a class="az scarica" href="${url(g.data, s, 1)}">⬇️ ${i + 1}</a>`).join("")}</div>`;
+    }
+    if (g.video) {
+      media += `<video controls preload="none" playsinline src="${url(g.data, "video.mp4")}" ${g.copertina ? `poster="${url(g.data, "copertina.jpg")}"` : ""}></video>
+        <a class="az scarica" href="${url(g.data, "video.mp4", 1)}">⬇️ Scarica ${g.tipo === "reel" ? "il reel" : "il video"}</a>`;
+    }
+    if (g.storia) {
+      media += `<a class="az scarica" href="${url(g.data, "storia.mp4", 1)}">⬇️ Scarica la storia</a>
+        <details><summary class="nota">Guarda la storia</summary><video controls preload="none" playsinline src="${url(g.data, "storia.mp4")}"></video></details>`;
+    }
+    const statoTxt = { da_pubblicare: "Da pubblicare", in_lavorazione: "In lavorazione", pubblicato: "Pubblicato" }[g.stato];
+    const chi = g.chi ? ` · ${esc(g.chi)}` : "";
+    return `<article class="giorno ${g.data === oggi ? "oggi" : ""} ${fatto ? "fatto" : ""}">
+      <div class="media">${media || '<p class="nota">Nessun video per questo giorno.</p>'}</div>
+      <div>
+        <div class="testa">
+          <span class="data">${bella(g.data)}</span>
+          <h2>${esc(g.titolo)}</h2>
+          ${g.data === oggi ? '<span class="pill oggi">OGGI</span>' : ""}
+          <span class="pill st-${g.stato}">${statoTxt}${chi}</span>
+        </div>
+        ${g.orario ? `<p class="nota">Da pubblicare alle ${esc(g.orario)} · ${esc(g.dove || "Facebook e Instagram")}</p>` : ""}
+        ${testo("Facebook", g.facebook, `fb-${g.data}`)}
+        ${testo("Instagram", g.instagram, `ig-${g.data}`)}
+        ${g.link_storia ? testo("Link per lo sticker della storia", g.link_storia, `ln-${g.data}`) : ""}
+        ${g.testo_storia ? `<p class="nota" style="margin-top:8px">Scritta della storia: ${esc(g.testo_storia)}</p>` : ""}
+        <div class="azioni">
+          ${fatto ? `<button class="az annulla" data-stato="da_pubblicare" data-d="${g.data}">↩️ Rimetti da fare</button>`
+                  : `<button class="az presa" data-stato="in_lavorazione" data-d="${g.data}">✋ Prendo in carico</button>
+                     <button class="az pubblicato" data-stato="pubblicato" data-d="${g.data}">✅ Pubblicato</button>`}
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function disegna() {
+    const v = visibili();
+    const fatti = giorni.filter((g) => g.stato === "pubblicato").length;
+    document.getElementById("conta").textContent = `${fatti} di ${giorni.length} pubblicati`;
+    document.getElementById("lista").innerHTML = v.length ? v.map(scheda).join("")
+      : `<div class="vuoto">Niente da mostrare con questo filtro.</div>`;
+  }
+
+  document.addEventListener("click", async (e) => {
+    const f = e.target.closest(".filtro");
+    if (f) {
+      filtro = f.dataset.f;
+      document.querySelectorAll(".filtro").forEach((b) => b.setAttribute("aria-pressed", String(b === f)));
+      return disegna();
+    }
+    const c = e.target.closest("[data-copia]");
+    if (c) {
+      const t = document.getElementById(c.dataset.copia).textContent;
+      try { await navigator.clipboard.writeText(t); c.textContent = "✅ Copiato"; }
+      catch (err) { const r = document.createRange(); r.selectNodeContents(document.getElementById(c.dataset.copia)); getSelection().removeAllRanges(); getSelection().addRange(r); c.textContent = "Seleziona e copia"; }
+      return setTimeout(() => (c.textContent = "📋 Copia"), 1800);
+    }
+    const s = e.target.closest("[data-stato]");
+    if (s) {
+      if (!nome()) chiSei();
+      const r = await fetch(`/api/avvento/${s.dataset.d}/stato`, { method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stato: s.dataset.stato, chi: nome() }) });
+      if (r.ok) { const j = await r.json(); const g = giorni.find((x) => x.data === s.dataset.d); Object.assign(g, { stato: j.stato, chi: j.chi }); disegna(); }
+      else alert("Non sono riuscito a salvare. Riprova.");
+    }
+  });
+
+  etichetta();
+  carica();
+})();
+</script>
+</body>
+</html>

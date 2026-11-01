@@ -9,6 +9,7 @@ import { getLinkedInAuthUrl, exchangeLinkedInCode } from "./linkedinAPI.js";
 import { verifyMetaWebhook, handleMetaWebhookEvent } from "./metaWebhook.js";
 import { getMetaAPI } from "./telegramBot.js";
 import { moderationQueue, getModerationDashboard } from "./moderationQueue.js";
+import { registraAvvento } from "./avvento.js";
 import {
   getAllDrafts,
   queryDrafts,
@@ -357,6 +358,9 @@ app.get("/api/report/year/:year", (req, res) => {
 });
 
 // Serve foto
+// Pagina «Avvento 2026» (public/avvento.html) e i suoi materiali
+registraAvvento(app, OUTPUT_DIR);
+
 app.get("/output/:filename", (req, res) => {
   try {
     const filePath = path.join(OUTPUT_DIR, req.params.filename);
