@@ -2009,24 +2009,25 @@ Altri comandi utili:
   await checkMonthlySummary();
   setInterval(checkMonthlySummary, 60 * 60 * 1000);
 
-  // Controlla (al via e poi ogni ora) se è martedì o venerdì dalle 18 (ora
-  // italiana): in quel caso pubblica SUBITO la promo del calendario solidale —
-  // post + Storia su Facebook e Instagram — e manda un riepilogo su Telegram.
-  const checkCalendarPromo = () =>
-    runCalendarPromoIfDue(bot, metaAPI).catch((err) =>
-      logger.error(`Errore nella promo calendario solidale automatica: ${err.message}`)
-    );
-  await checkCalendarPromo();
-  setInterval(checkCalendarPromo, 60 * 60 * 1000);
-
-  // Come sopra ma per la raccolta GoFundMe "Ruote di Speranza": mercoledì e sabato
-  // dalle 18 (ora italiana), sfasata di un giorno rispetto al calendario.
-  const checkGofundmePromo = () =>
-    runGofundmePromoIfDue(bot, metaAPI).catch((err) =>
-      logger.error(`Errore nella promo Ruote di Speranza automatica: ${err.message}`)
-    );
-  await checkGofundmePromo();
-  setInterval(checkGofundmePromo, 60 * 60 * 1000);
+  // SOSPESE: la promo automatica del calendario solidale (martedì e venerdì) e
+  // quella delle Ruote di Speranza (mercoledì e sabato) non vengono più pianificate
+  // all'avvio. Restano disponibili a mano con /calendario e /ruote. Per riattivarle
+  // basta ripristinare questo blocco: runCalendarPromoIfDue e runGofundmePromoIfDue
+  // sono ancora nel modulo.
+  //
+  // const checkCalendarPromo = () =>
+  //   runCalendarPromoIfDue(bot, metaAPI).catch((err) =>
+  //     logger.error(`Errore nella promo calendario solidale automatica: ${err.message}`)
+  //   );
+  // await checkCalendarPromo();
+  // setInterval(checkCalendarPromo, 60 * 60 * 1000);
+  //
+  // const checkGofundmePromo = () =>
+  //   runGofundmePromoIfDue(bot, metaAPI).catch((err) =>
+  //     logger.error(`Errore nella promo Ruote di Speranza automatica: ${err.message}`)
+  //   );
+  // await checkGofundmePromo();
+  // setInterval(checkGofundmePromo, 60 * 60 * 1000);
 
   return bot;
 }
